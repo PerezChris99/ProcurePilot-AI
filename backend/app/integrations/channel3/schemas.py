@@ -1,5 +1,5 @@
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import AliasChoices,BaseModel,ConfigDict,Field,HttpUrl
 
 class Channel3Brand(BaseModel):
     model_config=ConfigDict(extra='ignore')
@@ -8,17 +8,22 @@ class Channel3Brand(BaseModel):
 
 class Channel3Image(BaseModel):
     model_config=ConfigDict(extra='ignore')
-    url: HttpUrl | None = None
+    url: HttpUrl
     cleaned_url: HttpUrl | None = None
     is_main_image: bool = False
     alt_text: str | None = None
+
+class Channel3Price(BaseModel):
+    model_config=ConfigDict(extra='ignore')
+    amount: Decimal = Field(ge=0,validation_alias=AliasChoices('amount','price'))
+    currency: str = Field(min_length=3,max_length=3,pattern=r'^[A-Z]{3}$')
+    compare_at_price: Decimal | None = Field(default=None,ge=0)
 
 class Channel3Offer(BaseModel):
     model_config=ConfigDict(extra='ignore')
     url: HttpUrl
     domain: str
-    price: Decimal = Field(ge=0)
-    currency: str = Field(min_length=3,max_length=3)
+    price: Channel3Price
     availability: str
     condition: str | None = None
     max_commission_rate: Decimal | None = None
@@ -30,7 +35,7 @@ class Channel3Product(BaseModel):
     description: str | None = None
     brands: list[Channel3Brand] = Field(default_factory=list)
     images: list[Channel3Image] = Field(default_factory=list)
-    key_features: list[str] = Field(default_factory=list)
+    key_features: list[str] | None = None
     structured_attributes: dict[str,str] = Field(default_factory=dict)
     offers: list[Channel3Offer] = Field(default_factory=list)
 
