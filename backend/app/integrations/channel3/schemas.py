@@ -1,5 +1,5 @@
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel,ConfigDict,Field,HttpUrl
 
 class Channel3Brand(BaseModel):
     model_config=ConfigDict(extra='ignore')
@@ -8,17 +8,21 @@ class Channel3Brand(BaseModel):
 
 class Channel3Image(BaseModel):
     model_config=ConfigDict(extra='ignore')
-    url: HttpUrl | None = None
+    url: HttpUrl
     cleaned_url: HttpUrl | None = None
     is_main_image: bool = False
     alt_text: str | None = None
+
+class Channel3Price(BaseModel):
+    model_config=ConfigDict(extra='ignore')
+    amount: Decimal = Field(ge=0)
+    currency: str = Field(min_length=3,max_length=3)
 
 class Channel3Offer(BaseModel):
     model_config=ConfigDict(extra='ignore')
     url: HttpUrl
     domain: str
-    price: Decimal = Field(ge=0)
-    currency: str = Field(min_length=3,max_length=3)
+    price: Channel3Price
     availability: str
     condition: str | None = None
     max_commission_rate: Decimal | None = None

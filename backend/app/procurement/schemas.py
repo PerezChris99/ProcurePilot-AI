@@ -1,8 +1,8 @@
 from decimal import Decimal
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel,Field,field_validator
 
 class ProcurementRequirements(BaseModel):
-    query: str = Field(min_length=3,max_length=500)
+    query: str = Field(min_length=3,max_length=5000)
     quantity: int = Field(default=1,ge=1,le=100000)
     budget: Decimal | None = Field(default=None,gt=0)
     currency: str = Field(default='USD',pattern=r'^[A-Z]{3}$')
@@ -12,7 +12,9 @@ class ProcurementRequirements(BaseModel):
     @field_validator('query')
     @classmethod
     def normalize_query(cls,value: str) -> str:
-        return ' '.join(value.split())
+        normalized=' '.join(value.split())
+        if len(normalized)<3: raise ValueError('Search query must contain at least three non-space characters')
+        return normalized
 
 class ProductScore(BaseModel):
     product_id: str
