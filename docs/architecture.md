@@ -16,4 +16,10 @@ DRAFT -> PENDING_APPROVAL -> APPROVED -> PAYMENT_PENDING -> PAID
 
 Exception states include REJECTED, CANCELLED, PAYMENT_FAILED, and EXPIRED. Only verified PayPal transaction evidence can move an order to PAID.
 
-Channel3 and PayPal clients will be isolated under backend/app/integrations. Agent tools call application services rather than manipulating database tables directly.
+## Integration boundaries
+
+Channel3 and PayPal clients are isolated under backend/app/integrations. Agent tools call application services rather than manipulating database tables directly. Channel3 product discovery is separate from PayPal Sandbox payment; a Sandbox capture is not proof that a retailer received payment.
+
+## Current implementation
+
+The repository currently contains the React workspace shell, API health endpoint, email/password authentication foundation, user persistence model/migration, Channel3 client and schema validation, deterministic recommendation scoring, and an ADK procurement research agent. Product persistence, procurement request endpoints, approval workflows, and PayPal integration are not complete yet.
