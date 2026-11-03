@@ -12,7 +12,7 @@ class Channel3Unavailable(RuntimeError):
 class Channel3Client:
     def __init__(self,api_key: str | None=None,base_url: str | None=None,transport=None):
         settings=get_settings()
-        self.api_key=api_key or settings.channel3_api_key
+        self.api_key=api_key if api_key is not None else settings.channel3_api_key
         self.base_url=(base_url or settings.channel3_base_url or 'https://api.trychannel3.com/v1').rstrip('/')+'/'
         self.transport=transport
 
