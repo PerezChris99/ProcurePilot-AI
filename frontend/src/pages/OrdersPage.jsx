@@ -1,0 +1,3 @@
+import {ClipboardList,Plus} from 'lucide-react';
+import {Link} from 'react-router-dom';
+export default function OrdersPage(){return <div className="form-page"><div className="page-title-block"><span className="eyebrow">PURCHASING OPERATIONS</span><h1>Purchase orders</h1><p>Review purchase orders, monitor approval status, and track payment progress.</p></div><section className="panel orders-empty"><span className="empty-icon"><ClipboardList size={24}/></span><h2>No purchase orders yet</h2><p>Once you turn a procurement request into a purchase order, it will be tracked here from draft through approval and payment.</p><Link to="/procurement" className="button button-primary"><Plus size={16}/> Start procurement</Link></section></div>}
