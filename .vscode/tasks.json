@@ -6,10 +6,6 @@
       "type": "npm",
       "script": "build",
       "path": "frontend",
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
       "problemMatcher": [],
       "presentation": {
         "reveal": "always",
