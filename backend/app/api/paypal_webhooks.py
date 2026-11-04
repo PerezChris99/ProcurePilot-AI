@@ -26,8 +26,15 @@ async def paypal_webhook(request:Request,db:Session=Depends(get_db)):
     existing=db.scalar(select(WebhookEvent).where(WebhookEvent.provider_event_id==event['id']))
     if existing: return {'received':True,'duplicate':True,'processed':existing.processed_at is not None}
     resource=event.get('resource') or {}
-    related=(resource.get('supplementary_data') or {}).get('related_ids') or {}
+    if not isinstance(resource, dict):
+        raise HTTPException(status_code=400,detail='Invalid webhook resource')
+    supplementary=resource.get('supplementary_data') or {}
+    if not isinstance(supplementary, dict):
+        raise HTTPException(status_code=400,detail='Invalid webhook supplementary data')
+    related=supplementary.get('related_ids') or {}
     amount_data=resource.get('amount') or {}
+    if not isinstance(related, dict) or not isinstance(amount_data, dict):
+        raise HTTPException(status_code=400,detail='Invalid webhook payment details')
     safe_payload={'id':event['id'],'event_type':event['event_type'],'resource':{'id':resource.get('id'),'status':resource.get('status'),'amount':{'currency_code':amount_data.get('currency_code'),'value':amount_data.get('value')},'related_order_id':related.get('order_id')}}
     record=WebhookEvent(provider_event_id=event['id'],event_type=event['event_type'],verified=True,payload=safe_payload)
     db.add(record)
@@ -53,9 +60,9 @@ async def paypal_webhook(request:Request,db:Session=Depends(get_db)):
                 except (InvalidOperation,ValueError,TypeError): amount=None
                 currency=(resource.get('amount') or {}).get('currency_code')
                 duplicate_capture=db.scalar(select(Payment).where(Payment.capture_id==resource.get('id'))) if resource.get('id') else None
-                capture_not_reused=duplicate_capture is None or duplicate_capture.id==payment.id
+                capture_not_reused=(duplicate_capture is None or duplicate_capture.id==payment.id) and payment.capture_id in (None,resource.get('id'))
                 eligible_state=order.status in ('approved','payment_pending','paid')
-                if resource.get('status')=='COMPLETED' and amount==Decimal(order.total_amount) and currency==order.currency and resource.get('id') and capture_not_reused and eligible_state:
+                if resource.get('status')=='COMPLETED' and amount==Decimal(order.total_amount) and currency==order.currency and payment.amount==order.total_amount and payment.currency==order.currency and resource.get('id') and capture_not_reused and eligible_state:
                     payment.status='completed'; payment.capture_id=resource['id']; payment.provider_response={'paypal_status':'COMPLETED','capture_id':resource['id']}
                     order.status='paid'
                     db.add(AuditEvent(user_id=order.user_id,purchase_order_id=order.id,request_id=order.request_id,action='payment.webhook_capture_completed',details={'event_id':event['id'],'capture_id':resource['id'],'amount':str(amount),'currency':currency}))

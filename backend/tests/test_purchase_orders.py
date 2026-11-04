@@ -145,3 +145,34 @@ def test_checkout_approved_webhook_records_buyer_approval_for_later_capture(clie
     saved=client.get(f"/api/v1/purchase-orders/{order['id']}",headers=headers).json()
     assert saved['payment']['status']=='buyer_approved'
     assert any(entry['action']=='payment.paypal_buyer_approved' for entry in saved['audit_events'])
+
+
+def test_webhook_cannot_replace_an_existing_capture_with_a_different_id(client,monkeypatch):
+    headers,order=approved_order(client,monkeypatch,'no-capture-replacement@example.com')
+    fake_paypal(monkeypatch,order['id'])
+    client.post(f"/api/v1/purchase-orders/{order['id']}/payments/paypal/create",headers=headers)
+    async def verified(self,request_headers,event): return True
+    monkeypatch.setattr(PayPalClient,'verify_webhook',verified)
+
+    def event(event_id,capture_id):
+        return {'id':event_id,'event_type':'PAYMENT.CAPTURE.COMPLETED','resource':{
+            'id':capture_id,'status':'COMPLETED',
+            'amount':{'currency_code':'USD','value':'240.00'},
+            'supplementary_data':{'related_ids':{'order_id':'PAYPAL-ORDER-123'}}}}
+    first=client.post('/api/v1/webhooks/paypal',json=event('WH-CAPTURE-ONE','CAPTURE-ONE'))
+    second=client.post('/api/v1/webhooks/paypal',json=event('WH-CAPTURE-TWO','CAPTURE-TWO'))
+    assert first.status_code==200
+    assert second.status_code==200
+    saved=client.get(f"/api/v1/purchase-orders/{order['id']}",headers=headers).json()
+    assert saved['status']=='paid'
+    assert saved['payment']['capture_id']=='CAPTURE-ONE'
+    assert any(entry['action']=='payment.webhook_mismatch' for entry in saved['audit_events'])
+
+
+def test_webhook_rejects_malformed_resource_after_signature_verification(client,monkeypatch):
+    async def verified(self,request_headers,event): return True
+    monkeypatch.setattr(PayPalClient,'verify_webhook',verified)
+    response=client.post('/api/v1/webhooks/paypal',json={
+        'id':'WH-BAD-RESOURCE','event_type':'PAYMENT.CAPTURE.COMPLETED',
+        'resource':['not','a','payment']})
+    assert response.status_code==400
