@@ -54,18 +54,6 @@ export default function PublicLayout(){
   const {user}=useAuth();
   const location=useLocation();
   useEffect(()=>{
-    const titles={
-      '/':'ProcurePilot AI — Intelligent procurement, human decisions',
-      '/about':'About — ProcurePilot AI',
-      '/how-it-works':'How it works — ProcurePilot AI',
-      '/privacy':'Privacy — ProcurePilot AI',
-      '/terms':'Terms of use — ProcurePilot AI',
-      '/security':'Security — ProcurePilot AI',
-      '/accessibility':'Accessibility — ProcurePilot AI',
-      '/responsible-use':'Responsible use — ProcurePilot AI',
-      '/contact':'Contact — ProcurePilot AI',
-    };
-    document.title=titles[location.pathname]||'ProcurePilot AI';
     if(location.hash){
       const id=decodeURIComponent(location.hash.slice(1));
       document.getElementById(id)?.scrollIntoView({behavior:'auto',block:'start'});

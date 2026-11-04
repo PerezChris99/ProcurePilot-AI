@@ -1,4 +1,5 @@
 import {Route,Routes} from 'react-router-dom';
+import PageMetadata from './components/routing/PageMetadata.jsx';
 import PublicLayout from './components/layout/PublicLayout.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import PublicInfoPage from './pages/PublicInfoPage.jsx';
@@ -20,7 +21,7 @@ const publicPages=[
   'security','accessibility','responsible-use','contact',
 ];
 export default function App(){
-  return <Routes>
+  return <><PageMetadata/><Routes>
     <Route element={<PublicLayout/>}>
       <Route path="/" element={<LandingPage/>}/>
       {publicPages.map(kind=><Route key={kind} path={'/'+kind} element={<PublicInfoPage kind={kind}/>}/>)}
@@ -39,5 +40,5 @@ export default function App(){
         <Route path="/requests/:requestId" element={<RequestDetailPage/>}/>
       </Route>
     </Route>
-  </Routes>;
+  </Routes></>;
 }
