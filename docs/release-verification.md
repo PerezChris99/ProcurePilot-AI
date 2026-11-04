@@ -9,6 +9,7 @@
 - Batched purchase-order list details to remove the four-queries-per-order N+1 access pattern.
 - Prevented frontend Create PO actions on offers with mismatched currencies, unknown stock, missing/invalid price, non-HTTPS URL or budget overrun.
 - Added code-check helper and regression tests; improved user-facing validation errors and made provider readiness explicitly configuration-only.
+- Removed literal backslash-n escape text accidentally embedded in the CSS features stylesheet, which could cause malformed stylesheet parsing.
 
 ## Required local gates: NOT YET VERIFIED
 The GitHub connector can inspect and write source but cannot execute this Windows + PostgreSQL project or install the full backend/node dependency set. Do **not** claim tests, build, migrations or checkout passed solely because the source was committed.
