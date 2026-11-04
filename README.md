@@ -4,7 +4,7 @@
 
 ProcurePilot AI is an AI-assisted procurement workspace for small businesses. It structures purchasing requests, discovers real products through Channel3, ranks options using deterministic evidence-based scoring, prepares purchase orders, records human approval, and demonstrates a separate PayPal Sandbox payment lifecycle.
 
-> Hackathon prototype in active development. The repository contains the initial procurement workflow and the purchase-order/approval/PayPal integration code. Developer credentials, migrations, tests, and the complete external Sandbox round trip still require local verification. Do not treat unconfigured integrations as operational.
+> Hackathon prototype in active development. Provider adapters and the procurement workflow are implemented, but live Gemini, Channel3, and PayPal credentials must be configured and verified locally. Do not treat configured credentials as proof of successful external transactions.
 
 ## Current implementation
 
@@ -14,6 +14,8 @@ ProcurePilot AI is an AI-assisted procurement workspace for small businesses. It
 - User-scoped procurement requests and Channel3 product discovery.
 - Deterministic product ranking and saved catalogue snapshots.
 - Google ADK procurement agent with a restricted Channel3 research tool.
+- Gemini model selection through the backend-only `AI_MODEL` setting.
+- Authenticated integration status endpoint and live dashboard configuration indicators for PostgreSQL, Gemini, Channel3, and PayPal.
 - Purchase-order creation from saved catalogue offers; the server calculates totals and snapshots product/offer details.
 - Draft, pending approval, approved, rejected, payment pending, paid, and payment-failed lifecycle states.
 - Human approval records, immutable approved amounts, payment idempotency, PayPal webhook signature verification, duplicate-event protection, and per-order audit history.
@@ -21,7 +23,7 @@ ProcurePilot AI is an AI-assisted procurement workspace for small businesses. It
 
 ## Important integration boundary
 
-Channel3 provides product discovery and retailer offer links. Its public developer page currently describes merchant checkout as coming soon. PayPal Sandbox is therefore a separate hackathon payment demonstration. A Sandbox payment does not pay the Channel3 retailer or prove supplier settlement. Confirm Channel3 checkout access and PayPal live merchant eligibility separately before making a commercial settlement claim.
+Channel3 provides product discovery and retailer offer links. Its public developer documentation describes product search and retailer offers; catalogue discovery is not itself retailer checkout. PayPal Sandbox is a separate hackathon payment demonstration. A Sandbox payment does not pay the Channel3 retailer or prove supplier settlement. Confirm Channel3 checkout access and PayPal live merchant eligibility separately before making a commercial settlement claim.
 
 ## Technology
 
@@ -43,19 +45,17 @@ No TypeScript or TSX is used in the frontend.
 
 ## Local development
 
-See docs/development.md. Configure backend variables from .env.example and frontend variables from frontend/.env.example. Never commit secrets. Vite variables prefixed with VITE_ are public browser values; never put API keys, database URLs, JWT secrets, or PayPal credentials in frontend variables.
+See [docs/development.md](docs/development.md). Configure the root `.env` using [.env.example](.env.example) and [the provider setup guide](docs/provider-setup.md). Never commit secrets. Vite variables prefixed with `VITE_` are public browser values; never put API keys, database URLs, JWT secrets, or PayPal credentials in frontend variables.
 
-From backend/: install requirements, run alembic upgrade head, then start uvicorn app.main:app --reload.
+From `backend/`: install requirements, run `alembic upgrade head`, then start `uvicorn app.main:app --reload`.
 
-From frontend/: run npm ci, npm run dev, npm run lint, npm test, and npm run build.
+From `frontend/`: run `npm install`, `npm run dev`, `npm run lint`, `npm test`, and `npm run build`.
 
-Backend verification: run pytest and pytest --cov=app --cov-report=term-missing from backend/.
+Backend verification: run `pytest` and `pytest --cov=app --cov-report=term-missing` from `backend/`.
 
 ## PayPal Sandbox setup
 
-Set backend-only variables: PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com, PAYPAL_WEBHOOK_ID, and FRONTEND_URL.
-
-Register the public HTTPS webhook URL /api/v1/webhooks/paypal in the PayPal Developer Dashboard. Subscribe to CHECKOUT.ORDER.APPROVED, PAYMENT.CAPTURE.COMPLETED, and PAYMENT.CAPTURE.DENIED. The backend verifies each event with PayPal before processing it.
+Follow [docs/provider-setup.md](docs/provider-setup.md). PayPal credentials remain server-side. Register the public HTTPS webhook URL `/api/v1/webhooks/paypal` in the same Sandbox REST app and subscribe to `CHECKOUT.ORDER.APPROVED`, `PAYMENT.CAPTURE.COMPLETED`, and `PAYMENT.CAPTURE.DENIED`.
 
 ## Transaction safety
 
@@ -70,7 +70,7 @@ Register the public HTTPS webhook URL /api/v1/webhooks/paypal in the PayPal Deve
 
 ## Git workflow
 
-Implementation is developed on perez, reviewed through a pull request, and merged into main after verification. No additional development branches or GitHub Actions workflows are used.
+Implementation is developed on `perez`, reviewed through a pull request, and merged into `main` after verification. No additional development branches or GitHub Actions workflows are used.
 
 ## License
 
