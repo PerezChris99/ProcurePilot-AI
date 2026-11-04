@@ -23,6 +23,7 @@ def test_integration_status_reports_configured_providers_without_secrets(
         integrations,
         "get_settings",
         lambda: SimpleNamespace(
+            app_env="development",
             google_api_key="private-gemini-key",
             ai_model="gemini-3.8-flash",
             channel3_api_key="private-channel3-key",
