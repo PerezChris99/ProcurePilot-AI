@@ -10,7 +10,18 @@ class Settings(BaseSettings):
     frontend_url: str = 'http://localhost:5173'
     database_url: str = 'sqlite:///./procurepilot.db'
     jwt_secret_key: str = 'development-only-change-this-secret'
-    access_token_expire_minutes: int = 30
+    access_token_expire_minutes: int = Field(default=30, ge=5, le=120)
+    # Conservative per-process pool caps: scale API replicas, not DB connections.
+    db_pool_size: int = Field(default=5, ge=1, le=40)
+    db_max_overflow: int = Field(default=5, ge=0, le=20)
+    db_pool_timeout_seconds: int = Field(default=10, ge=1, le=60)
+    db_connect_timeout_seconds: int = Field(default=5, ge=1, le=30)
+    db_statement_timeout_ms: int = Field(default=15000, ge=1000, le=120000)
+    db_lock_timeout_ms: int = Field(default=3000, ge=100, le=30000)
+    db_idle_transaction_timeout_ms: int = Field(default=15000, ge=1000, le=120000)
+    rate_limit_redis_url: str | None = None
+    # Redis auth policy: identity 8/minute, source 120/minute in public environments.
+    max_request_body_bytes: int = Field(default=1048576, ge=1024, le=8388608)
     google_api_key: str | None = None
     ai_model: str | None = None
     ai_max_output_tokens: int = Field(default=900, ge=256, le=2048)
@@ -29,10 +40,16 @@ class Settings(BaseSettings):
     @model_validator(mode='after')
     def validate_production_secrets(self):
         environment = self.app_env.strip().lower()
+        if self.db_lock_timeout_ms >= self.db_statement_timeout_ms:
+            raise ValueError('DB_LOCK_TIMEOUT_MS must be lower than DB_STATEMENT_TIMEOUT_MS')
         if environment not in ('development','test','testing','staging','production'):
             raise ValueError('APP_ENV must be development, test, testing, staging, or production')
         self.app_env = environment
         if environment in ('staging','production'):
+            if self.rate_limit_redis_url:
+                redis_url = urlsplit(self.rate_limit_redis_url)
+                if redis_url.scheme != 'rediss' or not redis_url.hostname:
+                    raise ValueError('Public RATE_LIMIT_REDIS_URL must use rediss:// with TLS')
             if (len(self.jwt_secret_key)<32 or self.jwt_secret_key in
                     ('development-only-change-this-secret','replace-with-a-long-random-secret')
                     or len(set(self.jwt_secret_key))<12):

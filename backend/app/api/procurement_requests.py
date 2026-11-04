@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import Session
 
 from app.agents import runtime
@@ -57,14 +57,38 @@ def create_request(
 @router.get('', response_model=list[ProcurementRequestResponse])
 def list_requests(
     limit: int = Query(default=50, ge=1, le=100),
+    include_analysis: bool = False,
+    before_created_at: datetime | None = None,
+    before_id: str | None = Query(default=None, max_length=36),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return db.scalars(
-        select(ProcurementRequest).where(
-            ProcurementRequest.user_id == user.id
-        ).order_by(ProcurementRequest.created_at.desc()).limit(limit)
-    ).all()
+    """Keyset pagination and lean list rows keep large catalogue JSON off the hot path.
+
+    Use GET /procurement-requests/{id} for the complete saved evidence. Clients
+    needing legacy full list payloads may explicitly set include_analysis=true.
+    """
+    if (before_created_at is None) != (before_id is None):
+        raise HTTPException(status_code=422,detail='Supply both before_created_at and before_id')
+    columns=(
+        ProcurementRequest.id,ProcurementRequest.request_text,
+        ProcurementRequest.quantity,ProcurementRequest.budget,
+        ProcurementRequest.currency,ProcurementRequest.status,
+        ProcurementRequest.created_at,ProcurementRequest.updated_at,
+    )
+    query=(select(ProcurementRequest) if include_analysis else select(*columns)).where(
+        ProcurementRequest.user_id==user.id,
+    )
+    if before_created_at is not None:
+        query=query.where(or_(
+            ProcurementRequest.created_at<before_created_at,
+            and_(ProcurementRequest.created_at==before_created_at,
+                 ProcurementRequest.id<before_id),
+        ))
+    query=query.order_by(ProcurementRequest.created_at.desc(),ProcurementRequest.id.desc()).limit(limit)
+    if include_analysis:
+        return db.scalars(query).all()
+    return [{**dict(row._mapping),'analysis_json':None} for row in db.execute(query)]
 
 
 @router.get('/{request_id}', response_model=ProcurementRequestResponse)
@@ -94,9 +118,13 @@ async def _catalogue_snapshot(request: ProcurementRequest, user_id: str, *, curr
         raise HTTPException(status_code=502, detail='Channel3 product discovery is temporarily unavailable') from exc
 
     previous = (current or {}).get('results', []) if page_token else []
+    # Persistent snapshots must not grow indefinitely from repeated pagination.
+    if len(previous)>=120:
+        raise HTTPException(status_code=409,detail='Maximum saved catalogue results reached. Create a more specific request.')
     merged = {entry['product']['id']: entry['product'] for entry in previous}
     merged.update({product.id: product.model_dump(mode='json') for product in page.products})
-    products = [Channel3Product.model_validate(entry) for entry in merged.values()]
+    limited=list(merged.values())[:120]
+    products = [Channel3Product.model_validate(entry) for entry in limited]
     rankings = rank_products(products, requirements)
     by_id = {product.id: product for product in products}
     return {
@@ -108,8 +136,8 @@ async def _catalogue_snapshot(request: ProcurementRequest, user_id: str, *, curr
             }
             for item in rankings
         ],
-        'next_page_available': page.next_page_token is not None,
-        'next_page_token': page.next_page_token,
+        'next_page_available': page.next_page_token is not None and len(limited)<120,
+        'next_page_token': page.next_page_token if len(limited)<120 else None,
     }
 
 

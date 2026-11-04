@@ -1,0 +1,25 @@
+/* Compact, device-accurate overview clock. All timezone math uses Intl. */
+.workspace-clock{
+  display:flex;align-items:center;gap:9px;flex:none;
+  padding:4px 10px;
+  border-left:1px solid var(--line);color:var(--navy);
+  min-width:0;font-variant-numeric:tabular-nums;
+}
+.workspace-clock>svg{color:#1981a9;flex:none}
+.workspace-clock-values{display:grid;gap:0;min-width:0}
+.workspace-clock-time{
+  font-size:15px;line-height:1.28;font-weight:810;letter-spacing:.025em;
+}
+.workspace-clock-date{font-size:10px;line-height:1.4;color:#536b82;white-space:nowrap}
+.workspace-clock-zone{font-size:9px;line-height:1.35;color:#60758a;white-space:nowrap}
+@media(max-width:960px){
+  .workspace-clock{padding-inline:8px;gap:5px}
+  .workspace-clock>svg{display:none}
+  .workspace-clock-time{font-size:13px}
+}
+@media(max-width:590px){
+  .topbar:has(.workspace-clock) .environment-pill{display:none}
+  .workspace-clock{padding:1px 6px}
+  .workspace-clock-time{font-size:12px}
+  .workspace-clock-date,.workspace-clock-zone{font-size:9px}
+}

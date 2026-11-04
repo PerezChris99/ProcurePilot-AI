@@ -15,9 +15,9 @@ class Channel3Image(BaseModel):
 
 class Channel3Price(BaseModel):
     model_config=ConfigDict(extra='ignore')
-    amount: Decimal = Field(ge=0,validation_alias=AliasChoices('amount','price'))
+    amount: Decimal = Field(ge=0,allow_inf_nan=False,max_digits=14,decimal_places=2,validation_alias=AliasChoices('amount','price'))
     currency: str = Field(min_length=3,max_length=3,pattern=r'^[A-Z]{3}$')
-    compare_at_price: Decimal | None = Field(default=None,ge=0)
+    compare_at_price: Decimal | None = Field(default=None,ge=0,allow_inf_nan=False)
 
 class Channel3Offer(BaseModel):
     model_config=ConfigDict(extra='ignore')

@@ -57,3 +57,23 @@ Authenticated `GET /api/v1/dashboard/summary` returns user-scoped counts of comp
 ## Integration status contract (non-secret)
 
 Authenticated `GET /api/v1/integrations/status` returns `runtime.environment`, `runtime.provider_checks=configuration_only`; `database.connected/schema_ready/engine`; `ai.configured/api_key_set/model`; `channel3.configured/api_key_set/base_url_configured`; `paypal.credentials_configured/client_id_set/client_secret_set/webhook_configured/environment`. Empty or obvious template key values count as missing, and Channel3 requires a valid HTTPS API endpoint. The endpoint performs database SELECT checks only; it does **not** call Google Gemini, Channel3 or PayPal to claim provider availability, return tokens or expose backend credentials. The browser refetches periodically and provides a manual refresh action.
+
+## Bounded read endpoints and operational responses
+
+### Procurement request list
+
+`GET /api/v1/procurement-requests?limit=50` returns a **user-owned, chronologically sorted metadata list**. Each row intentionally includes `analysis_json: null` so a busy workspace does not download large product snapshots for each card. `limit` accepts 1–100. The detail endpoint `GET /api/v1/procurement-requests/{id}` returns the full saved analysis and product evidence. `include_analysis=true` preserves the former full-list payload when deliberately requested, but has higher DB/response cost.
+
+For **keyset pagination**, pass both `before_created_at` (ISO 8601 timestamp from the last returned row) and `before_id` (its ID), together with `limit`. Results use a stable `created_at DESC, id DESC` order. Invalid/partial cursors return 422.
+
+### Purchase orders and audit
+
+`GET /api/v1/purchase-orders?limit=50&status=pending_approval` is owner-scoped and bounded to 100 orders. Embedded `audit_events` in **list** results includes the most recent 25 events per purchase order to bound response size. `GET /api/v1/purchase-orders/{id}` still returns the full saved order-specific audit history. These safeguards limit list payloads, not underlying immutable financial evidence.
+
+### Authentication and throttling
+
+In staging/production, register/login are guarded by distributed Redis fixed-window attempt limits. A limit violation returns `429` with `Retry-After`; a missing/unavailable Redis protection service returns `503` rather than accepting unthrottled public authentication. Development remains offline-compatible. JWTs now have bound issuer/audience and required timestamps; previously issued tokens without those claims must be replaced by signing in again.
+
+### API security and health
+
+API responses send `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, anti-framing/permission headers and an API-only CSP. Oversized request bodies return 413; source schema/money errors return 422. Liveness `GET /api/v1/health` does not depend on external services; readiness `GET /api/v1/ready` checks core/AI quota database schema and returns 503 on DB migration outage. Neither endpoint certifies Redis, PayPal, Gemini or Channel3 remote availability. Use the authenticated integration status flags for configured values and explicit provider workflow tests for actual connectivity.

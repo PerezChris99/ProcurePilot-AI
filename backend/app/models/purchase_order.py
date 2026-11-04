@@ -1,12 +1,16 @@
 import uuid
 from datetime import datetime,timezone
 from decimal import Decimal
-from sqlalchemy import DateTime,ForeignKey,JSON,Numeric,String,Text,UniqueConstraint
+from sqlalchemy import DateTime,ForeignKey,JSON,Numeric,String,Text,UniqueConstraint,Index
 from sqlalchemy.orm import Mapped,mapped_column
 from app.core.database import Base
 
 class PurchaseOrder(Base):
     __tablename__='purchase_orders'
+    __table_args__=(
+        Index('ix_purchase_orders_user_created','user_id','created_at'),
+        Index('ix_purchase_orders_user_status_created','user_id','status','created_at'),
+    )
     id: Mapped[str]=mapped_column(String(36),primary_key=True,default=lambda:str(uuid.uuid4()))
     po_number: Mapped[str]=mapped_column(String(40),unique=True,index=True,nullable=False)
     user_id: Mapped[str]=mapped_column(ForeignKey('users.id',ondelete='CASCADE'),index=True,nullable=False)
@@ -40,6 +44,7 @@ class PurchaseOrderItem(Base):
 
 class Approval(Base):
     __tablename__='approvals'
+    __table_args__=(Index('ix_approvals_po_created','purchase_order_id','created_at'),)
     id: Mapped[str]=mapped_column(String(36),primary_key=True,default=lambda:str(uuid.uuid4()))
     purchase_order_id: Mapped[str]=mapped_column(ForeignKey('purchase_orders.id',ondelete='CASCADE'),index=True,nullable=False)
     actor_user_id: Mapped[str]=mapped_column(ForeignKey('users.id',ondelete='RESTRICT'),nullable=False)
@@ -76,6 +81,10 @@ class WebhookEvent(Base):
 
 class AuditEvent(Base):
     __tablename__='audit_events'
+    __table_args__=(
+        Index('ix_audit_events_order_created','purchase_order_id','created_at'),
+        Index('ix_audit_events_user_created','user_id','created_at'),
+    )
     id: Mapped[str]=mapped_column(String(36),primary_key=True,default=lambda:str(uuid.uuid4()))
     user_id: Mapped[str|None]=mapped_column(ForeignKey('users.id',ondelete='SET NULL'),index=True,nullable=True)
     purchase_order_id: Mapped[str|None]=mapped_column(ForeignKey('purchase_orders.id',ondelete='SET NULL'),index=True,nullable=True)

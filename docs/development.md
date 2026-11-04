@@ -160,3 +160,13 @@ The browser now opens a **public** landing page at `/` for judges and guests. Si
 The hero includes real Unsplash photography loaded from an HTTPS CDN. Judges need normal internet access to see remote photos; the content/navigation remain usable if media cannot load. Source and license: https://unsplash.com/license. Social proof is limited to named **integrated technologies**, not invented adoption statistics or endorsements.
 
 Vercel SPA deep links: deploy with Root Directory `frontend`; `frontend/vercel.json` supplies the `/(.*)` → `/index.html` rewrite. Netlify: publish `frontend/dist`; the Vite build copies `frontend/public/_redirects` into the output. For both, use `npm run build:deploy` and a real public `VITE_API_BASE_URL`; a Vite development build with localhost must not be deployed unchanged.
+
+## Security-aware configuration after hardening
+
+The local Windows/macOS/Linux startup scripts install the new Python Redis client dependency and apply Alembic revision `0005_read_indexes`. Existing SQLite demo mode does not need Redis. In `APP_ENV=staging` and `production`, login/registration **fail closed (503)** if `RATE_LIMIT_REDIS_URL` is not configured or unreachable; use a managed `rediss://` TLS service. Proxy client-IP identity must be trusted and tested before relying on per-source limits.
+
+PostgreSQL database connection pool defaults to 5 persistent + 5 burst connections per worker, and connections use query, lock and idle-in-transaction timeouts. Do not scale API workers without checking total connections across instances against a real PostgreSQL/PgBouncer capacity budget. See [scaling and operations](scaling.md).
+
+The successful sign-in token format now includes issuer/audience/time claims. Any session token created by the earlier version lacks those claims and will get 401; clear the browser session token or sign in again. This is expected, not a CORS issue. API JSON has defensive no-store/CSP/anti-framing headers; production frontend CSP must be configured separately.
+
+Saved request lists now return lean metadata without `analysis_json` by default. Fetch a specific request for full stored evidence or explicitly pass `include_analysis=true` for legacy behavior. To page older records use both `before_created_at` and `before_id` from the last row. The purchase-order list shows up to 25 recent events per order; the order detail endpoint exposes its full audit trail.

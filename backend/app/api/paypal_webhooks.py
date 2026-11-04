@@ -18,6 +18,13 @@ async def paypal_webhook(request:Request,db:Session=Depends(get_db)):
     except Exception as exc: raise HTTPException(status_code=400,detail='Invalid webhook JSON') from exc
     if not isinstance(event,dict) or not event.get('id') or not event.get('event_type'):
         raise HTTPException(status_code=400,detail='Webhook event is missing its ID or type')
+    # Reject malformed provider identifiers before calling the signature verifier
+    # or writing to indexed VARCHAR(128) columns. All content remains untrusted.
+    for key in ('id','event_type'):
+        value=event[key]
+        if (not isinstance(value,str) or len(value)>128
+                or not value.isprintable() or value!=value.strip()):
+            raise HTTPException(status_code=400,detail='Invalid PayPal webhook event identifier')
     client=PayPalClient()
     try: verified=await client.verify_webhook(request.headers,event)
     except PayPalConfigurationError as exc: raise HTTPException(status_code=503,detail='PayPal webhook verification is not configured') from exc
