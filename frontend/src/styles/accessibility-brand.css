@@ -28,9 +28,13 @@ body{
 }
 button,input,select,textarea{font:inherit}
 button,a,summary{touch-action:manipulation}
-:where(button,a,input,select,textarea,summary):focus-visible{
-  outline:3px solid #0865cc;
+button:focus-visible,a:focus-visible,input:focus-visible,
+select:focus-visible,textarea:focus-visible,summary:focus-visible{
+  outline:3px solid #075ca9;
   outline-offset:3px;
+}
+.site-footer a:focus-visible,.site-final-cta a:focus-visible{
+  outline-color:var(--brand-yellow);
 }
 ::selection{background:#ffe49a;color:var(--brand-navy)}
 
@@ -333,6 +337,17 @@ button,a,summary{touch-action:manipulation}
     overflow:hidden;
     text-overflow:ellipsis;
   }
+}
+@media(max-width:519px){
+  /* Account is always available from the shared six-link mobile dock.
+     Suppress duplicate header sign-in at narrow widths to prevent a 320px overflow. */
+  .site-header-actions .site-signin{display:none}
+  .site-header-actions .site-top-cta{
+    min-height:44px;
+    font-size:.875rem;
+    padding-inline:11px;
+  }
+  .site-brand img{width:29px;height:29px}
 }
 @media(max-width:380px){
   .site-brand{font-size:1.1875rem}
