@@ -36,7 +36,7 @@ class Channel3Product(BaseModel):
     brands: list[Channel3Brand] = Field(default_factory=list)
     images: list[Channel3Image] = Field(default_factory=list)
     key_features: list[str] | None = None
-    structured_attributes: dict[str,str] = Field(default_factory=dict)
+    structured_attributes: dict[str,str | list[str]] = Field(default_factory=dict)
     offers: list[Channel3Offer] = Field(default_factory=list)
 
 class Channel3SearchResponse(BaseModel):
