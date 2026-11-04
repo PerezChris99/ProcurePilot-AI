@@ -21,7 +21,8 @@ describe('Public landing page',()=>{
   it('shows three real photo slides with meaningful manual controls and pause',()=>{
     renderLanding();
     const carousel=screen.getByRole('region',{name:'Procurement photography'});
-    const images=within(carousel).getAllByRole('img',{hidden:true});
+    // Hidden slides are intentionally decorative (alt=""), so query the slide images directly.
+    const images=carousel.querySelectorAll('img.site-hero-image');
     expect(images).toHaveLength(3);
     expect(images[0].getAttribute('src')).toMatch(/^https:\/\/images\.unsplash\.com\/photo-/);
     expect(within(carousel).getByText('Less uncertainty in sourcing')).toBeInTheDocument();
