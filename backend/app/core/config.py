@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     @model_validator(mode='after')
     def validate_production_secrets(self):
-        if self.app_env.lower()=='production' and (len(self.jwt_secret_key)<32 or self.jwt_secret_key=='development-only-change-this-secret'):
+        if self.app_env.lower()=='production' and (len(self.jwt_secret_key)<32 or self.jwt_secret_key in ('development-only-change-this-secret','replace-with-a-long-random-secret') or len(set(self.jwt_secret_key))<12):
             raise ValueError('Production requires a unique JWT_SECRET_KEY of at least 32 characters')
         return self
 

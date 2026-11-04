@@ -171,7 +171,7 @@ Set-Location ".\ProcurePilot-AI"
 code .
 ~~~
 
-1. Copy root [\`.env.example\`](.env.example) to \`.env\` and supply \`DATABASE_URL\`, a unique \`JWT_SECRET_KEY\`, and the relevant backend-only provider keys. The launcher can create the template files automatically if missing, but **cannot invent credentials or start PostgreSQL for you**.
+1. Copy root [`.env.example`](.env.example) to `.env` and supply `DATABASE_URL`, a unique `JWT_SECRET_KEY`, and the relevant backend-only provider keys. The launcher can create the template files automatically if missing, but **cannot invent credentials or start PostgreSQL for you**.
 2. From the repository root run:
 
    ~~~powershell
@@ -200,7 +200,7 @@ PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
 PAYPAL_WEBHOOK_ID=
 ~~~
 
-See the [full provider setup guide](docs/provider-setup.md) for merchant vs buyer Sandbox accounts and webhook registration. \`PAYPAL_WEBHOOK_ID\` requires a webhook registered against a **public HTTPS** endpoint; localhost cannot accept PayPal's remote webhook deliveries. Keep all keys in the backend/root environment, never a \`VITE_*\` frontend setting or a commit.
+See the [full provider setup guide](docs/provider-setup.md) for merchant vs buyer Sandbox accounts and webhook registration. `PAYPAL_WEBHOOK_ID` requires a webhook registered against a **public HTTPS** endpoint; localhost cannot accept PayPal's remote webhook deliveries. Keep all keys in the backend/root environment, never a `VITE_*` frontend setting or a commit.
 
 ### Checks before a judge demonstration
 
@@ -224,24 +224,24 @@ This is not a PCI-certified payment processor. The app does not capture card num
 
 | Location | Contents |
 | --- | --- |
-| \`frontend/\` | React UI, views, routing, accessible controls, theme and favicon |
-| \`backend/app/api/\` | Auth, procurement, approvals/order/payment and webhook HTTP routes |
-| \`backend/app/agents/\` | Bounded Gemini/ADK runtime, evidence shaping and daily budgets |
-| \`backend/app/procurement/\` | Deterministic requirements and product scoring |
-| \`backend/app/integrations/\` | Channel3 and PayPal network clients |
-| \`backend/app/models/\` | SQLAlchemy domain tables; Alembic migrations in \`backend/alembic/\` |
-| \`backend/tests/\`, \`frontend/src/**/*.test.jsx\` | Unit/integration regression tests |
-| \`docs/architecture.md\` | Domain architecture and trust boundaries |
-| \`docs/agent.md\` | AI limits and safety engineering |
-| \`docs/security.md\` | Implemented controls, threat model and remaining gaps |
-| \`docs/provider-setup.md\` | Gemini, Channel3, PayPal Sandbox credentials |
-| \`docs/development.md\` | Local startup and troubleshooting |
-| \`docs/release-verification.md\` | Outstanding acceptance gates |
+| `frontend/` | React UI, views, routing, accessible controls, theme and favicon |
+| `backend/app/api/` | Auth, procurement, approvals/order/payment and webhook HTTP routes |
+| `backend/app/agents/` | Bounded Gemini/ADK runtime, evidence shaping and daily budgets |
+| `backend/app/procurement/` | Deterministic requirements and product scoring |
+| `backend/app/integrations/` | Channel3 and PayPal network clients |
+| `backend/app/models/` | SQLAlchemy domain tables; Alembic migrations in `backend/alembic/` |
+| `backend/tests/`, `frontend/src/**/*.test.jsx` | Unit/integration regression tests |
+| `docs/architecture.md` | Domain architecture and trust boundaries |
+| `docs/agent.md` | AI limits and safety engineering |
+| `docs/security.md` | Implemented controls, threat model and remaining gaps |
+| `docs/provider-setup.md` | Gemini, Channel3, PayPal Sandbox credentials |
+| `docs/development.md` | Local startup and troubleshooting |
+| `docs/release-verification.md` | Outstanding acceptance gates |
 
 ## Hackathon attribution and disclosure
 
 **AI:** Gemini via Google ADK; catalogue discovery uses Channel3, and purchases/payments use deterministic FastAPI workflow controls and PayPal Orders v2 Sandbox. The recommendation is LLM-assisted; product prices, scores, stock evidence, payments and approvals are not fabricated by an LLM. Model costs are bounded but not guaranteed to be zero.
 
-**Workflow:** Implement changes on \`perez\`, document meaningful commits, open a PR, merge into \`main\` and synchronize both branches. No GitHub Actions workflows.
+**Workflow:** Implement changes on `perez`, document meaningful commits, open a PR, merge into `main` and synchronize both branches. No GitHub Actions workflows.
 
 **Copyright and license:** © 2026 PerezChris99. **All rights reserved. Authorized use only.** See [LICENSE](LICENSE), which grants narrowly scoped hackathon evaluator access but no general right to reuse, modify, sell or redistribute the project. **This is a proprietary license, not an OSI-approved open-source license.** If the hackathon requires an open-source license, the owner must resolve that conflict before submission.
