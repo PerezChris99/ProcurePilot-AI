@@ -8,10 +8,10 @@ ProcurePilot is designed for clear reading across public, account and authentica
 | --- | --- | --- | --- |
 | Background | Whitesmoke | `#F5F5F7` | Calm surface behind high-contrast content |
 | Interactive accent | Sky Blue | `#38BDF8` | Focused digital identity, non-text decorative accents, icons |
-| Warm emphasis | Sweet Yellow | `#FFD66B` | Primary CTA surfaces, hero underline, selected markers, process steps, alerts and highlighting |
+| Selective accent | Sweet Yellow | `#FFD66B` | Closing CTA on dark navy and genuine caution states, not decorative borders or heading underlines |
 | Contrast anchor | Midnight Navy | `#0B1B3D` | Body headings, dark footer/callouts and text on yellow |
 
-Yellow intentionally appears as a **surface or line**, with navy lettering over it. Small yellow text on white would have insufficient contrast and is prohibited by design. Link blue used on white is a darker `#075CA9`, not the lower-contrast bright Sky Blue token.
+Yellow intentionally appears **sparingly**, mainly as a CTA surface on dark navy or in meaningful caution states, with dark lettering. A yellow dash before the hero kicker, yellow hero-word underline, yellow footer strip, yellow selection hairlines, and colored edges on overview metric cards have been removed. Small yellow text on white would have insufficient contrast and is prohibited by design. Link blue used on white is a darker `#075CA9`, not the lower-contrast bright Sky Blue token.
 
 Our unit-level WCAG contrast calculation checks the following representative pairs using actual sRGB relative luminance:
 
@@ -45,3 +45,11 @@ The figures describe these pairs alone, not every pixel over photography or a fu
 ## Known limits
 
 Source-level automated checks cannot guarantee full accessibility or universal visual compatibility. The project still needs manual zoom, screen-reader, native-browser, assistive-technology and device testing, especially with long dynamic catalogue entries, changing language and error states. Accessibility improvements should be maintained alongside API security and performance work.
+
+## Layout restraint and content hierarchy
+
+The public page uses a unified responsive edge gutter `clamp(16px, 2.4vw, 44px)` instead of a 1220px maximum width. Header, legal/footer and content sections align. At desktop widths (at least 961px), the hero image retains 510px height and takes approximately 65% of the row width; at tablet widths it occupies a full-width rectangular row. Body copy remains line-length-limited for comfort, rather than stretching long text across the screen.
+
+The dashboard replaces four separate rounded, color-edged metric cards with a single neutral data strip separated by fine rules. The promotional dashboard hero is removed because the overview already has a primary procurement action. The activity and system-status sections remain, including explicit configuration-versus-connectivity disclaimers.
+
+Visual and assistive-tech checks remain necessary at 320–960px, 200%/400% zoom, high-contrast mode, and desktop widths above 1920px.

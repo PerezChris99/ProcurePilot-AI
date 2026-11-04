@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const styles=readFileSync(resolve(root,'src/styles/accessibility-brand.css'),'utf8');
+const layout=readFileSync(resolve(root,'src/styles/layout-refinement.css'),'utf8');
 const main=readFileSync(resolve(root,'src/main.jsx'),'utf8');
 
 function luminance(hex){
@@ -55,12 +56,31 @@ test('accessibility typography overrides load after prior theme layers',()=>{
   }
 });
 
-test('yellow is used as a readable highlight, not tiny text on white',()=>{
+test('yellow remains an intentional, high-contrast accent without decorative underlines',()=>{
   assert.match(styles,/--brand-yellow:#FFD66B/);
-  assert.match(styles,/\.site-top-cta\s*\{[^}]*background:var\(--brand-yellow\);[^}]*color:var\(--brand-navy\)/);
-  assert.match(styles,/\.site-hero-text h1 em\s*\{[^}]*background:linear-gradient\([^;]*var\(--brand-yellow\)/);
-  assert.match(styles,/\.site-step-number\s*\{[^}]*color:var\(--brand-yellow-ink\);[^}]*background:var\(--brand-yellow-tint\)/);
-  assert.match(styles,/\.mobile-dock-link\.active::before\s*\{[^}]*background:var\(--brand-yellow\)/);
+  assert.match(styles,/\.site-top-cta\s*\{[^}]*background:#0865cc;[^}]*color:#fff/);
+  assert.match(styles,/\.site-button-light\s*\{[^}]*background:var\(--brand-yellow\);[^}]*color:var\(--brand-navy\)/);
+  assert.doesNotMatch(styles,/\.site-kicker::before\s*\{[^}]*content:""/);
+  assert.doesNotMatch(styles,/background:linear-gradient\(transparent 81%,var\(--brand-yellow\)/);
+  assert.match(layout,/\.site-kicker::before\{content:none\}/);
+  assert.match(layout,/\.site-hero-text h1 em\{background:none;text-decoration:none\}/);
+  assert.match(styles,/\.mobile-dock-link\.active::before\{background:#0865cc/);
   assert.match(styles,/@media\(max-width:519px\)/);
   assert.match(styles,/@media\(prefers-reduced-motion:reduce\)/);
+});
+
+test('landing fills the viewport with a wider fixed-height rectangular slideshow',()=>{
+  assert.match(main,/import '\.\/styles\/accessibility-brand\.css';\s*import '\.\/styles\/layout-refinement\.css';/);
+  assert.match(layout,/--site-gutter:clamp\(16px,2\.4vw,44px\)/);
+  assert.match(layout,/\.site-container,\s*\.site-footer-top\s*\{[^}]*width:calc\(100% - 2 \* var\(--site-gutter\)\)/);
+  assert.match(layout,/grid-template-columns:minmax\(0,\.76fr\) minmax\(0,1\.44fr\)/);
+  assert.match(layout,/\.site-hero-visual\s*\{\s*height:510px;\s*min-height:510px/);
+  assert.match(layout,/@media\(min-width:760px\) and \(max-width:960px\)/);
+});
+
+test('dashboard metrics use one neutral summary strip, without colored rounded cards',()=>{
+  assert.match(layout,/\.dashboard-refined \.metrics-grid\s*\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(layout,/\.dashboard-refined \.metric-card\s*\{[^}]*border:0;\s*border-radius:0;\s*box-shadow:none;/);
+  assert.match(layout,/\.dashboard-refined \.metric-card\+\.metric-card\s*\{\s*border-left:1px solid/);
+  assert.match(layout,/@media\(max-width:960px\)\s*\{/);
 });

@@ -12,10 +12,10 @@ describe('Public landing page',()=>{
     renderLanding();
     expect(screen.getByRole('heading',{level:1})).toHaveTextContent(/purchase with.*clarity/i);
     expect(screen.getByRole('link',{name:/explore procurepilot/i})).toHaveAttribute('href','/register');
-    expect(screen.getByText(/built with actual integrations/i)).toBeInTheDocument();
+    expect(screen.getByText('INTEGRATIONS')).toBeInTheDocument();
     expect(screen.getByText(/sandbox payments/i)).toBeInTheDocument();
     expect(screen.getByText(/PayPal Sandbox only/i)).toBeInTheDocument();
-    expect(screen.getByRole('heading',{name:/three steps.*one clearer decision/i})).toBeInTheDocument();
+    expect(screen.getByRole('heading',{name:/from request to approval/i})).toBeInTheDocument();
   });
 
   it('shows three real photo slides with meaningful manual controls and pause',()=>{
@@ -34,7 +34,7 @@ describe('Public landing page',()=>{
     expect(within(carousel).getByText('One clearer purchasing workspace')).toBeInTheDocument();
   });
 
-  it('contains genuine FAQ answers and a safe CTA for unregistered judges',()=>{
+  it('contains factual FAQ answers and a safe CTA for visitors',()=>{
     renderLanding();
     const faq=screen.getByText('Does the AI place orders automatically?').closest('details');
     fireEvent.click(within(faq).getByText('Does the AI place orders automatically?'));

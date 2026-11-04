@@ -33,19 +33,19 @@ const photography=[
 const faqs=[
   {
     question:'Does the AI place orders automatically?',
-    answer:'No. Gemini helps explain catalogue evidence. The app enforces purchasing rules, and a signed-in person must approve each order before a payment flow begins.',
+    answer:'No. AI explains catalogue evidence. A signed-in person must approve each order before payment.',
   },
   {
     question:'Where do prices and products come from?',
-    answer:'From Channel3 catalogue responses, not invented AI listings. You can inspect the saved offer evidence before creating a purchase order.',
+    answer:'Channel3 catalogue results, not AI-invented listings. Review saved offers before placing an order.',
   },
   {
     question:'Is PayPal processing real purchases?',
-    answer:'This prototype uses PayPal Sandbox only. Its simulated payment flow does not purchase goods from a Channel3 retailer or transfer live money.',
+    answer:'PayPal Sandbox only. No live money moves and no supplier purchase is made.',
   },
   {
     question:'Can I try it without external API keys?',
-    answer:'You can create an account and explore the local workspace. Live catalogue search, AI analysis, and Sandbox checkout need the relevant configured credentials.',
+    answer:'Yes. Explore the local workspace without keys. Search, AI and Sandbox checkout need credentials.',
   },
 ];
 
@@ -83,7 +83,7 @@ function HeroSlideshow(){
         alt={index===active?photo.alt:''}
         className={'site-hero-image'+(index===active?' is-visible':'')}
         aria-hidden={index!==active}
-        width="1000"
+        width="1600"
         height="800"
         loading="eager"
         decoding="async"
@@ -91,10 +91,6 @@ function HeroSlideshow(){
       />)}
     </div>
     <div className="site-hero-mist" aria-hidden="true"/>
-    <div className="site-hero-topline">
-      <span>A CLEARER WAY TO BUY</span>
-      <span>PROCUREPILOT AI</span>
-    </div>
     <div className="site-hero-caption" aria-live={paused?'polite':'off'}>
       <div>
         <span className="site-photo-eyebrow">{photography[active].eyebrow}</span>
@@ -140,7 +136,7 @@ export default function LandingPage(){
       <div className="site-hero-text">
         <span className="site-kicker">A BETTER WAY TO BUY FOR WORK</span>
         <h1 id="landing-headline">Purchase with <em>clarity.</em><br/>Not guesswork.</h1>
-        <p>Find the right products, understand the evidence, and approve purchases with confidence. One clear path from request to decision.</p>
+        <p>Compare real offers, review AI insights, and approve orders in one place.</p>
         <div className="site-hero-actions">
           <Link className="site-button site-button-dark" to={user?'/dashboard':'/register'}>
             {user?'Go to workspace':'Explore ProcurePilot'} <ArrowRight size={18} aria-hidden="true"/>
@@ -149,14 +145,14 @@ export default function LandingPage(){
             See how it works <ArrowUpRight size={17} aria-hidden="true"/>
           </Link>
         </div>
-        <div className="site-trust-note"><ShieldCheck size={16} aria-hidden="true"/> Evidence-led AI. Human approvals. Sandbox payments.</div>
+        <div className="site-trust-note"><ShieldCheck size={16} aria-hidden="true"/> AI insights · Human approvals · Sandbox payments.</div>
       </div>
       <HeroSlideshow/>
     </section>
 
     <section className="site-evidence-strip" aria-label="Technology foundation">
       <div className="site-container site-evidence-inner">
-        <span className="site-evidence-title">BUILT WITH ACTUAL INTEGRATIONS</span>
+        <span className="site-evidence-title">INTEGRATIONS</span>
         <div className="site-evidence-names">
           <span>Google Gemini <small>via ADK</small></span>
           <span>Channel3 <small>catalogue</small></span>
@@ -169,17 +165,16 @@ export default function LandingPage(){
     <section className="site-container site-story-grid" id="why" aria-label="Problem and solution">
       <div className="site-story-left">
         <span className="site-section-index">THE CHALLENGE</span>
-        <h2>Purchasing gets messy<br/>before anything is bought.</h2>
-        <p>Too many tabs, uncertain prices, approvals lost in conversations. It should be easier to know what you are buying and why.</p>
-        
+        <h2>Buying for work gets complicated.</h2>
+        <p>Scattered offers. Unclear costs. Decisions without a trail.</p>
       </div>
       <div className="site-story-right">
         <span className="site-section-index">THE SOLUTION</span>
-        <h2>Every step, clearly connected.</h2>
+        <h2>One clear buying workflow.</h2>
         <div className="site-benefit-list">
-          <div><SearchCheck size={20}/><span><strong>Evidence before opinions.</strong> Compare offers sourced from the catalogue.</span></div>
-          <div><Sparkles size={20}/><span><strong>AI that explains.</strong> Short assessments based on available evidence.</span></div>
-          <div><ClipboardCheck size={20}/><span><strong>People stay in control.</strong> Save the decision and its audit trail.</span></div>
+          <div><SearchCheck size={20}/><span><strong>Catalogue evidence.</strong> See offers and prices.</span></div>
+          <div><Sparkles size={20}/><span><strong>Useful AI guidance.</strong> Compare the options.</span></div>
+          <div><ClipboardCheck size={20}/><span><strong>Human approval.</strong> Keep a record of every decision.</span></div>
         </div>
       </div>
     </section>
@@ -187,13 +182,13 @@ export default function LandingPage(){
     <section className="site-process-wrap" id="how">
       <div className="site-container">
         <div className="site-section-header">
-          <div><span className="site-section-index">HOW IT WORKS</span><h2>Three steps. One clearer decision.</h2></div>
+          <div><span className="site-section-index">HOW IT WORKS</span><h2>From request to approval.</h2></div>
           <Link to="/how-it-works" className="site-text-action">View the full process <ArrowUpRight size={16}/></Link>
         </div>
         <div className="site-process-grid">
-          <Point index="01" title="Describe the need" copy="Tell us what you're buying, how many, and your budget."/>
-          <Point index="02" title="Review the evidence" copy="Compare real catalogue offers and a bounded AI assessment."/>
-          <Point index="03" title="Approve with confidence" copy="Confirm the saved order, then try the PayPal Sandbox flow."/>
+          <Point index="01" title="Describe the need" copy="Enter the item, quantity, and budget."/>
+          <Point index="02" title="Compare the offers" copy="Review catalogue results and AI analysis."/>
+          <Point index="03" title="Approve the order" copy="Confirm the order and test PayPal Sandbox."/>
         </div>
       </div>
     </section>
@@ -201,9 +196,7 @@ export default function LandingPage(){
     <section className="site-container site-faq-block" id="faq">
       <div className="site-faq-intro">
         <span className="site-section-index">COMMON QUESTIONS</span>
-        <h2>The essentials,<br/>answered.</h2>
-        <p>Clear boundaries, without the sales pitch.</p>
-        <Link className="site-text-action" to="/responsible-use">Our operating principles <ArrowUpRight size={15}/></Link>
+        <h2>Common questions.</h2>
       </div>
       <div className="site-faq-grid">
         {faqs.map((item,index)=><details key={item.question} className="site-faq-item">
@@ -214,9 +207,8 @@ export default function LandingPage(){
     </section>
 
     <section className="site-container site-final-cta" aria-label="Get started">
-      <div><span className="site-section-index">BETTER PURCHASING STARTS HERE</span>
-        <h2>Make the next decision clearer.</h2>
-        <p>Real evidence, helpful intelligence, and you in control.</p>
+      <div><span className="site-section-index">GET STARTED</span>
+        <h2>Buy with clarity.</h2>
       </div>
       <Link to={user?'/dashboard':'/register'} className="site-button site-button-light">
         {user?'Open your workspace':'Start your workspace'} <ArrowRight size={17} aria-hidden="true"/>

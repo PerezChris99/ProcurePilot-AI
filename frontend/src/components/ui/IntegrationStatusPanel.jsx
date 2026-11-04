@@ -49,7 +49,6 @@ export default function IntegrationStatusPanel({health,integrations}){
     <div className="panel-heading">
       <div>
         <h3>System status</h3>
-        <p>Current backend setup · updated on focus and every minute</p>
       </div>
       <button type="button" className="status-refresh button" aria-label="Refresh system status"
         onClick={refresh} disabled={checking}>
@@ -76,7 +75,6 @@ export default function IntegrationStatusPanel({health,integrations}){
       {...webhook}/>
     <p className="status-summary" role="note">
       <strong>{integrations.isError?'Could not check configuration.':'Configured means credentials are present, not verified.'}</strong>
-      {' '}Live provider access, checkout and signed webhooks require separate tests.
       {lastUpdated&&!integrations.isError&&<span> · Checked {lastUpdated}</span>}
     </p>
   </article>;

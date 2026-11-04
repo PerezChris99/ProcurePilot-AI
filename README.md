@@ -311,7 +311,7 @@ The standard npm run build is a localhost-compatible Windows development check. 
 
 ## Readability, contrast and brand accessibility
 
-ProcurePilot uses three signature visual colours: **Whitesmoke** `#F5F5F7` for calm backgrounds, **Sky Blue** `#38BDF8` for digital accents, and **Warm Yellow** `#FFD66B` for primary calls to action, progress/selection marks and meaningful emphasis. **Midnight Navy** `#0B1B3D` anchors headings, long-form text and dark surfaces so yellow never becomes unreadable small lettering on white.
+ProcurePilot uses **Whitesmoke** `#F5F5F7` for calm backgrounds, **Sky Blue** `#38BDF8` for digital accents, and restrained **Warm Yellow** `#FFD66B` for its closing call to action and meaningful caution states. **Midnight Navy** `#0B1B3D` anchors text and dark surfaces. Decorative yellow underlines, section bars, and metric-card edges are intentionally avoided.
 
 Public, account and workspace interfaces now use a browser-scalable 16px root, larger text (typically 14–18px for secondary copy and controls, with 16px inputs and body text), stronger contrast and more generous line-height. The universal six-link mobile navigation keeps a short label and high-contrast active marker, even at narrow phone widths. Users can zoom the page using normal browser controls without relying on downloaded fonts. The design preserves reduced-motion preferences and visible keyboard focus. See [Accessibility and visual design](docs/accessibility.md) for checks and current limitations.
 
@@ -336,3 +336,9 @@ The protected Overview also shows a ticking local device time, date, IANA time z
 ### Public visual language
 
 The public site follows a refined, original fintech design rather than imitating another company's interface: clear hierarchy, confident typography, restrained blue accents, real editorial procurement photography with a translucent mist, and subtle accessible motion. The same responsive navigation behavior is shared across public, account and private routes. The photography is illustrative, not a customer endorsement. Motion follows system reduced-motion preferences, and the hero slideshow retains manual next/previous/pause controls.
+
+## Full-width public layout and concise workspace
+
+The landing page uses a small responsive side gutter instead of a narrow maximum-width container; its header, hero, content sections and footer share the same alignment. On desktop, the real-photo carousel occupies roughly two-thirds of the hero row and retains its existing **510px height**, creating a clearly wider rectangular display. Tablet layouts keep a full-width photo below the hero copy rather than squeezing it into a square. At small widths, the layout stacks naturally without hiding the mobile dock.
+
+The signed-in Overview prioritizes the greeting, **New procurement** action, live saved counts, recent events and actual integration status. Four metrics now share a single rectangular, neutral summary surface with fine dividers, not colored card borders or decorative rounded tiles. The extra promotional hero, duplicate explanatory sentences, and unnecessary site copy were removed; provider and PayPal Sandbox limitations are still accurately disclosed. Visual regression and runtime acceptance guidance is in [docs/testing.md](docs/testing.md).
