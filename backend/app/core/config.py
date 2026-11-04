@@ -28,11 +28,17 @@ class Settings(BaseSettings):
 
     @model_validator(mode='after')
     def validate_production_secrets(self):
-        if self.app_env.lower()=='production':
+        environment = self.app_env.strip().lower()
+        if environment not in ('development','test','testing','staging','production'):
+            raise ValueError('APP_ENV must be development, test, testing, staging, or production')
+        self.app_env = environment
+        if environment in ('staging','production'):
             if (len(self.jwt_secret_key)<32 or self.jwt_secret_key in
                     ('development-only-change-this-secret','replace-with-a-long-random-secret')
                     or len(set(self.jwt_secret_key))<12):
                 raise ValueError('Production requires a unique JWT_SECRET_KEY of at least 32 characters')
+            if self.database_url == 'postgresql+psycopg://postgres:postgres@localhost:5432/procurepilot':
+                raise ValueError('Public environments must replace the example PostgreSQL credentials')
             if not self.database_url.startswith('postgresql+psycopg://'):
                 raise ValueError('Production DATABASE_URL must use postgresql+psycopg:// and a persistent PostgreSQL database')
             url = urlsplit(self.frontend_url)

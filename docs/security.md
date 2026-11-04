@@ -66,3 +66,5 @@
 ## Production startup configuration gate (November 2026)
 
 When `APP_ENV=production`, application settings now reject known JWT signing-key placeholders, SQLite/uninstalled `postgresql://` driver defaults, and non-HTTPS or non-origin `FRONTEND_URL`. This is fail-closed configuration validation, not a guarantee that public DNS, PostgreSQL credentials, TLS termination, or PayPal webhooks are actually available. Configure `DATABASE_URL=postgresql+psycopg://...` and a public HTTPS frontend origin before deploying; local `APP_ENV=development` bootstrap is unchanged. A production frontend must also set its public API endpoint, `VITE_API_BASE_URL`, to the real HTTPS API URL at build time.
+
+Production/staging APP_ENV is now normalized to lower case; unsupported values such as prod are rejected rather than silently bypassing the startup checks or exposing production API docs. The example local postgres:postgres database URL is explicitly rejected in a public environment. Local development remains unchanged.

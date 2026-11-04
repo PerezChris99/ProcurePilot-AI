@@ -50,3 +50,25 @@ def test_production_normalizes_frontend_origin_for_cors_and_paypal_redirect():
              database_url='postgresql+psycopg://user:password@db.example.com/procurepilot',
              frontend_url='https://procurepilot.example.com/')
     assert settings.frontend_url == 'https://procurepilot.example.com'
+
+
+@pytest.mark.parametrize('unknown',['prod','live','release',''])
+def test_unknown_app_env_is_rejected_instead_of_silently_skipping_guards(unknown):
+    with pytest.raises(ValidationError, match='APP_ENV must'):
+        Settings(_env_file=None,app_env=unknown)
+
+
+def test_case_insensitive_production_environment_is_canonicalized():
+    settings = Settings(_env_file=None,app_env='Production',
+             jwt_secret_key='JxQ7fPcKzU4#n8BvA2!qW9sD6@hL3rTyN5',
+             database_url='postgresql+psycopg://user:password@db.example.com/procurepilot',
+             frontend_url='https://procurepilot.example.com')
+    assert settings.app_env == 'production'
+
+
+def test_public_environment_rejects_example_postgresql_credentials():
+    with pytest.raises(ValidationError, match='example PostgreSQL credentials'):
+        Settings(_env_file=None,app_env='production',
+             jwt_secret_key='JxQ7fPcKzU4#n8BvA2!qW9sD6@hL3rTyN5',
+             database_url='postgresql+psycopg://postgres:postgres@localhost:5432/procurepilot',
+             frontend_url='https://procurepilot.example.com')
