@@ -30,7 +30,7 @@ class PayPalClient:
     def is_approval_url(value):
         try: parsed=urlsplit(value) if isinstance(value,str) else None
         except ValueError: return False
-        return bool(parsed and parsed.scheme=='https' and parsed.hostname in ('www.sandbox.paypal.com','www.paypal.com') and not parsed.username and not parsed.password)
+        return bool(parsed and parsed.scheme=='https' and parsed.hostname in ('www.sandbox.paypal.com','www.paypal.com') and not parsed.username and not parsed.password and parsed.port is None)
 
     def ensure_configured(self):
         if not self.client_id or not self.client_secret:

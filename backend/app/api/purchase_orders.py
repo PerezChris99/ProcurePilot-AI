@@ -174,7 +174,7 @@ async def capture_paypal_order(order_id:str,db:Session=Depends(get_db),user:User
         payment.status='pending'; payment.provider_response={'paypal_status':result.get('status')}
         _audit(db,user.id,'payment.capture_pending',order_id=order.id,request_id=order.request_id,details={'paypal_status':result.get('status')})
         db.commit()
-        raise HTTPException(status_code=202,detail='PayPal has not confirmed a completed capture. The order remains unpaid.')
+        raise HTTPException(status_code=409,detail='PayPal has not confirmed a completed capture. The order remains unpaid; retry after the provider reports a final status.')
     captures=[]
     for unit in result.get('purchase_units') or []: captures.extend((unit.get('payments') or {}).get('captures') or [])
     capture=next((entry for entry in captures if entry.get('status')=='COMPLETED' and entry.get('id')),None)
