@@ -22,8 +22,24 @@ async def discover_and_rank_products(query: str, quantity: int = 1, budget: str 
         requirements=ProcurementRequirements(query=query,quantity=quantity,budget=Decimal(budget) if budget is not None else None,currency=currency,mandatory_attributes=mandatory_attributes or {},preferred_attributes=preferred_attributes or {})
         response=await Channel3Client().search_products(requirements.query,limit=20)
         scores=rank_products(response.products,requirements)
-        products={product.id:product for product in response.products}
-        return {'status':'success','source':'Channel3','results':[{'ranking':score.model_dump(mode='json'),'product':products[score.product_id].model_dump(mode='json')} for score in scores],'next_page_available':response.next_page_token is not None}
+        return {
+            'status': 'success',
+            'source': 'Channel3',
+            'results': [
+                {
+                    'product_id': score.product_id,
+                    'title': score.title[:120],
+                    'score': str(score.score) if score.score is not None else None,
+                    'eligible': score.eligible,
+                    'available': score.available,
+                    'best_unit_price': str(score.best_unit_price) if score.best_unit_price is not None else None,
+                    'currency': score.currency,
+                    'unmet_requirements': score.unmet_requirements[:5],
+                }
+                for score in scores[:5]
+            ],
+            'next_page_available': response.next_page_token is not None,
+        }
     except (Channel3ConfigurationError,Channel3Unavailable) as exc:
         return {'status':'unavailable','message':str(exc),'results':[]}
     except Exception:
