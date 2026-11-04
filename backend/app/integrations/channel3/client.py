@@ -1,3 +1,4 @@
+import json
 import httpx
 from pydantic import ValidationError
 from app.core.config import get_settings
@@ -27,8 +28,15 @@ class Channel3Client:
         if page_token: payload['page_token']=page_token
         try:
             async with httpx.AsyncClient(base_url=self.base_url,timeout=httpx.Timeout(12.0,connect=3.0),transport=self.transport) as client:
-                response=await client.post('search',headers=headers,json=payload)
-                response.raise_for_status()
-                return Channel3SearchResponse.model_validate(response.json())
+                async with client.stream('POST','search',headers=headers,json=payload) as response:
+                    response.raise_for_status()
+                    size=0
+                    chunks=[]
+                    async for chunk in response.aiter_bytes():
+                        size+=len(chunk)
+                        if size>2_097_152:
+                            raise Channel3Unavailable('Channel3 catalogue response exceeds the safe size limit')
+                        chunks.append(chunk)
+                    return Channel3SearchResponse.model_validate(json.loads(b''.join(chunks)))
         except (httpx.HTTPError,ValidationError,ValueError) as exc:
             raise Channel3Unavailable('Channel3 product search failed or returned an invalid response') from exc

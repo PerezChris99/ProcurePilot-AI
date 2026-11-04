@@ -94,9 +94,13 @@ async def _catalogue_snapshot(request: ProcurementRequest, user_id: str, *, curr
         raise HTTPException(status_code=502, detail='Channel3 product discovery is temporarily unavailable') from exc
 
     previous = (current or {}).get('results', []) if page_token else []
+    # Persistent snapshots must not grow indefinitely from repeated pagination.
+    if len(previous)>=120:
+        raise HTTPException(status_code=409,detail='Maximum saved catalogue results reached. Create a more specific request.')
     merged = {entry['product']['id']: entry['product'] for entry in previous}
     merged.update({product.id: product.model_dump(mode='json') for product in page.products})
-    products = [Channel3Product.model_validate(entry) for entry in merged.values()]
+    limited=list(merged.values())[:120]
+    products = [Channel3Product.model_validate(entry) for entry in limited]
     rankings = rank_products(products, requirements)
     by_id = {product.id: product for product in products}
     return {
@@ -108,8 +112,8 @@ async def _catalogue_snapshot(request: ProcurementRequest, user_id: str, *, curr
             }
             for item in rankings
         ],
-        'next_page_available': page.next_page_token is not None,
-        'next_page_token': page.next_page_token,
+        'next_page_available': page.next_page_token is not None and len(limited)<120,
+        'next_page_token': page.next_page_token if len(limited)<120 else None,
     }
 
 

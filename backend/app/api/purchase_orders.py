@@ -100,10 +100,18 @@ def create_purchase_order(request_id:str,payload:PurchaseOrderCreate,db:Session=
     if not payload.offer_url.startswith('https://'): raise HTTPException(status_code=422,detail='Retailer offer links must use HTTPS.')
     availability=''.join(char for char in str(offer.get('availability','')).casefold() if char.isalnum())
     if availability!='instock': raise HTTPException(status_code=422,detail='The selected retailer offer is not confirmed in stock.')
-    try: unit_price=Decimal(str(price.get('amount'))).quantize(Decimal('0.01'))
-    except (InvalidOperation,ValueError,TypeError): raise HTTPException(status_code=422,detail='The selected offer has no valid price.')
-    if unit_price<=0: raise HTTPException(status_code=422,detail='The selected offer price must be greater than zero.')
-    total=(unit_price*request.quantity).quantize(Decimal('0.01'))
+    try:
+        raw_price=Decimal(str(price.get('amount')))
+        if not raw_price.is_finite():
+            raise InvalidOperation('Non-finite provider price')
+        unit_price=raw_price.quantize(Decimal('0.01'))
+        total=(unit_price*request.quantity).quantize(Decimal('0.01'))
+    except (InvalidOperation,ValueError,TypeError,OverflowError) as exc:
+        raise HTTPException(status_code=422,detail='The selected offer has no valid finite currency amount.') from exc
+    if unit_price<=0:
+        raise HTTPException(status_code=422,detail='The selected offer price must be greater than zero.')
+    if total>Decimal('999999999999.99'):
+        raise HTTPException(status_code=422,detail='Order amount exceeds the supported currency range.')
     if request.budget is not None and total>request.budget: raise HTTPException(status_code=422,detail='The selected offer exceeds the procurement budget.')
     po_id=str(uuid.uuid4()); now=datetime.now(timezone.utc)
     order=PurchaseOrder(id=po_id,po_number='PP-'+now.strftime('%Y%m%d')+'-'+po_id[:8].upper(),user_id=user.id,request_id=request.id,status='draft',currency=request.currency,subtotal=total,total_amount=total)
