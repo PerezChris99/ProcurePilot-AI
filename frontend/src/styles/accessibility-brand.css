@@ -289,6 +289,39 @@ select:focus-visible,textarea:focus-visible,summary:focus-visible{
 .workspace-clock-zone{font-size:.75rem;color:var(--brand-muted)}
 .workspace-clock>svg{color:var(--brand-yellow-ink)}
 
+/* Long-tail pages and helper text that were formerly below 12px. */
+.app-frame .empty-state strong,.app-frame .orders-empty strong{
+  font-size:1rem;line-height:1.5;
+}
+.app-frame .empty-state p,.app-frame .orders-empty p,
+.app-frame .not-found p,.app-frame .discovery-empty p,
+.app-frame .saved-request p,.app-frame .request-summary p{
+  font-size:.9375rem;line-height:1.72;color:var(--brand-muted);
+}
+.app-frame .form-step,.app-frame .form-section-title p,
+.app-frame .secure-note,.app-frame .human-control-note,
+.app-frame .discovery-disclaimer,.app-frame .muted-note{
+  font-size:.90625rem;line-height:1.65;color:var(--brand-muted);
+}
+.app-frame .form-section-title h2{font-size:1.1875rem;line-height:1.4}
+.app-frame .optional-label,.app-frame .summary-label,
+.app-frame .summary-stats small,.app-frame .nav-count{
+  font-size:.8125rem;line-height:1.5;color:var(--brand-muted);
+}
+.app-frame .summary-stats strong{font-size:1.125rem;line-height:1.4}
+.app-frame .paid-indicator{
+  font-size:.90625rem;line-height:1.45;
+}
+.app-frame .live-indicator,.app-frame .activity-event-copy strong{
+  font-size:.8125rem;line-height:1.55;
+}
+.app-frame .ai-assessment-meta{
+  font-size:.8125rem!important;line-height:1.6;
+}
+.app-frame .saved-request .text-link{font-size:.90625rem}
+.app-frame .summary-stats{gap:12px}
+.app-frame .order-card-top,.app-frame .product-title-row{min-width:0}
+
 /* Universal six-tab mobile dock. Text remains legible at 320px without
    sacrificing six equal touch targets or the iPhone safe-area inset. */
 .mobile-dock{
