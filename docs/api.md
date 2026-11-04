@@ -39,3 +39,7 @@ Base path: /api/v1
 - PayPal webhook event IDs are unique and duplicate deliveries are idempotent.
 
 Foreign-owned resources return 404.
+
+## Dashboard
+
+Authenticated `GET /api/v1/dashboard/summary` returns user-scoped counts of completed, active and awaiting-approval orders; requests with discovered products; and the latest eight order audit events. It does not sum amounts in unrelated currencies. Provider status is separately available via `GET /api/v1/integrations/status`.
