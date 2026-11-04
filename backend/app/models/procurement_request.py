@@ -1,12 +1,16 @@
 import uuid
 from datetime import datetime,timezone
 from decimal import Decimal
-from sqlalchemy import DateTime,ForeignKey,Integer,JSON,Numeric,String,Text
+from sqlalchemy import DateTime,ForeignKey,Integer,JSON,Numeric,String,Text,Index
 from sqlalchemy.orm import Mapped,mapped_column
 from app.core.database import Base
 
 class ProcurementRequest(Base):
     __tablename__='procurement_requests'
+    __table_args__=(
+        Index('ix_procurement_requests_user_created','user_id','created_at'),
+        Index('ix_procurement_requests_user_status_created','user_id','status','created_at'),
+    )
     id: Mapped[str]=mapped_column(String(36),primary_key=True,default=lambda:str(uuid.uuid4()))
     user_id: Mapped[str]=mapped_column(ForeignKey('users.id',ondelete='CASCADE'),index=True,nullable=False)
     request_text: Mapped[str]=mapped_column(Text,nullable=False)
