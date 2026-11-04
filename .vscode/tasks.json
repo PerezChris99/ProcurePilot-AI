@@ -14,6 +14,26 @@
       }
     },
     {
+      "label": "ProcurePilot: Apply Database Migrations",
+      "type": "process",
+      "command": "${workspaceFolder}\\backend\\.venv\\Scripts\\python.exe",
+      "args": [
+        "-m",
+        "alembic",
+        "upgrade",
+        "head"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}\\backend"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
       "label": "ProcurePilot: Backend (Integrated Terminal)",
       "type": "process",
       "command": "${workspaceFolder}\\backend\\.venv\\Scripts\\python.exe",
@@ -86,6 +106,7 @@
       "label": "ProcurePilot: Build then Start (VS Code Terminals)",
       "dependsOn": [
         "ProcurePilot: Frontend Production Build",
+        "ProcurePilot: Apply Database Migrations",
         "ProcurePilot: Backend (Integrated Terminal)",
         "ProcurePilot: Frontend Dev Server (Integrated Terminal)"
       ],

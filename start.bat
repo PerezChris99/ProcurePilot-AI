@@ -36,7 +36,7 @@ if errorlevel 1 (
     )
 )
 
-echo [1/4] Preparing the backend virtual environment...
+echo [1/5] Preparing the backend virtual environment...
 if not exist "backend\.venv\Scripts\python.exe" (
     %PYTHON_LAUNCHER% -m venv "backend\.venv"
     if errorlevel 1 (
@@ -47,7 +47,7 @@ if not exist "backend\.venv\Scripts\python.exe" (
 )
 
 echo.
-echo [2/4] Installing Python dependencies...
+echo [2/5] Installing Python dependencies...
 "backend\.venv\Scripts\python.exe" -m pip install --upgrade pip
 if errorlevel 1 (
     echo [ERROR] Could not upgrade pip.
@@ -62,7 +62,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo [3/4] Preparing local environment files...
+echo [3/5] Preparing local environment files...
 if not exist ".env" (
     copy ".env.example" ".env" >nul
     if errorlevel 1 (
@@ -83,7 +83,7 @@ if not exist "frontend\.env" (
 )
 
 echo.
-echo [4/4] Installing frontend dependencies...
+echo [4/5] Installing frontend dependencies...
 pushd "frontend"
 if exist "package-lock.json" (
     echo Found package-lock.json. Attempting a clean, reproducible install...
@@ -108,14 +108,29 @@ if errorlevel 1 (
 popd
 
 echo.
+echo [5/5] Applying database migrations...
+pushd "backend"
+"%PROJECT_ROOT%\\backend\\.venv\\Scripts\\python.exe" -m alembic upgrade head
+if errorlevel 1 (
+    popd
+    echo [ERROR] Database migrations failed. The application was not started.
+    echo Check PostgreSQL is running, DATABASE_URL in the root .env is correct,
+    echo and the procurepilot database exists. Then rerun start.bat.
+    pause
+    exit /b 1
+)
+popd
+
+echo.
 echo ============================================================
-echo  Dependencies are ready.
+echo  Dependencies and database migrations are ready.
 echo.
 echo  Opening ProcurePilot in a dedicated VS Code window.
 echo  VS Code will automatically:
 echo    1. Run the frontend production build.
-echo    2. Start the backend terminal if the build succeeds.
-echo    3. Start the frontend terminal if the backend is ready.
+echo    2. Confirm database migrations are current.
+echo    3. Start the backend terminal if setup succeeds.
+echo    4. Start the frontend terminal when the backend is ready.
 echo.
 echo  First run: trust this workspace and allow automatic tasks.
 echo  Frontend: http://localhost:5173
