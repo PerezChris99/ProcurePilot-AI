@@ -9,7 +9,7 @@ export default function DashboardPage(){
  const {user}=useAuth();
  const hour=new Date().getHours();
  const greeting=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
- const name=(user?.full_name||'').trim().split(/\\s+/)[0]?.slice(0,35)||'there';
+ const name=(user?.full_name||'').trim().split(/\s+/)[0]?.slice(0,35)||'there';
  const health=useQuery({queryKey:['api-health'],queryFn:getHealth,retry:false});
  const integrations=useQuery({queryKey:['integration-status'],queryFn:getIntegrationStatus,retry:false});
  const summaryQuery=useQuery({queryKey:['dashboard-summary'],queryFn:getDashboardSummary,retry:false});

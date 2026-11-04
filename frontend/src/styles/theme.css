@@ -89,3 +89,5 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
   .metric-note { font-size: 10px; }
   .button { font-size: 11.5px; }
 }
+
+.ai-assessment-meta{display:block;margin-top:11px!important;padding-top:9px;border-top:1px solid #DBE9F1;color:#42647D!important;font-size:10.5px!important;font-weight:700}
