@@ -85,15 +85,15 @@ function HeroSlideshow(){
         aria-hidden={index!==active}
         width="1000"
         height="800"
-        loading={index===0?'eager':'lazy'}
+        loading="eager"
         decoding="async"
-        fetchPriority={index===0?'high':'auto'}
+        fetchPriority={index===0?'high':'low'}
       />)}
     </div>
     <div className="site-hero-mist" aria-hidden="true"/>
     <div className="site-hero-topline">
-      <span>PROCUREMENT / REIMAGINED</span>
-      <span>01 — 03</span>
+      <span>A CLEARER WAY TO BUY</span>
+      <span>PROCUREPILOT AI</span>
     </div>
     <div className="site-hero-caption" aria-live={paused?'polite':'off'}>
       <div>
@@ -138,9 +138,9 @@ export default function LandingPage(){
   return <>
     <section className="site-hero site-container" aria-labelledby="landing-headline">
       <div className="site-hero-text">
-        <span className="site-kicker"><span className="site-kicker-line"/> INTELLIGENT PROCUREMENT · HUMAN CONTROL</span>
+        <span className="site-kicker">A BETTER WAY TO BUY FOR WORK</span>
         <h1 id="landing-headline">Purchase with <em>clarity.</em><br/>Not guesswork.</h1>
-        <p>From a business need to a confident decision. Discover real product offers, compare the evidence, and approve every purchase on your terms.</p>
+        <p>Find the right products, understand the evidence, and approve purchases with confidence. One clear path from request to decision.</p>
         <div className="site-hero-actions">
           <Link className="site-button site-button-dark" to={user?'/dashboard':'/register'}>
             {user?'Go to workspace':'Explore ProcurePilot'} <ArrowRight size={18} aria-hidden="true"/>
@@ -168,14 +168,14 @@ export default function LandingPage(){
 
     <section className="site-container site-story-grid" id="why" aria-label="Problem and solution">
       <div className="site-story-left">
-        <span className="site-section-index">01 / THE PROBLEM</span>
+        <span className="site-section-index">THE CHALLENGE</span>
         <h2>Purchasing gets messy<br/>before anything is bought.</h2>
-        <p>Scattered products, unclear pricing, decisions in chat threads, and no reliable approval history.</p>
-        <div className="site-story-rule"><span>LESS SEARCHING.</span><span>MORE CERTAINTY.</span></div>
+        <p>Too many tabs, uncertain prices, approvals lost in conversations. It should be easier to know what you are buying and why.</p>
+        
       </div>
       <div className="site-story-right">
-        <span className="site-section-index">02 / OUR APPROACH</span>
-        <h2>One connected path<br/>from need to approval.</h2>
+        <span className="site-section-index">THE SOLUTION</span>
+        <h2>Every step, clearly connected.</h2>
         <div className="site-benefit-list">
           <div><SearchCheck size={20}/><span><strong>Evidence before opinions.</strong> Compare offers sourced from the catalogue.</span></div>
           <div><Sparkles size={20}/><span><strong>AI that explains.</strong> Short assessments based on available evidence.</span></div>
@@ -187,7 +187,7 @@ export default function LandingPage(){
     <section className="site-process-wrap" id="how">
       <div className="site-container">
         <div className="site-section-header">
-          <div><span className="site-section-index">03 / THE WORKFLOW</span><h2>Three steps. One clearer decision.</h2></div>
+          <div><span className="site-section-index">HOW IT WORKS</span><h2>Three steps. One clearer decision.</h2></div>
           <Link to="/how-it-works" className="site-text-action">View the full process <ArrowUpRight size={16}/></Link>
         </div>
         <div className="site-process-grid">
@@ -200,7 +200,7 @@ export default function LandingPage(){
 
     <section className="site-container site-faq-block" id="faq">
       <div className="site-faq-intro">
-        <span className="site-section-index">04 / GOOD TO KNOW</span>
+        <span className="site-section-index">COMMON QUESTIONS</span>
         <h2>The essentials,<br/>answered.</h2>
         <p>Clear boundaries, without the sales pitch.</p>
         <Link className="site-text-action" to="/responsible-use">Our operating principles <ArrowUpRight size={15}/></Link>
@@ -214,9 +214,9 @@ export default function LandingPage(){
     </section>
 
     <section className="site-container site-final-cta" aria-label="Get started">
-      <div><span className="site-section-index">YOUR NEXT PURCHASE, SIMPLIFIED</span>
-        <h2>Good decisions start here.</h2>
-        <p>See the workflow. Keep the final call.</p>
+      <div><span className="site-section-index">BETTER PURCHASING STARTS HERE</span>
+        <h2>Make the next decision clearer.</h2>
+        <p>Real evidence, helpful intelligence, and you in control.</p>
       </div>
       <Link to={user?'/dashboard':'/register'} className="site-button site-button-light">
         {user?'Open your workspace':'Start your workspace'} <ArrowRight size={17} aria-hidden="true"/>

@@ -88,3 +88,11 @@ Execute `.\\start.bat` then `.\\verify.bat` on Windows; on macOS/Linux use `./st
 - Verify public auth with managed TLS Redis: 429 plus Retry-After beyond thresholds, 503 fail-closed when Redis is down, no leaked email/password in Redis key names, correct client address behind a trusted ingress proxy. Check legitimate users behind NAT are not broadly throttled.
 - Validate 1 MiB incoming body/2 MiB Channel3 response rejection, finite price/maximum amount checks, malformed webhook event rejection, and default lean procurement list behavior with `include_analysis=true` as the explicit heavy legacy mode.
 - Run Postgres explain/plan analysis and representative load/soak/fault/restore tests before claiming 100K or 1M users. Rehearse PayPal Sandbox/webhook race handling separately. Full procedures: [scaling and operations](scaling.md).
+
+## Universal mobile navigation and landing polish
+
+- At 320, 375, 390, 430, 768, and 960 CSS pixels, verify the **same** fixed translucent dock design on `/`, `/#why`, `/#how`, `/#faq`, `/about`, `/privacy`, `/login`, `/register`, `/dashboard`, `/procurement`, `/orders` and `/requests/:id`. The public destinations are Home/Why/How/FAQ/About/Account (or Workspace for a signed-in user); private routes retain the six workspace/sidebar links.
+- Verify the active destination changes with a landing anchor hash and with the `/requests/:id` Discovery detail route. Anchors must scroll below the sticky header; safe-area spacing must keep the dock above the iPhone home indicator without obscuring the footer or sign-in controls.
+- At widths 961px and above, the bottom dock must be hidden: the public site uses its header links and the workspace uses its desktop sidebar.
+- Exercise the hero carousel manually (next/previous/dots/pause), keyboard-only and with `prefers-reduced-motion: reduce`; images must not hide readable captions or controls as they load. No external provider configuration is required to render the public landing page.
+- Run the complete five-stage local verifier, including ESLint, Vitest, Node-native configuration tests and Vite production build, after pulling; also inspect the real app in a phone browser. A GitHub merge is not a substitute for local runtime verification.

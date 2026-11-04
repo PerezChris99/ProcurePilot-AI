@@ -1,0 +1,314 @@
+/*
+  ProcurePilot — premium fintech surface.
+  High-contrast typography, editorial photography, restrained blue accents,
+  predictable interaction. No pseudo-ratings, glowing gradients or colored
+  navigation pills. Keep the existing KC/ProcurePilot brand, not PayPal marks.
+*/
+.site-shell {
+  --site-blue:#0865cc;
+  --site-deep:#0b1b3d;
+  --site-quiet:#4e627c;
+  --site-line:#dfe7ef;
+  background:#fff;
+  color:var(--site-deep);
+  overflow-x:clip;
+}
+.site-main{background:#fff}
+.site-container{width:min(calc(100% - 36px),1220px)}
+.site-header{
+  background:rgba(255,255,255,.97);
+  border-bottom:1px solid var(--site-line);
+  box-shadow:none;
+  -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:blur(12px);
+}
+.site-header-inner{max-width:1280px;min-height:72px}
+.site-brand,.site-footer-brand{font-weight:800;letter-spacing:-.055em}
+.site-brand-period,.site-footer-brand-dot{color:var(--site-blue)}
+.site-nav{gap:32px}
+.site-nav a{font-size:13px;color:#41536b;font-weight:660}
+.site-nav a:hover,.site-nav a:focus-visible{color:var(--site-blue)}
+.site-header-actions{gap:20px}
+.site-signin{font-size:13px;color:var(--site-deep);font-weight:700}
+.site-top-cta{
+  background:var(--site-blue);
+  min-height:43px;
+  border-radius:6px;
+  font-size:12px;
+  padding:0 19px;
+  font-weight:750;
+  box-shadow:none;
+}
+.site-top-cta:hover{background:#074da5;transform:none}
+.site-kicker,.site-section-index,.site-foot-eyebrow{
+  letter-spacing:.09em;
+  font-size:10px;
+  font-weight:800;
+  color:#346a9b;
+}
+.site-hero{
+  min-height:0;
+  padding-block:52px 62px;
+  grid-template-columns:minmax(0,1fr);
+  gap:31px;
+}
+.site-hero-text{max-width:600px}
+.site-hero-text h1{
+  font-size:clamp(40px,8.1vw,78px);
+  line-height:1.035;
+  letter-spacing:-.063em;
+  font-weight:800;
+  color:var(--site-deep);
+  margin:16px 0 19px;
+}
+.site-hero-text h1 em{color:#0768d0;font-style:normal}
+.site-hero-text>p{
+  max-width:490px;
+  color:var(--site-quiet);
+  font-size:15px;
+  line-height:1.75;
+}
+.site-hero-actions{gap:24px;margin-top:29px}
+.site-button{
+  min-height:49px;
+  border-radius:6px;
+  font-size:13px;
+  letter-spacing:0;
+  font-weight:750;
+  padding:0 22px;
+  transition:background-color .2s ease, border-color .2s ease;
+}
+.site-button:hover{transform:none}
+.site-button-dark{background:#0b1b3d;color:#fff}
+.site-button-dark:hover{background:#174679}
+.site-button-light{background:#fff;color:#0b1b3d}
+.site-button-light:hover{background:#f0f8ff}
+.site-text-action{color:#0c5fae;font-size:13px;gap:7px}
+.site-text-action:hover{text-decoration:underline;text-underline-offset:4px}
+.site-trust-note{
+  color:#536a80;
+  margin-top:25px;
+  font-size:11px;
+  gap:9px;
+}
+.site-trust-note svg{color:#0865cc}
+.site-hero-visual{
+  min-height:365px;
+  border:0;
+  border-radius:14px;
+  background:#d6e5f0;
+  box-shadow:none;
+}
+.site-hero-image{transition:opacity .8s ease,transform 9s ease-out;transform:scale(1.025)}
+.site-hero-image.is-visible{transform:scale(1)}
+.site-hero-mist{
+  background:linear-gradient(125deg,rgba(216,237,252,.36),rgba(242,249,255,.21) 45%,rgba(14,52,95,.14));
+  -webkit-backdrop-filter:blur(2px) saturate(105%);
+  backdrop-filter:blur(2px) saturate(105%);
+}
+.site-hero-topline{
+  top:22px;
+  left:23px;
+  right:23px;
+  font-size:10px;
+  letter-spacing:.095em;
+  color:#fff;
+}
+.site-hero-caption{
+  inset:auto 0 0;
+  padding:82px 23px 66px;
+  border:0;
+  background:linear-gradient(180deg,transparent 0%,rgba(8,30,62,.7) 100%);
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+  color:#fff;
+  align-items:end;
+}
+.site-photo-eyebrow{color:#dbedfb;font-size:10px;letter-spacing:.095em}
+.site-hero-caption h2{
+  color:#fff;
+  margin:9px 0 6px;
+  letter-spacing:-.025em;
+  font-weight:770;
+  font-size:clamp(19px,2.8vw,26px);
+}
+.site-hero-caption p{font-size:12px;color:#f1f7fd}
+.site-image-index{font-size:11px;color:#d6e9f7}
+.site-slide-controls{bottom:15px;left:20px;right:20px}
+.site-slide-dots{gap:4px}
+.site-slide-dot{width:32px;height:44px}
+.site-slide-dot::after{width:27px;height:3px;border-radius:3px;background:rgba(255,255,255,.45)}
+.site-slide-dot.is-active::after{background:#fff}
+.site-slide-arrows{gap:5px}
+.site-slide-arrows button{
+  width:44px;height:44px;
+  border-radius:6px;
+  border:1px solid rgba(255,255,255,.5);
+  background:rgba(6,26,60,.2);
+  -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:blur(12px);
+}
+.site-slide-arrows button:hover{background:rgba(6,26,60,.52)}
+.site-slide-arrows button:focus-visible,.site-slide-dot:focus-visible{
+  outline:3px solid #fff;outline-offset:2px;
+}
+.site-evidence-strip{background:#f3f8fd;border-color:#e3ebf3}
+.site-evidence-inner{padding-block:24px}
+.site-evidence-title{color:#62768e;font-size:10px;letter-spacing:.08em}
+.site-evidence-names>span{
+  font-weight:760;
+  letter-spacing:-.035em;
+  color:#1a3154;
+}
+.site-evidence-names small{color:#566e84;font-size:11px}
+.site-story-grid{padding-block:59px;gap:31px}
+.site-story-grid h2,.site-section-header h2,.site-faq-intro h2,.site-final-cta h2{
+  font-size:clamp(26px,4.2vw,36px);
+  letter-spacing:-.045em;
+  line-height:1.17;
+  font-weight:790;
+}
+.site-story-grid p{font-size:13px;line-height:1.8;color:#566b83}
+.site-story-right{border-top:1px solid var(--site-line);padding-top:24px}
+.site-benefit-list{gap:16px}
+.site-benefit-list>div{font-size:13px;line-height:1.6;color:#526881;gap:14px}
+.site-benefit-list strong{color:#112e50}
+.site-benefit-list svg{color:#096bc8}
+.site-process-wrap{
+  background:#f6f9fc;
+  border-block:1px solid #e6edf4;
+  padding-block:47px;
+}
+.site-section-header{margin-bottom:24px}
+.site-process-grid{gap:0}
+.site-process-step{
+  min-height:0;
+  padding:18px 18px 20px 0;
+  border:0;
+  border-top:1px solid #cad8e5;
+  background:transparent;
+}
+.site-step-number{font-size:11px;color:#0865cc;font-weight:800}
+.site-process-step h3{font-size:18px;letter-spacing:-.025em;margin-top:13px}
+.site-process-step p{font-size:12.5px;line-height:1.7}
+.site-faq-block{padding-block:57px;gap:24px}
+.site-faq-intro p{font-size:13px}
+.site-faq-grid{gap:0 20px}
+.site-faq-item{
+  background:transparent;
+  border:0;
+  border-top:1px solid #d9e4ed;
+}
+.site-faq-item:last-child{border-bottom:1px solid #d9e4ed}
+.site-faq-item summary{
+  min-height:66px;
+  padding:15px 0;
+  font-size:13px;
+  font-weight:720;
+  line-height:1.5;
+  gap:13px;
+}
+.site-faq-item summary>span{font-size:10px;color:#4482b8}
+.site-faq-item p{font-size:12px;color:#50677c;padding:0 20px 18px 29px}
+.site-final-cta{
+  background:#0b1b3d;
+  border:0;
+  border-radius:12px;
+  padding:33px 28px;
+  margin-bottom:55px;
+  box-shadow:none;
+}
+.site-final-cta::after{display:none}
+.site-final-cta .site-section-index{color:#92cffa}
+.site-final-cta p{font-size:13px;color:#cbd8e7}
+.site-footer{background:#0b1b3d}
+.site-footer-top{gap:28px;padding-block:42px}
+.site-footer-links strong{color:#9ed5f5}
+.site-footer-links a{line-height:1.6}
+.site-footer-bottom{color:#b3c2d6}
+.site-info-head{border-bottom-color:var(--site-line)}
+.site-info-card{border-color:var(--site-line);border-radius:4px}
+.site-info-nav-link.is-selected{color:#0865cc}
+.site-info-side{background:#eaf4ff;border-left-color:#0865cc}
+.site-contact-links a:hover{background:#f2f8fe}
+/* The same bottom dock is now present on public, login and workspace routes. */
+.mobile-dock{
+  border-color:rgba(11,27,61,.1);
+  background:rgba(255,255,255,.96);
+  box-shadow:0 11px 35px rgba(11,27,61,.13);
+}
+.mobile-dock-link{
+  border-radius:0;
+  background:transparent;
+  color:#536780;
+  font-size:10px;
+  font-weight:690;
+}
+.mobile-dock-link.active{color:#0b1b3d}
+.mobile-dock-link.active::before{background:#0865cc}
+.mobile-dock-link:hover{background:transparent}
+@media(max-width:960px){
+  /* Use the dock instead of two competing public navigation systems. */
+  .site-nav{display:none}
+  .site-footer{padding-bottom:calc(94px + env(safe-area-inset-bottom,0px))}
+  .auth-page{padding-bottom:calc(124px + env(safe-area-inset-bottom,0px))}
+  .site-header-actions{gap:13px}
+}
+@media(min-width:520px){
+  .site-hero-visual{min-height:440px}
+  .site-hero-caption{padding-inline:27px;padding-bottom:77px}
+  .site-slide-controls{left:24px;right:24px}
+  .site-process-grid{gap:16px}
+}
+@media(min-width:760px){
+  .site-container{width:min(calc(100% - 56px),1220px)}
+  .site-hero{
+    grid-template-columns:minmax(0,1fr) minmax(0,1.03fr);
+    gap:clamp(26px,4vw,58px);
+    padding-block:67px 71px;
+  }
+  .site-hero-visual{min-height:470px}
+  .site-hero-text h1{font-size:clamp(48px,5.8vw,78px)}
+  .site-story-grid{grid-template-columns:1fr 1fr;gap:60px;padding-block:69px}
+  .site-story-right{border-top:0;border-left:1px solid var(--site-line);padding:0 0 0 38px}
+  .site-process-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:0}
+  .site-process-step{padding:21px 24px 14px 0}
+  .site-process-step:not(:first-child){padding-left:25px;border-left:1px solid #dce6ef}
+  .site-faq-block{padding-block:65px}
+  .site-final-cta{padding:38px 43px}
+}
+@media(min-width:961px){
+  .site-nav{display:flex}
+  .mobile-dock{display:none}
+  .site-hero{padding-block:78px 78px}
+  .site-hero-visual{min-height:510px}
+}
+@media(max-width:519px){
+  .site-header-inner{min-height:66px}
+  .site-brand{font-size:19px}
+  .site-hero{padding-block:34px 43px;gap:26px}
+  .site-hero-text>p{font-size:14px}
+  .site-hero-text h1{font-size:clamp(38px,9.2vw,50px)}
+  .site-hero-visual{min-height:335px}
+  .site-hero-caption{padding:73px 18px 70px}
+  .site-hero-caption h2{font-size:20px}
+  .site-hero-topline{left:18px;right:18px}
+  .site-evidence-inner{padding-block:19px}
+  .site-story-grid{padding-block:41px}
+  .site-faq-block{padding-block:46px}
+  .site-final-cta{padding:26px 22px}
+}
+@media(prefers-reduced-motion:reduce){
+  .site-hero-image,.site-slide-dot::after,.site-top-cta,
+  .site-button,.site-nav a{transition:none!important;transform:none!important}
+}
+
+/* A single quiet entrance, not an always-running parallax effect. */
+@keyframes site-welcome{
+  from{opacity:0;transform:translateY(9px)}
+  to{opacity:1;transform:translateY(0)}
+}
+@media(prefers-reduced-motion:no-preference){
+  .site-hero-text{animation:site-welcome .52s ease-out both}
+  .site-hero-visual{animation:site-welcome .62s ease-out .06s both}
+}
