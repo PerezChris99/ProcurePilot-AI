@@ -1,17 +1,46 @@
-MIT License
+ProcurePilot AI — Proprietary Authorized-Use License
+Copyright (c) 2026 PerezChris99. All rights reserved.
 
-Copyright (c) 2026 PerezChris99
+1. OWNERSHIP AND RESERVED RIGHTS
+All original code, interfaces, documentation, designs, graphics, data models,
+and other copyrightable content in this repository are owned by their
+respective copyright holders. Except for the narrow permission expressly
+granted below, no license or other right is granted by access to, viewing,
+cloning, or downloading the source code.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+2. PERMISSION REQUIRED
+Access, operation, modification, copying, distribution, public deployment,
+hosting, sublicensing, commercialization, or other exploitation of this
+Software requires prior written authorization from the copyright holder,
+except to the extent explicitly allowed in section 3 or by applicable law.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+3. LIMITED HACKATHON EVALUATION AUTHORIZATION
+Organizers, assigned judges, sponsors, and technical reviewers of a hackathon
+to which ProcurePilot AI is submitted are authorized to inspect, download,
+build, and execute this Software solely for judging and technical evaluation
+of that submission. This permission is limited, nonexclusive,
+nontransferable, revocable where permitted by law, and does not permit
+commercial reuse, redistribution, publication of modified versions, resale,
+or production hosting. Evaluators must use their own authorized credentials
+and must not expose submitted secrets or private data.
 
+4. THIRD-PARTY MATERIAL
+Third-party dependencies, trademarks, APIs, product listings, and external
+services remain subject to their own terms and licenses. This notice does
+not restrict rights granted by applicable third-party licenses.
+
+5. NO WARRANTIES
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. TO THE MAXIMUM
+EXTENT PERMITTED BY LAW, COPYRIGHT HOLDERS SHALL NOT BE LIABLE FOR CLAIMS,
+DAMAGES, OR OTHER LIABILITY ARISING FROM USE OF THE SOFTWARE.
+
+6. PERMISSION CONTACT
+To request use, collaboration, redistribution, or deployment permission,
+contact the project owner via this repository's GitHub profile:
+https://github.com/PerezChris99
+
+This is a proprietary, source-visible evaluation license and is NOT an
+OSI-approved open-source license. Public repository visibility does not
+constitute permission for unrestricted use.
