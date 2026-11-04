@@ -40,7 +40,7 @@ test('brand yellow, navy and text color pairs reach strong reading contrast',()=
 
 test('accessibility typography overrides load after prior theme layers',()=>{
   assert.match(main,/import '\.\/styles\/fintech-polish\.css';\s*import '\.\/styles\/accessibility-brand\.css';/);
-  assert.match(styles,/html\s*\{\s*font-size:16px/);
+  assert.match(styles,/:root\s*\{[^}]*font-size:16px/);
   for(const selector of [
     '.site-hero-text>p',
     '.site-faq-item summary',

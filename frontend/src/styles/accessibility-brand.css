@@ -16,9 +16,10 @@
   --brand-muted:#425570;
   --honey:var(--brand-yellow);
   --yellow:var(--brand-yellow);
+  /* :root matches the original stylesheet's selector specificity. */
+  font-size:16px;
 }
 html{
-  font-size:16px;
   scroll-padding-top:5.75rem;
 }
 body{
