@@ -24,12 +24,16 @@ describe('DashboardPage',()=>{
  });
  it('shows live provider configuration rather than hard-coded not configured labels',async()=>{
   renderPage();
-  expect(await screen.findByText('Google Gemini')).toBeInTheDocument();
-  expect(screen.getByText('PayPal Sandbox')).toBeInTheDocument();
-  expect((await screen.findAllByText('Configured')).length).toBe(3);
-  expect(screen.getByText('Webhook ID missing')).toBeInTheDocument();
-  expect(screen.getByText('PayPal webhook')).toBeInTheDocument();
-  expect(screen.getByText(/configured means credentials are present, not verified/i)).toBeInTheDocument();
+  // Provider names render before React Query resolves, but the PayPal
+  // environment and credential states come from the asynchronous API response.
+  await waitFor(()=>{
+   expect(screen.getByText('Google Gemini')).toBeInTheDocument();
+   expect(screen.getByText('PayPal Sandbox')).toBeInTheDocument();
+   expect(screen.getAllByText('Configured')).toHaveLength(3);
+   expect(screen.getByText('Webhook ID missing')).toBeInTheDocument();
+   expect(screen.getByText('PayPal webhook')).toBeInTheDocument();
+   expect(screen.getByText(/configured means credentials are present, not verified/i)).toBeInTheDocument();
+  });
  });
 });
 
