@@ -31,7 +31,7 @@ def test_gemini_38_config_avoids_deprecated_temperature_and_caps_thinking():
     assert config.temperature is None
     assert config.max_output_tokens >= 256
     assert config.thinking_config is not None
-    assert str(config.thinking_config.thinking_level).lower() == 'low'
+    assert str(config.thinking_config.thinking_level).lower().endswith('low')
 
 
 def test_legacy_gemini_models_do_not_receive_unsupported_3x_thinking_level():

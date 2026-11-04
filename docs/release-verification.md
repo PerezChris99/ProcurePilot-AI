@@ -48,3 +48,6 @@ Run start.bat, verify.bat, and the manual walkthrough in docs/testing.md. Record
 - Added production startup validation for persistent PostgreSQL via installed psycopg driver, a canonical HTTPS frontend origin, and the existing strong JWT secret requirement. The Windows development bootstrap remains unchanged.
 - Added regression tests for model generation settings and incorrect production database/frontend URLs.
 - Still not release-certified until the user runs the full Windows verify.bat (including frontend lint/Vitest/build) and exercises live provider credentials and PayPal Sandbox with signed HTTPS webhooks. No checked-in frontend lockfile or browser E2E suite exists.
+
+- Windows bootstrap now rejects incompatible Node.js versions before attempting to install Vite 7 dependencies; package.json declares the corresponding Node engines, and the Vite dev server defaults to localhost binding.
+- The model config regression accepts the SDK's enum/string representation of the low thinking level.

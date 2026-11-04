@@ -112,3 +112,7 @@ The authenticated /approvals route now has a dedicated page for pending submitte
 New backend-only settings are AI_MAX_OUTPUT_TOKENS, AI_TIMEOUT_SECONDS, AI_DAILY_USER_RUNS, AI_DAILY_GLOBAL_RUNS and AI_EVIDENCE_CANDIDATES. Defaults are in the root .env.example. They do not belong in frontend/.env. See docs/agent.md and docs/testing.md for details.
 
 Before each startup, stop existing VS Code backend/frontend terminal tasks or free ports 8000/5173; VS Code may require workspace trust and explicit permission before automatically running folder-open tasks. Database startup and third-party credential creation cannot be automated by the repository.
+
+## Node.js / local browser safety
+
+The launcher now checks Node.js **20.19+** or **22.12+** before dependency installation because Vite 7 requires these ranges. Node 18 and 21 are unsupported. The development server defaults to loopback (`127.0.0.1`) rather than listening on the public network. Local bootstrap still works with `APP_ENV=development`; production mode requires an HTTPS frontend origin, a strong JWT secret, and a PostgreSQL URL using the installed psycopg driver.
