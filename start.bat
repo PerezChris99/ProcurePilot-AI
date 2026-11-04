@@ -1,30 +1,27 @@
 @echo off
 setlocal EnableExtensions
 
-REM ProcurePilot AI - Windows local development launcher.
-REM Run this file from Explorer or from any Command Prompt / PowerShell location.
+REM ProcurePilot AI - Windows + VS Code local development bootstrap.
+REM Run from the VS Code integrated terminal after pulling the perez branch.
 
 cd /d "%~dp0"
 set "PROJECT_ROOT=%CD%"
 
 echo.
 echo ============================================================
-echo  ProcurePilot AI - Local Development Setup
+echo  ProcurePilot AI - VS Code Development Setup
 echo ============================================================
 echo.
 
-REM Check required tools before changing the environment.
 where npm >nul 2>nul
 if errorlevel 1 (
     echo [ERROR] Node.js and npm were not found on PATH.
-    echo Install the current Node.js LTS release, reopen the terminal, and retry.
+    echo Install Node.js LTS, reopen VS Code, and retry.
     pause
     exit /b 1
 )
 
 REM Prefer the Python executable already available on PATH.
-REM The Python Launcher may be installed without a 3.12 runtime registered,
-REM so do not assume that "py -3.12" exists just because "py" exists.
 set "PYTHON_LAUNCHER=python"
 python -c "import sys; raise SystemExit(0 if sys.version_info >= (3,12) else 1)" >nul 2>nul
 if errorlevel 1 (
@@ -37,22 +34,13 @@ if errorlevel 1 (
         where python 2>nul
         where py 2>nul
         echo.
-        echo Try running "python --version" and "py -0p" to inspect installed versions.
-        echo Ensure Python 3.12+ is on PATH, or install it from python.org.
+        echo Run "python --version" and "py -0p" to inspect installed versions.
         pause
         exit /b 1
     )
 )
 
-%PYTHON_LAUNCHER% --version
-if errorlevel 1 (
-    echo [ERROR] The detected Python runtime could not be started.
-    pause
-    exit /b 1
-)
-
-echo.
-echo [1/5] Preparing the backend virtual environment...
+echo [1/4] Preparing the backend virtual environment...
 if not exist "backend\.venv\Scripts\python.exe" (
     %PYTHON_LAUNCHER% -m venv "backend\.venv"
     if errorlevel 1 (
@@ -63,29 +51,22 @@ if not exist "backend\.venv\Scripts\python.exe" (
 )
 
 echo.
-echo [2/5] Installing Python dependencies...
-call "backend\.venv\Scripts\activate.bat"
-if errorlevel 1 (
-    echo [ERROR] Could not activate the backend virtual environment.
-    pause
-    exit /b 1
-)
-python -m pip install --upgrade pip
+echo [2/4] Installing Python dependencies...
+"backend\.venv\Scripts\python.exe" -m pip install --upgrade pip
 if errorlevel 1 (
     echo [ERROR] Could not upgrade pip.
     pause
     exit /b 1
 )
-python -m pip install -r "backend\requirements.txt"
+"backend\.venv\Scripts\python.exe" -m pip install -r "backend\requirements.txt"
 if errorlevel 1 (
     echo [ERROR] Python dependency installation failed.
     pause
     exit /b 1
 )
 
-
 echo.
-echo [3/5] Preparing local environment files...
+echo [3/4] Preparing local environment files...
 if not exist ".env" (
     copy ".env.example" ".env" >nul
     if errorlevel 1 (
@@ -106,7 +87,7 @@ if not exist "frontend\.env" (
 )
 
 echo.
-echo [4/5] Installing frontend dependencies...
+echo [4/4] Installing frontend dependencies...
 pushd "frontend"
 if exist "package-lock.json" (
     call npm ci
@@ -122,30 +103,38 @@ if errorlevel 1 (
 popd
 
 echo.
-echo [5/5] Starting backend and frontend in separate terminal windows...
-start "ProcurePilot Backend" /D "%PROJECT_ROOT%\backend" cmd /k "call .venv\Scripts\activate.bat && python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
-start "ProcurePilot Frontend" /D "%PROJECT_ROOT%\frontend" cmd /k "npm run dev -- --host 127.0.0.1"
-
-echo.
 echo ============================================================
-echo  Startup commands launched.
+echo  Setup complete. Handing startup to VS Code tasks.
+echo.
+echo  VS Code will run the frontend production build first.
+echo  Backend and frontend integrated terminals start only if
+echo  that build succeeds.
+echo.
+echo  In the task picker, select:
+echo  ProcurePilot: Build then Start (VS Code Terminals)
 echo.
 echo  Frontend: http://localhost:5173
 echo  Backend:  http://localhost:8000
 echo  API docs: http://localhost:8000/docs
-echo.
-echo  IMPORTANT:
-echo  - The backend environment file defaults to local PostgreSQL.
-echo    Ensure PostgreSQL is running and the procurepilot database
-echo    exists, or edit DATABASE_URL in the root .env file.
-echo  - Apply database migrations from backend with:
-echo      .venv\Scripts\activate
-echo      alembic upgrade head
-echo  - Provider keys are optional for basic local startup, but
-echo    Gemini, Channel3 and PayPal features need valid credentials.
-echo  - This script does not install PostgreSQL or create cloud
-echo    provider accounts.
 echo ============================================================
 echo.
-pause
+
+where code >nul 2>nul
+if errorlevel 1 (
+    echo [ERROR] VS Code command-line launcher "code" is not on PATH.
+    echo Open this folder in VS Code, then use Terminal ^> Run Task.
+    echo Select: ProcurePilot: Build then Start (VS Code Terminals)
+    pause
+    exit /b 1
+)
+
+code --reuse-window "%PROJECT_ROOT%" --command workbench.action.tasks.runTask
+if errorlevel 1 (
+    echo [ERROR] Could not invoke the VS Code task picker.
+    echo In VS Code, use Terminal ^> Run Task and select:
+    echo ProcurePilot: Build then Start (VS Code Terminals)
+    pause
+    exit /b 1
+)
+
 exit /b 0
