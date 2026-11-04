@@ -2,17 +2,84 @@
 
 ## Prerequisites
 
-- Node.js LTS and npm
-- Python 3.12+
-- PostgreSQL (SQLite is used for isolated tests)
 - Git
+- Python 3.12+
+- Node.js LTS and npm
+- PostgreSQL for the configured local database (SQLite is used by isolated tests)
 
-## Frontend
+## Windows quick start
 
-From the frontend directory, copy .env.example to .env, install dependencies with npm install, and run npm run dev. Before committing, run npm test, npm run lint, and npm run build.
+From the repository root, run:
 
-## Backend
+```bat
+start.bat
+```
 
-From the backend directory, create and activate a Python virtual environment, install dependencies with pip install -r requirements.txt, and copy ../.env.example to .env (or configure environment variables directly). Run database migrations with alembic upgrade head, execute tests with pytest, and start the API with uvicorn app.main:app --reload.
+The launcher creates `backend\\.venv` when needed, installs `backend/requirements.txt`, creates local `.env` files from the examples if they do not exist, installs frontend packages, and opens separate terminal windows for the FastAPI backend and Vite frontend.
 
-Never put credentials in VITE_ variables: Vite exposes those values to browser code. The frontend .env file must contain only the public API base URL. Keep AI, Channel3, database, JWT, and PayPal secrets in the backend environment.
+Local URLs:
+
+- Frontend: http://localhost:5173
+- Backend: http://localhost:8000
+- API documentation: http://localhost:8000/docs
+
+The launcher does not install or start PostgreSQL. The root `.env.example` configures PostgreSQL at `localhost:5432` with database name `procurepilot`; start PostgreSQL and create that database, or change `DATABASE_URL` in the root `.env` before starting the backend. Do not replace an existing `.env` file: the launcher intentionally preserves local credentials and configuration.
+
+After configuring the database, apply migrations once from the repository root:
+
+```bat
+cd backend
+.venv\\Scripts\\activate
+alembic upgrade head
+```
+
+The external Gemini, Channel3, and PayPal features require their corresponding backend credentials. Keep these secrets in the root/backend environment, never in frontend `VITE_` variables.
+
+## Manual frontend setup
+
+From `frontend/`:
+
+```powershell
+Copy-Item .env.example .env
+npm install
+npm run dev
+```
+
+Before committing, run:
+
+```powershell
+npm test
+npm run lint
+npm run build
+```
+
+## Manual backend setup
+
+From the repository root:
+
+```powershell
+py -3.12 -m venv backend/.venv
+backend/.venv/Scripts/Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r backend/requirements.txt
+Copy-Item .env.example .env
+Set-Location backend
+alembic upgrade head
+python -m uvicorn app.main:app --reload
+```
+
+If PowerShell blocks virtual-environment activation, either use `backend\\.venv\\Scripts\\python.exe -m pip ...` directly or adjust the current user's PowerShell execution policy according to your organization's policy. The batch launcher avoids PowerShell activation-policy issues.
+
+Run backend tests from `backend/`:
+
+```powershell
+.venv/Scripts/Activate.ps1
+pytest
+pytest --cov=app --cov-report=term-missing
+```
+
+## Environment and secrets
+
+The root `.env.example` is the backend environment template. The frontend `frontend/.env.example` contains only the public API base URL. Vite exposes variables prefixed with `VITE_` to browser code; never put API keys, database URLs, JWT secrets, or PayPal credentials in frontend variables.
+
+Keep AI, Channel3, database, JWT, and PayPal secrets server-side. Never commit `.env` files or real credentials.
