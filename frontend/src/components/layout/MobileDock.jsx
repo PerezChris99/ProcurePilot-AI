@@ -1,5 +1,6 @@
 import {Link,useLocation} from 'react-router-dom';
 import {useAuth} from '../../context/useAuth.js';
+import IosDockIcon from './IosDockIcon.jsx';
 import {isNavigationActive,publicNavigation,workspaceNavigation} from './navigation.js';
 
 /**
@@ -13,12 +14,12 @@ export default function MobileDock({variant='public'}){
   const items=workspace?workspaceNavigation:publicNavigation(Boolean(user));
   return <nav className={'mobile-dock'+(workspace?' mobile-dock-workspace':' mobile-dock-public')}
     aria-label={workspace?'Mobile workspace navigation':'Mobile website navigation'}>
-    {items.map(({label,short,to,icon:Icon})=>{
+    {items.map(({label,short,to,iosIcon})=>{
       const active=isNavigationActive(pathname,hash,to);
       return <Link key={to} to={to} aria-label={label}
         aria-current={active?'page':undefined}
         className={'mobile-dock-link'+(active?' active':'')}>
-        <Icon size={19} strokeWidth={1.9} aria-hidden="true"/>
+        <IosDockIcon name={iosIcon} active={active}/>
         <span>{short}</span>
       </Link>;
     })}

@@ -1,4 +1,4 @@
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {Link} from 'react-router-dom';
 import {
   ArrowLeft,ArrowRight,ArrowUpRight,ChevronDown,ClipboardCheck,
@@ -8,21 +8,21 @@ import {useAuth} from '../context/useAuth.js';
 
 const photography=[
   {
-    src:'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1460&q=78',
+    src:'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=2200&q=80',
     alt:'An organized warehouse with shelves of parcels and inventory.',
     title:'Less uncertainty in sourcing',
     detail:'Know what the catalogue actually shows.',
     eyebrow:'THE SOURCING PROBLEM',
   },
   {
-    src:'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=1460&q=78',
+    src:'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=2200&q=80',
     alt:'Professionals discussing plans and working from laptops in an office.',
     title:'Decisions people can stand behind',
     detail:'Review evidence before anyone approves.',
     eyebrow:'THE HUMAN DECISION',
   },
   {
-    src:'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1460&q=78',
+    src:'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=2200&q=80',
     alt:'A sunlit modern office meeting space behind glass walls.',
     title:'One clearer purchasing workspace',
     detail:'From initial request to an auditable trail.',
@@ -49,7 +49,8 @@ const faqs=[
   },
 ];
 
-function HeroSlideshow(){
+function HeroSlideshow({children}){
+  const heroRef=useRef(null);
   const [active,setActive]=useState(0);
   const [paused,setPaused]=useState(false);
   const [motionReduced,setMotionReduced]=useState(false);
@@ -66,9 +67,50 @@ function HeroSlideshow(){
     const timer=window.setInterval(()=>setActive(index=>(index+1)%photography.length),7000);
     return ()=>window.clearInterval(timer);
   },[paused,motionReduced]);
+  // Scroll-only parallax; never animate on mobile or for reduced-motion users.
+  useEffect(()=>{
+    const hero=heroRef.current;
+    if(!hero || typeof window.matchMedia!=='function' ||
+       typeof window.requestAnimationFrame!=='function')return;
+    const desktop=window.matchMedia('(min-width: 961px)');
+    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
+    let enabled=false;
+    let frame=0;
+    const paint=()=>{
+      frame=0;
+      if(!enabled)return;
+      const bounds=hero.getBoundingClientRect();
+      if(bounds.bottom<0 || bounds.top>window.innerHeight)return;
+      const shift=Math.max(-36,Math.min(36,
+        (window.innerHeight/2-(bounds.top+bounds.height/2))*0.12));
+      hero.style.setProperty('--hero-parallax-shift',shift.toFixed(1)+'px');
+    };
+    const schedule=()=>{
+      if(enabled && frame===0)frame=window.requestAnimationFrame(paint);
+    };
+    const sync=()=>{
+      enabled=desktop.matches && !reduced.matches;
+      if(!enabled)hero.style.removeProperty('--hero-parallax-shift');
+      schedule();
+    };
+    desktop.addEventListener?.('change',sync);
+    reduced.addEventListener?.('change',sync);
+    window.addEventListener('scroll',schedule,{passive:true});
+    window.addEventListener('resize',schedule,{passive:true});
+    sync();
+    return ()=>{
+      window.removeEventListener('scroll',schedule);
+      window.removeEventListener('resize',schedule);
+      desktop.removeEventListener?.('change',sync);
+      reduced.removeEventListener?.('change',sync);
+      if(frame)window.cancelAnimationFrame?.(frame);
+      hero.style.removeProperty('--hero-parallax-shift');
+    };
+  },[]);
   const change=amount=>setActive(index=>(index+amount+photography.length)%photography.length);
   return <section
-    className="site-hero-visual"
+    ref={heroRef}
+    className="site-hero site-container site-hero-visual"
     aria-roledescription="carousel"
     aria-label="Procurement photography"
     onMouseEnter={()=>setPaused(true)}
@@ -91,6 +133,7 @@ function HeroSlideshow(){
       />)}
     </div>
     <div className="site-hero-mist" aria-hidden="true"/>
+    <div className="site-hero-content">{children}</div>
     <div className="site-hero-caption" aria-live={paused?'polite':'off'}>
       <div>
         <span className="site-photo-eyebrow">{photography[active].eyebrow}</span>
@@ -132,7 +175,7 @@ function Point({index,title,copy}){
 export default function LandingPage(){
   const {user}=useAuth();
   return <>
-    <section className="site-hero site-container" aria-labelledby="landing-headline">
+    <HeroSlideshow>
       <div className="site-hero-text">
         <span className="site-kicker">A BETTER WAY TO BUY FOR WORK</span>
         <h1 id="landing-headline">Purchase with <em>clarity.</em><br/>Not guesswork.</h1>
@@ -147,8 +190,7 @@ export default function LandingPage(){
         </div>
         <div className="site-trust-note"><ShieldCheck size={16} aria-hidden="true"/> AI insights · Human approvals · Sandbox payments.</div>
       </div>
-      <HeroSlideshow/>
-    </section>
+    </HeroSlideshow>
 
     <section className="site-evidence-strip" aria-label="Technology foundation">
       <div className="site-container site-evidence-inner">
