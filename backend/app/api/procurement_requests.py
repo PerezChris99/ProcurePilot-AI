@@ -1,83 +1,226 @@
-from fastapi import APIRouter,Depends,HTTPException,Query,status
+"""User-scoped procurement endpoints and evidence-first, budgeted AI orchestration."""
+from datetime import datetime, timedelta, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
 from app.agents import runtime
-from app.agents.runtime import AgentConfigurationError,AgentExecutionError
+from app.agents.budget import AiQuotaExceeded, reserve_ai_call
+from app.agents.evidence import evidence_prompt
+from app.agents.runtime import AgentConfigurationError, AgentExecutionError
+from app.core.config import get_settings
 from app.core.database import get_db
-from app.integrations.channel3.client import Channel3Client,Channel3ConfigurationError,Channel3Unavailable
+from app.integrations.channel3.client import (
+    Channel3Client, Channel3ConfigurationError, Channel3Unavailable,
+)
 from app.integrations.channel3.schemas import Channel3Product
 from app.models.procurement_request import ProcurementRequest
 from app.models.user import User
 from app.procurement.schemas import ProcurementRequirements
 from app.procurement.scoring import rank_products
-from app.schemas.procurement_request import ProcurementRequestCreate,ProcurementRequestResponse
+from app.schemas.procurement_request import ProcurementRequestCreate, ProcurementRequestResponse
 from app.security.tokens import get_current_user
 
-router=APIRouter(prefix='/procurement-requests',tags=['procurement'])
+router = APIRouter(prefix='/procurement-requests', tags=['procurement'])
 
-def _owned_request(request_id: str,user: User,db: Session) -> ProcurementRequest:
-    request=db.scalar(select(ProcurementRequest).where(ProcurementRequest.id==request_id,ProcurementRequest.user_id==user.id))
-    if request is None: raise HTTPException(status_code=404,detail='Procurement request not found')
+
+def _owned_request(request_id: str, user: User, db: Session) -> ProcurementRequest:
+    request = db.scalar(select(ProcurementRequest).where(
+        ProcurementRequest.id == request_id,
+        ProcurementRequest.user_id == user.id,
+    ))
+    if request is None:
+        raise HTTPException(status_code=404, detail='Procurement request not found')
     return request
 
-@router.post('',response_model=ProcurementRequestResponse,status_code=status.HTTP_201_CREATED)
-def create_request(payload: ProcurementRequestCreate,db: Session=Depends(get_db),user: User=Depends(get_current_user)):
-    request=ProcurementRequest(user_id=user.id,request_text=payload.request_text,quantity=payload.quantity,budget=payload.budget,currency=payload.currency)
+
+@router.post('', response_model=ProcurementRequestResponse, status_code=status.HTTP_201_CREATED)
+def create_request(
+    payload: ProcurementRequestCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    request = ProcurementRequest(
+        user_id=user.id,
+        request_text=payload.request_text,
+        quantity=payload.quantity,
+        budget=payload.budget,
+        currency=payload.currency,
+    )
     db.add(request)
     db.commit()
     db.refresh(request)
     return request
 
-@router.get('',response_model=list[ProcurementRequestResponse])
-def list_requests(limit: int=Query(default=50,ge=1,le=100),db: Session=Depends(get_db),user: User=Depends(get_current_user)):
-    return db.scalars(select(ProcurementRequest).where(ProcurementRequest.user_id==user.id).order_by(ProcurementRequest.created_at.desc()).limit(limit)).all()
 
-@router.get('/{request_id}',response_model=ProcurementRequestResponse)
-def get_request(request_id: str,db: Session=Depends(get_db),user: User=Depends(get_current_user)):
-    return _owned_request(request_id,user,db)
+@router.get('', response_model=list[ProcurementRequestResponse])
+def list_requests(
+    limit: int = Query(default=50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return db.scalars(
+        select(ProcurementRequest).where(
+            ProcurementRequest.user_id == user.id
+        ).order_by(ProcurementRequest.created_at.desc()).limit(limit)
+    ).all()
+
+
+@router.get('/{request_id}', response_model=ProcurementRequestResponse)
+def get_request(
+    request_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return _owned_request(request_id, user, db)
+
+
+async def _catalogue_snapshot(request: ProcurementRequest, user_id: str, *, current=None, page_token=None):
+    """Exactly one Channel3 call; deterministic ranking, no model tokens consumed."""
+    requirements = ProcurementRequirements(
+        query=request.request_text,
+        quantity=request.quantity,
+        budget=request.budget,
+        currency=request.currency,
+    )
+    try:
+        page = await Channel3Client().search_products(
+            requirements.query, limit=20, user_id=user_id, page_token=page_token
+        )
+    except Channel3ConfigurationError as exc:
+        raise HTTPException(status_code=503, detail='Channel3 product discovery is not configured') from exc
+    except Channel3Unavailable as exc:
+        raise HTTPException(status_code=502, detail='Channel3 product discovery is temporarily unavailable') from exc
+
+    previous = (current or {}).get('results', []) if page_token else []
+    merged = {entry['product']['id']: entry['product'] for entry in previous}
+    merged.update({product.id: product.model_dump(mode='json') for product in page.products})
+    products = [Channel3Product.model_validate(entry) for entry in merged.values()]
+    rankings = rank_products(products, requirements)
+    by_id = {product.id: product for product in products}
+    return {
+        'source': 'Channel3',
+        'results': [
+            {
+                'ranking': item.model_dump(mode='json'),
+                'product': by_id[item.product_id].model_dump(mode='json'),
+            }
+            for item in rankings
+        ],
+        'next_page_available': page.next_page_token is not None,
+        'next_page_token': page.next_page_token,
+    }
+
 
 @router.post('/{request_id}/discover')
-async def discover_products(request_id: str,next_page: bool=False,db: Session=Depends(get_db),user: User=Depends(get_current_user)):
-    request=_owned_request(request_id,user,db)
-    current=request.analysis_json or {}
-    page_token=current.get('next_page_token') if next_page else None
-    if next_page and not page_token: raise HTTPException(status_code=409,detail='There is no additional catalogue page to load')
-    requirements=ProcurementRequirements(query=request.request_text,quantity=request.quantity,budget=request.budget,currency=request.currency)
-    try:
-        response=await Channel3Client().search_products(requirements.query,limit=20,user_id=user.id,page_token=page_token)
-    except Channel3ConfigurationError as exc:
-        raise HTTPException(status_code=503,detail='Product discovery is not configured yet') from exc
-    except Channel3Unavailable as exc:
-        raise HTTPException(status_code=502,detail='The product catalogue is temporarily unavailable') from exc
-    page_products=[item['product'] for item in current.get('results',[])] if next_page else []
-    merged={item['id']:item for item in page_products}
-    merged.update({product.id:product.model_dump(mode='json') for product in response.products})
-    all_products=[Channel3Product.model_validate(item) for item in merged.values()]
-    scores=rank_products(all_products,requirements)
-    products={product.id:product for product in all_products}
-    results=[{'ranking':score.model_dump(mode='json'),'product':products[score.product_id].model_dump(mode='json')} for score in scores]
-    request.analysis_json={'source':'Channel3','results':results,'next_page_available':response.next_page_token is not None,'next_page_token':response.next_page_token}
-    request.status='products_discovered'
+async def discover_products(
+    request_id: str,
+    next_page: bool = False,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    request = _owned_request(request_id, user, db)
+    current = request.analysis_json or {}
+    page_token = current.get('next_page_token') if next_page else None
+    if next_page and not page_token:
+        raise HTTPException(status_code=409, detail='There is no additional catalogue page to load')
+    request.analysis_json = await _catalogue_snapshot(
+        request, user.id, current=current if next_page else {}, page_token=page_token
+    )
+    request.status = 'products_discovered'
     db.add(request)
     db.commit()
     db.refresh(request)
     return request.analysis_json
 
+
+def _next_utc_day_seconds():
+    now = datetime.now(timezone.utc)
+    tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    return max(1, int((tomorrow - now).total_seconds()))
+
+
 @router.post('/{request_id}/analyze')
-async def analyze_request(request_id: str,db: Session=Depends(get_db),user: User=Depends(get_current_user)):
-    request=_owned_request(request_id,user,db)
-    prompt=(f'Analyze this business procurement request and use your Channel3 discovery tool to find and rank real catalogue options. '
-            f'Request: {request.request_text}\nQuantity: {request.quantity}\nBudget: {request.budget if request.budget is not None else "Not specified"} {request.currency}. '
-            'Explain the strongest options, show evidence for prices and availability, identify missing or unverified requirements, '
-            'and clearly state that delivery suitability is unknown unless verified. Do not create a purchase order or initiate payment.')
+async def analyze_request(
+    request_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    request = _owned_request(request_id, user, db)
+    current = request.analysis_json or {}
+
+    # Repeated clicks and refreshes must not spend another model call on the same
+    # saved evidence. Refreshing Channel3 deliberately invalidates this cache.
+    if current.get('ai_explanation'):
+        return {
+            'request_id': request.id, 'explanation': current['ai_explanation'],
+            'status': request.status, 'cached': True,
+            'source': current.get('ai_source', 'gemini'),
+            'usage': current.get('ai_usage'),
+        }
+
+    # A first-time judge can press Ask AI without explicitly pressing Search.
+    # Discover once, save the deterministic result, then analyze only its summary.
+    if current.get('source') != 'Channel3':
+        current = await _catalogue_snapshot(request, user.id)
+        request.analysis_json = current
+        request.status = 'products_discovered'
+        db.add(request)
+        db.commit()
+        db.refresh(request)
+
+    if not current.get('results'):
+        explanation = (
+            'Channel3 returned no catalogue products for this request. '
+            'Try more specific product requirements or a different search. '
+            'No product prices, inventory or delivery claims have been invented.'
+        )
+        request.analysis_json = {
+            **current, 'ai_explanation': explanation,
+            'ai_source': 'catalogue_only', 'ai_usage': None,
+        }
+        db.add(request)
+        db.commit()
+        return {
+            'request_id': request.id, 'explanation': explanation, 'status': request.status,
+            'cached': False, 'source': 'catalogue_only', 'usage': None,
+        }
+
+    settings = get_settings()
+    if not settings.google_api_key:
+        raise HTTPException(status_code=503, detail='Gemini is not configured. Catalogue results remain available.')
+
+    prompt = evidence_prompt(
+        request, current['results'], max_candidates=settings.ai_evidence_candidates,
+    )
     try:
-        explanation=await runtime.run_procurement_agent(user.id,prompt)
+        reserve_ai_call(db, user.id, settings=settings)
+    except AiQuotaExceeded as exc:
+        limit = 'The global' if exc.scope == 'global' else 'Your'
+        raise HTTPException(
+            status_code=429,
+            detail=f'{limit} daily AI analysis allowance is exhausted. Catalogue research and purchasing are still available.',
+            headers={'Retry-After': str(_next_utc_day_seconds())},
+        ) from exc
+
+    try:
+        result = await runtime.run_evidence_analysis(user.id, prompt)
     except AgentConfigurationError as exc:
-        raise HTTPException(status_code=503,detail='The AI procurement agent is not configured yet') from exc
+        raise HTTPException(status_code=503, detail='Gemini is not configured') from exc
     except AgentExecutionError as exc:
-        raise HTTPException(status_code=502,detail=str(exc)) from exc
-    request.analysis_json={**(request.analysis_json or {}),'ai_explanation':explanation}
-    if request.status=='draft': request.status='analyzed'
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    request.analysis_json = {
+        **current, 'ai_explanation': result['text'],
+        'ai_source': 'gemini', 'ai_model': result['model'],
+        'ai_usage': result['usage'],
+    }
     db.add(request)
     db.commit()
-    return {'request_id':request.id,'explanation':explanation,'status':request.status}
+    return {
+        'request_id': request.id,
+        'explanation': result['text'],
+        'status': request.status,
+        'cached': False, 'source': 'gemini', 'usage': result['usage'],
+    }
