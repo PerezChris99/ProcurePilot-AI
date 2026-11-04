@@ -69,3 +69,12 @@ It stops at the first failure. No GitHub Actions workflows are configured.
 - Verify Activity lists actual saved audit events, Discovery lists the signed-in user's saved procurement requests, and neither reveals another account's data.
 - System status: check all keys unset, only Channel3 URL present, PayPal client ID without secret, full Sandbox credentials, webhook ID unset/set, SQLite vs PostgreSQL, and schema missing. Confirm the UI labels these as configuration signals rather than validated provider connectivity.
 - Exercise real provider operations only with authorized test credentials; compare dashboard flags with outcomes. Do not report a Sandbox payment as a supplier settlement.
+
+## Public marketing, policy, and deep-link regression checks
+
+- Open `/` as a **signed-out judge**: public split hero and real images load, controls advance all three slides, Pause/Play works, and the short Problem/Solution, How It Works, FAQ and CTA sections render without console errors or horizontal overflow.
+- Exercise the photographic carousel with mouse, keyboard and a reduced-motion preference; use a browser without external image network access to check that headings, CTAs and captions remain legible. Do not describe photographs as real customers or supplier evidence.
+- Open all public footer links directly without a token: `/about`, `/how-it-works`, `/privacy`, `/terms`, `/security`, `/accessibility`, `/responsible-use`, `/contact`. Test refresh on each. Confirm the login/register pages also link to the legal pages.
+- Verify authenticated overview at `/dashboard` and guest redirect to `/login` on direct `/dashboard` access. After login/register, the landing should not accidentally replace the dashboard. Confirm every desktop sidebar/mobile bottom-dock Overview link targets `/dashboard`.
+- Confirm that `/orders?token=...` still opens the protected order page after the PayPal Sandbox same-tab buyer return, not the public landing or a host 404. Confirm direct URL refresh works on deployed Vercel/Netlify through the SPA rewrite rules.
+- Review privacy/terms text with the project owner or qualified counsel before treating them as final commercial policies. Test actual provider credentials and webhook delivery independently of the public website source/build.

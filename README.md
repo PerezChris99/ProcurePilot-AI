@@ -59,6 +59,8 @@ If VS Code does not start them automatically:
 
 **Local addresses:** [UI](http://127.0.0.1:5173) · [API](http://127.0.0.1:8000) · [API docs](http://127.0.0.1:8000/docs) · [Database readiness](http://127.0.0.1:8000/api/v1/ready).
 
+**Start here:** `http://127.0.0.1:5173/` is now the public landing page; click **Get started** to register or **Sign in**. After authentication, the Overview is at `/dashboard`. The existing `/orders` PayPal Sandbox return URL is unchanged. Judges can read About, How it works, Privacy, Terms, Security, Accessibility, Responsible use and Contact before signing in.
+
 ### Optional PostgreSQL and external providers
 
 On macOS/Linux, `./start.sh --postgres` starts from the PostgreSQL template **only when no `.env` exists**. For an existing `.env`, change `DATABASE_URL` yourself; the script never overwrites it. Development SQLite is useful for judging UI and local flows; **production requires PostgreSQL**. In Windows, configure PostgreSQL before `.\start.bat`.
@@ -81,7 +83,7 @@ ProcurePilot separates responsibilities: **the model explains, deterministic cod
 
 ## A judge's five-minute tour
 
-1. **Register or sign in.** The dashboard greets you by your first name and displays your own saved purchase activity.
+1. **Visit the public landing page, then register or sign in.** A short real-photo slideshow introduces procurement challenges and the workflow; your authenticated overview is now at `/dashboard`.
 2. **New procurement.** Enter an unambiguous requirement, e.g. "Two 27-inch office monitors with IPS displays", quantity 2, currency USD and a reasonable budget. Product availability depends on the live catalogue.
 3. **Ask AI to analyze** or **Search products**. Asking AI first automatically performs one Channel3 discovery if none has been saved, ranks the returned products in backend code, and sends a short shortlist to Gemini. Repeating an unchanged assessment uses its saved response without a new model call.
 4. **Inspect the offers.** Only verified-in-stock, matching-currency, HTTPS offers within budget can become a purchase order. Review the retailer link, select **Create PO**, then **Submit for approval**.
@@ -95,6 +97,8 @@ ProcurePilot separates responsibilities: **the model explains, deterministic cod
 
 | Screen | What a judge can do |
 | --- | --- |
+| Public home | Concise hero, actual procurement photography, transparent technology integration strip, problem/solution, workflow, FAQs and CTA |
+| About and legal pages | Public About, How it works, Privacy, Terms, Security, Accessibility, Responsible use and Contact |
 | Overview | Personalized greeting, persisted order/approval statistics, recent audit events, live-refreshing integration-configuration indicators (configured vs missing, not provider connectivity) |
 | New procurement | Enter business requirements, quantity, currency and budget |
 | Product discovery | Reopen saved requests and their catalogue evidence, with a searchable user-scoped history |
@@ -321,3 +325,11 @@ The standard npm run build is a localhost-compatible Windows development check. 
 ## Responsive layout and integration-state honesty
 
 Phones and tablets below 961px use a six-destination fixed bottom dock (Overview, New, Orders, Approvals, Activity, Discover) with iPhone safe-area spacing and accessible link labels. Desktop screens retain a flat, no-pill sidebar. All six destinations are genuine routes; Activity and saved Product discovery no longer duplicate Purchase orders/New procurement. The status panel distinguishes **API reachable**, **database connected with required schema**, **credentials configured**, **partially configured**, and **not configured**. It reads real non-secret backend environment flags, refreshes on request and periodically, and never claims configured APIs have been authenticated with external providers.
+
+## Public landing, photo sources and deployment routing
+
+The public root `/` now introduces the problem and product in a compact editorial layout. A controlled three-frame **real photography** carousel (warehouse sourcing, team purchasing decisions, office workflow) has previous/next and pause controls, motion-reduction handling, descriptive image text and a light fogged-glass tint. Photography is served over HTTPS by Unsplash, governed by the [Unsplash License](https://unsplash.com/license); the site uses these images as illustrative editorial photos, not customer proof. The social-proof strip names the actual technology stack, **not customers, partners or endorsements**. The slideshow needs internet access to load its remote images.
+
+The authenticated Overview moved to `/dashboard`. Other purchasing routes and PayPal's `/orders` return route are preserved. Public About, How it works, Privacy, Terms, Security, Accessibility, Responsible use and Contact are available from the footer without a login. These prototype legal notices should receive owner/counsel review before a commercial launch.
+
+For static hosting, `frontend/vercel.json` provides Vercel's SPA rewrite when the project root is `frontend/`, and `frontend/public/_redirects` provides Netlify's SPA fallback for direct legal and workspace URLs. Configure the public frontend's HTTPS backend address as `VITE_API_BASE_URL` and use `npm run build:deploy`. A simple successful `npm run build` alone does not prove a deployed domain, API connection or provider access.

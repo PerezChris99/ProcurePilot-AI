@@ -1,4 +1,4 @@
-import {NavLink, Outlet, useLocation} from 'react-router-dom';
+import {Link,NavLink, Outlet, useLocation} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {
   Activity, ClipboardList, LayoutDashboard, LogOut, Plus,
@@ -8,7 +8,7 @@ import {useAuth} from '../../context/useAuth.js';
 import {getIntegrationStatus} from '../../services/api.js';
 
 const navigation = [
-  {label:'Overview', short:'Home', to:'/', icon:LayoutDashboard, end:true, group:'workspace'},
+  {label:'Overview', short:'Home', to:'/dashboard', icon:LayoutDashboard, end:true, group:'workspace'},
   {label:'New procurement', short:'New', to:'/procurement', icon:Plus, group:'workspace'},
   {label:'Purchase orders', short:'Orders', to:'/orders', icon:ClipboardList, group:'workspace'},
   {label:'Approvals', short:'Approve', to:'/approvals', icon:ShieldCheck, group:'workspace'},
@@ -56,7 +56,7 @@ export default function AppShell(){
 
   return <div className="app-frame">
     <aside className="sidebar">
-      <NavLink className="brand" to="/" aria-label="ProcurePilot AI home">
+      <NavLink className="brand" to="/dashboard" aria-label="ProcurePilot AI home">
         <span className="brand-mark"><img src="/favicon.svg" className="brand-logo" alt=""/></span>
         <span><strong>procurepilot</strong><small>INTELLIGENT PROCUREMENT</small></span>
       </NavLink>
@@ -101,6 +101,16 @@ export default function AppShell(){
         </div>
       </header>
       <div className="page-content"><Outlet/></div>
+      <footer className="app-legal-footer" aria-label="Workspace legal information">
+        <span>© 2026 ProcurePilot AI</span>
+        <nav aria-label="Legal links">
+          <Link to="/privacy">Privacy</Link>
+          <Link to="/terms">Terms</Link>
+          <Link to="/security">Security</Link>
+          <Link to="/contact">Contact</Link>
+          <Link to="/">Public site</Link>
+        </nav>
+      </footer>
     </main>
     <nav className="mobile-dock" aria-label="Mobile workspace navigation">
       <NavigationLinks items={navigation} mobile detailSelected={onRequestDetail}/>
