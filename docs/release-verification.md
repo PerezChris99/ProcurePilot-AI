@@ -57,3 +57,10 @@ Run start.bat, verify.bat, and the manual walkthrough in docs/testing.md. Record
 - Introduced a dedicated strict public frontend build gate, a Node-native URL test suite, and a browser runtime guard against a deployed UI calling localhost. Hosting must use npm run build:deploy explicitly, while the Windows local build remains unchanged.
 
 - The Windows verify.bat frontend test stage now also executes the Node-only public API endpoint validator test suite before attempting the Vite build. The validator was separately exercised in this review with nine passing Node tests (not a complete frontend build).
+
+## Judge experience / mobile-first improvements (source authored, not runtime certified)
+
+- Executable macOS/Linux shell launch and verify scripts using a first-run-only local SQLite demo path, alongside the existing Windows VS Code Ctrl+Shift+P Tasks launcher.
+- Responsive six-destination navigation with a bottom iPhone safe-area dock below 961px and a flat desktop sidebar, plus dedicated Activity and saved Discovery views instead of duplicated links.
+- Authenticated, secret-safe dynamic configuration panel with database engine/schema readiness, Gemini, Channel3, PayPal credentials, separate webhook flag, actual environment and manual/periodic refresh. Configured is not the same as remotely verified.
+- Release acceptance still requires native macOS/Linux/Windows script execution, all local tests/builds, responsive browser/device review and live third-party provider workflows. A SQLite local judging database is not production readiness.

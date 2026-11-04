@@ -53,3 +53,7 @@ Authenticated `GET /api/v1/dashboard/summary` returns user-scoped counts of comp
 - Daily exhausted global/user LLM allowance returns HTTP 429 with Retry-After, while product discovery/PO paths remain usable. Missing model key returns 503; live provider failure is reported separately. AI budget defaults are documented in docs/agent.md.
 - Latest database migration: 0004_ai_budget, auto-applied by start.bat and the VS Code startup task.
 - PayPal Sandbox buyer approval must return in the same tab for frontend sessionStorage continuity. The browser return does not establish paid status; capture verification does.
+
+## Integration status contract (non-secret)
+
+Authenticated `GET /api/v1/integrations/status` returns `runtime.environment`, `runtime.provider_checks=configuration_only`; `database.connected/schema_ready/engine`; `ai.configured/api_key_set/model`; `channel3.configured/api_key_set/base_url_configured`; `paypal.credentials_configured/client_id_set/client_secret_set/webhook_configured/environment`. Empty or obvious template key values count as missing, and Channel3 requires a valid HTTPS API endpoint. The endpoint performs database SELECT checks only; it does **not** call Google Gemini, Channel3 or PayPal to claim provider availability, return tokens or expose backend credentials. The browser refetches periodically and provides a manual refresh action.
