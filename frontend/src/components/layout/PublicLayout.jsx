@@ -57,7 +57,8 @@ export default function PublicLayout(){
     if(location.hash){
       let id=location.hash.slice(1);
       try{id=decodeURIComponent(id)}catch{ /* Ignore malformed URL escapes. */ }
-      document.getElementById(id)?.scrollIntoView({behavior:'auto',block:'start'});
+      const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      document.getElementById(id)?.scrollIntoView({behavior:reduced?'auto':'smooth',block:'start'});
     }else{
       document.documentElement.scrollTop=0;
       document.body.scrollTop=0;

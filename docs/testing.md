@@ -65,14 +65,14 @@ It stops at the first failure. No GitHub Actions workflows are configured.
 ## Mobile and cross-platform judge acceptance matrix
 
 - Verify `./start.sh` and `./verify.sh` on macOS and Linux, and `.\\start.bat` plus `.\\verify.bat` on Windows. The macOS/Linux default creates SQLite only if .env does not exist; do not accidentally replace a judge's PostgreSQL credentials.
-- In Chrome/Firefox responsive mode and Safari/iOS where available, test 320px, 375px, 430px, 768px, 960px, 961px and 1440px widths, the six accessible mobile dock links, desktop flat sidebar, safe-area spacing, keyboard focus, and no horizontal overflow.
+- In Chrome/Firefox responsive mode and Safari/iOS where available, test 320px, 375px, 430px, 768px, 960px, 961px and 1440px widths, the six accessible original iOS-style SVG mobile dock icons and labels, desktop flat sidebar, safe-area spacing, keyboard focus, and no horizontal overflow.
 - Verify Activity lists actual saved audit events, Discovery lists the signed-in user's saved procurement requests, and neither reveals another account's data.
 - System status: check all keys unset, only Channel3 URL present, PayPal client ID without secret, full Sandbox credentials, webhook ID unset/set, SQLite vs PostgreSQL, and schema missing. Confirm the UI labels these as configuration signals rather than validated provider connectivity.
 - Exercise real provider operations only with authorized test credentials; compare dashboard flags with outcomes. Do not report a Sandbox payment as a supplier settlement.
 
 ## Public marketing, policy, and deep-link regression checks
 
-- Open `/` as a **signed-out judge**: public split hero and real images load, controls advance all three slides, Pause/Play works, and the short Problem/Solution, How It Works, FAQ and CTA sections render without console errors or horizontal overflow.
+- Open `/` as a **signed-out judge**: public full-photo overlaid hero and real images load, controls advance all three slides, Pause/Play works, and the short Problem/Solution, How It Works, FAQ and CTA sections render without console errors or horizontal overflow.
 - Exercise the photographic carousel with mouse, keyboard and a reduced-motion preference; use a browser without external image network access to check that headings, CTAs and captions remain legible. Do not describe photographs as real customers or supplier evidence.
 - Open all public footer links directly without a token: `/about`, `/how-it-works`, `/privacy`, `/terms`, `/security`, `/accessibility`, `/responsible-use`, `/contact`. Test refresh on each. Confirm the login/register pages also link to the legal pages.
 - Verify authenticated overview at `/dashboard` and guest redirect to `/login` on direct `/dashboard` access. After login/register, the landing should not accidentally replace the dashboard. Confirm every desktop sidebar/mobile bottom-dock Overview link targets `/dashboard`.
@@ -109,7 +109,7 @@ Execute `.\\start.bat` then `.\\verify.bat` on Windows; on macOS/Linux use `./st
 ## Wide landing and neutral metrics visual acceptance
 
 - At 1024px, 1440px, 1920px and ultrawide widths, the public header, hero, story, workflow, FAQ, final CTA and footer must use the same narrow responsive side clearance; do not retain the previous 1220px hard cap.
-- On desktop at 961px+, confirm the photo slideshow remains **510px high** and becomes approximately 65% of the hero row. It must be distinctly rectangular, with no overflow, clipped captions or distorted photos. On tablets (760–960px), the photo sits below the copy as a wide rectangle; on phones it resizes.
+- At 961px+ confirm the photo fills **the entire 510px-high hero section**, with all headline content, two CTAs and trust disclosure legible inside it. Verify that both slideshow controls and caption remain visible without overlap at 1440px and wider; at narrower widths the secondary photo caption can be suppressed to avoid clutter. Mobile uses a taller single-section hero that cannot crop or overlap primary actions. At all widths, check that parallax is subtle and disabled when `prefers-reduced-motion: reduce` is active.
 - On /dashboard, verify that the **four true saved-data metrics** appear as a single plain rectangular summary with thin neutral dividers and no colored edge/highlight, gradient tile or rounded metric card. Preserve four values, loading placeholders, recent activity, the primary button and integration status. The redundant promotional hero should no longer render.
 - Confirm the shortened public and dashboard labels still honestly describe the AI, Channel3 and PayPal Sandbox limitations, and that privacy/legal pages remain intact. Verify the FAQ and slideshow controls, reduced motion, mobile dock, 200%/400% zoom, and the frontend build.
 - Run `npm run test:deploy-config` for documented layout contract and color checks; the full lint, Vitest and Vite build remain separate gates.

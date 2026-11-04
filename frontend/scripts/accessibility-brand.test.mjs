@@ -8,6 +8,11 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const styles=readFileSync(resolve(root,'src/styles/accessibility-brand.css'),'utf8');
 const layout=readFileSync(resolve(root,'src/styles/layout-refinement.css'),'utf8');
 const main=readFileSync(resolve(root,'src/main.jsx'),'utf8');
+const landing=readFileSync(resolve(root,'src/pages/LandingPage.jsx'),'utf8');
+const dock=readFileSync(resolve(root,'src/components/layout/MobileDock.jsx'),'utf8');
+const dockIcons=readFileSync(resolve(root,'src/components/layout/IosDockIcon.jsx'),'utf8');
+const navigation=readFileSync(resolve(root,'src/components/layout/navigation.js'),'utf8');
+const publicLayout=readFileSync(resolve(root,'src/components/layout/PublicLayout.jsx'),'utf8');
 
 function luminance(hex){
   const color=hex.replace('#','');
@@ -63,19 +68,42 @@ test('yellow remains an intentional, high-contrast accent without decorative und
   assert.doesNotMatch(styles,/\.site-kicker::before\s*\{[^}]*content:""/);
   assert.doesNotMatch(styles,/background:linear-gradient\(transparent 81%,var\(--brand-yellow\)/);
   assert.match(layout,/\.site-kicker::before\{content:none\}/);
-  assert.match(layout,/\.site-hero-text h1 em\{background:none;text-decoration:none\}/);
+  assert.match(layout,/\.site-hero-text h1 em\{color:#d8efff;background:none;text-decoration:none\}/);
   assert.match(styles,/\.mobile-dock-link\.active::before\{background:#0865cc/);
   assert.match(styles,/@media\(max-width:519px\)/);
   assert.match(styles,/@media\(prefers-reduced-motion:reduce\)/);
 });
 
-test('landing fills the viewport with a wider fixed-height rectangular slideshow',()=>{
+test('image fills the hero and every CTA belongs to the photographic section',()=>{
   assert.match(main,/import '\.\/styles\/accessibility-brand\.css';\s*import '\.\/styles\/layout-refinement\.css';/);
   assert.match(layout,/--site-gutter:clamp\(16px,2\.4vw,44px\)/);
   assert.match(layout,/\.site-container,\s*\.site-footer-top\s*\{[^}]*width:calc\(100% - 2 \* var\(--site-gutter\)\)/);
-  assert.match(layout,/grid-template-columns:minmax\(0,\.76fr\) minmax\(0,1\.44fr\)/);
-  assert.match(layout,/\.site-hero-visual\s*\{\s*height:510px;\s*min-height:510px/);
-  assert.match(layout,/@media\(min-width:760px\) and \(max-width:960px\)/);
+  assert.match(layout,/\.site-hero\.site-hero-visual\s*\{[^}]*width:calc\(100% - 2 \* var\(--site-gutter\)\);[^}]*height:510px;\s*min-height:510px/);
+  assert.match(layout,/\.site-hero-content\s*\{[^}]*z-index:2/);
+  assert.match(landing,/<HeroSlideshow>\s*<div className="site-hero-text">/);
+  assert.match(landing,/<div className="site-hero-content">\{children\}<\/div>/);
+  assert.match(layout,/\.site-hero-mist\s*\{[^}]*linear-gradient\(90deg,rgba\(5,18,38,\.91\)/);
+  assert.match(layout,/@media\(max-width:1279px\)/);
+});
+
+test('parallax is bounded and motion-safe; anchor navigation follows user preference',()=>{
+  assert.match(landing,/const desktop=window\.matchMedia\('\(min-width: 961px\)'\)/);
+  assert.match(landing,/const reduced=window\.matchMedia\('\(prefers-reduced-motion: reduce\)'\)/);
+  assert.match(landing,/Math\.max\(-36,Math\.min\(36,/);
+  assert.match(landing,/requestAnimationFrame\(paint\)/);
+  assert.match(landing,/window\.addEventListener\('scroll',schedule,\{passive:true\}\)/);
+  assert.match(layout,/html\{scroll-behavior:smooth\}/);
+  assert.match(layout,/@media\(prefers-reduced-motion:reduce\)\s*\{\s*html\{scroll-behavior:auto\}/);
+  assert.match(publicLayout,/scrollIntoView\(\{behavior:reduced\?'auto':'smooth'/);
+});
+
+test('mobile icons are exclusively original iOS-style SVG glyphs',()=>{
+  assert.match(dock,/<IosDockIcon name=\{iosIcon\} active=\{active\}\/>/);
+  assert.doesNotMatch(dock,/<Icon\s+size=/);
+  assert.match(dockIcons,/data-icon-style="ios"/);
+  assert.match(dockIcons,/viewBox="0 0 24 24"/);
+  assert.equal((navigation.match(/iosIcon:/g)||[]).length,13);
+  assert.match(layout,/\.mobile-dock-link svg\.ios-dock-icon/);
 });
 
 test('dashboard metrics use one neutral summary strip, without colored rounded cards',()=>{
