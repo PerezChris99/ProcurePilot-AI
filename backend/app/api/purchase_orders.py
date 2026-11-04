@@ -4,7 +4,6 @@ from decimal import Decimal,InvalidOperation
 from fastapi import APIRouter,Depends,HTTPException,Query,status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import get_db
@@ -115,9 +114,10 @@ def reject_purchase_order(order_id:str,payload:ApprovalAction,db:Session=Depends
 async def create_paypal_order(order_id:str,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
     order=_owned_order(order_id,user,db)
     if order.status not in ('approved','payment_pending'): raise HTTPException(status_code=409,detail='A human-approved purchase order is required before starting PayPal checkout.')
-    client=PayPalClient()
-    try: client.ensure_configured()
-    except PayPalConfigurationError as exc: raise HTTPException(status_code=503,detail='PayPal Sandbox credentials are not configured.') from exc
+    try:
+        client=PayPalClient()
+        client.ensure_configured()
+    except PayPalConfigurationError as exc: raise HTTPException(status_code=503,detail='PayPal Sandbox configuration or credentials are invalid.') from exc
     payment=db.scalar(select(Payment).where(Payment.purchase_order_id==order.id))
     if payment and payment.paypal_order_id and payment.approval_url:
         return {'payment':_payment_data(payment),'approval_url':payment.approval_url,'idempotent_replay':True}
@@ -144,7 +144,7 @@ async def create_paypal_order(order_id:str,db:Session=Depends(get_db),user:User=
         raise HTTPException(status_code=503 if isinstance(exc,PayPalConfigurationError) else 502,detail='PayPal could not create the checkout order. Check Sandbox connectivity and credentials.') from exc
     links=result.get('links') or []
     approval_url=next((link.get('href') for link in links if link.get('rel') in ('approve','payer-action')),None)
-    if not result.get('id') or not approval_url:
+    if not result.get('id') or not approval_url or not PayPalClient.is_valid_order_id(result.get('id')) or not PayPalClient.is_approval_url(approval_url):
         payment.status='failed'; payment.provider_response={'status':'invalid_create_order_response'}; db.commit()
         raise HTTPException(status_code=502,detail='PayPal did not return a usable approval link.')
     payment.paypal_order_id=result['id']; payment.approval_url=approval_url; payment.status='created'; payment.provider_response={'id':result['id'],'status':result.get('status')}
@@ -160,8 +160,9 @@ async def capture_paypal_order(order_id:str,db:Session=Depends(get_db),user:User
     if payment is None or not payment.paypal_order_id: raise HTTPException(status_code=409,detail='Create a PayPal checkout order first.')
     if payment.status=='completed' and order.status=='paid': return _serialize(order,db)
     if order.status not in ('approved','payment_pending'): raise HTTPException(status_code=409,detail='Purchase order is not eligible for payment capture.')
-    client=PayPalClient()
     try:
+        client=PayPalClient()
+        client.ensure_configured()
         remote=await client.get_order(payment.paypal_order_id)
         if not _paypal_order_matches(remote,order,payment): raise HTTPException(status_code=409,detail='PayPal order details do not match the approved purchase order.')
         result=await client.capture_order(payment.paypal_order_id,hashlib.sha256(('capture:'+payment.idempotency_key).encode()).hexdigest()[:32]) if remote.get('status')=='APPROVED' else remote

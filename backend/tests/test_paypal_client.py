@@ -30,3 +30,9 @@ def test_webhook_verification_posts_paypal_transmission_headers():
     verified=asyncio.run(client.verify_webhook(headers,{'id':'event-1','event_type':'PAYMENT.CAPTURE.COMPLETED'}))
     assert verified is True
     assert b'"webhook_id":"webhook-1"' in calls[0].read()
+
+def test_approval_url_only_allows_paypal_checkout_hosts():
+    assert PayPalClient.is_approval_url('https://www.sandbox.paypal.com/checkoutnow?token=abc')
+    assert PayPalClient.is_approval_url('https://www.paypal.com/checkoutnow?token=abc')
+    assert not PayPalClient.is_approval_url('https://evil.example/checkout')
+    assert not PayPalClient.is_approval_url('http://www.sandbox.paypal.com/checkoutnow')
