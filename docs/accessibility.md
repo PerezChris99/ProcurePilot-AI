@@ -30,8 +30,8 @@ The figures describe these pairs alone, not every pixel over photography or a fu
 - Main paragraphs, descriptions, form inputs and FAQ copy: generally **15–18px**.
 - Compact metadata, timestamps, dock labels and supporting details: generally **12–14px**, with the smallest text reserved for space-constrained interface metadata.
 - Visible links, keyboard outlines, clear input boundaries, larger button/touch targets and 1.5–1.8 line-height for extended copy.
-- Mobile-first dock on public, sign-in and workspace screens below 961px with iOS safe-area spacing; desktop uses conventional navigation.
-- Reduced-motion preference disables decorative entrance animations and carousel auto-rotation while preserving manual slideshow controls.
+- Mobile-first dock on public, sign-in and workspace screens below 961px with original, consistent iOS-style SVG glyphs, visible text labels and safe-area spacing; desktop uses conventional navigation. These are independently drawn web icons, not Apple SF Symbols.
+- Native smooth anchor scrolling and bounded desktop-only photographic parallax improve navigation without excessive effects. Reduced-motion preferences disable parallax, smooth scrolling, decorative entrance animations and carousel auto-rotation while preserving manual slideshow controls.
 - Font stack uses common system fonts. No remote webfont is required to read the website.
 
 ## User experience review checklist
@@ -48,7 +48,7 @@ Source-level automated checks cannot guarantee full accessibility or universal v
 
 ## Layout restraint and content hierarchy
 
-The public page uses a unified responsive edge gutter `clamp(16px, 2.4vw, 44px)` instead of a 1220px maximum width. Header, legal/footer and content sections align. At desktop widths (at least 961px), the hero image retains 510px height and takes approximately 65% of the row width; at tablet widths it occupies a full-width rectangular row. Body copy remains line-length-limited for comfort, rather than stretching long text across the screen.
+The public page uses a unified responsive edge gutter `clamp(16px, 2.4vw, 44px)` instead of a fixed maximum width. Header, legal/footer and content sections align. The entire desktop hero is one 510px-high photograph-backed section; the headline, description, and CTAs sit inside it over an intentionally deep navy scrim so text remains readable when the slideshow changes. Smaller screens retain the one-section layout, with a taller minimum height for readable text and touch controls. Paragraph widths stay limited for comfortable reading.
 
 The dashboard replaces four separate rounded, color-edged metric cards with a single neutral data strip separated by fine rules. The promotional dashboard hero is removed because the overview already has a primary procurement action. The activity and system-status sections remain, including explicit configuration-versus-connectivity disclaimers.
 

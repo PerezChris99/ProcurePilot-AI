@@ -21,6 +21,10 @@ describe('Public landing page',()=>{
   it('shows three real photo slides with meaningful manual controls and pause',()=>{
     renderLanding();
     const carousel=screen.getByRole('region',{name:'Procurement photography'});
+    expect(carousel).toContainElement(screen.getByRole('heading',{level:1}));
+    expect(within(carousel).getByRole('link',{name:/explore procurepilot/i}))
+      .toHaveAttribute('href','/register');
+    expect(carousel).toHaveClass('site-hero','site-hero-visual');
     // Hidden slides are intentionally decorative (alt=""), so query the slide images directly.
     const images=carousel.querySelectorAll('img.site-hero-image');
     expect(images).toHaveLength(3);

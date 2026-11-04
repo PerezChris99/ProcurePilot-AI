@@ -22,6 +22,11 @@ describe('universal mobile navigation',()=>{
   it('presents six useful public routes before sign-in, with no private-order traps',()=>{
     renderDock();
     const links=within(dock()).getAllByRole('link');
+    for(const link of links){
+      const symbol=link.querySelector('svg.ios-dock-icon');
+      expect(symbol).toHaveAttribute('data-icon-style','ios');
+      expect(symbol).toHaveAttribute('aria-hidden','true');
+    }
     expect(links.map(link=>link.getAttribute('href')))
       .toEqual(['/','/#why','/#how','/#faq','/about','/login']);
     expect(within(dock()).getByRole('link',{name:'Home'}))
@@ -52,6 +57,9 @@ describe('universal mobile navigation',()=>{
   it('keeps all six protected workspace destinations and discovery detail state',()=>{
     renderDock('/requests/request-123','workspace');
     const nav=screen.getByRole('navigation',{name:'Mobile workspace navigation'});
+    for(const link of within(nav).getAllByRole('link')){
+      expect(link.querySelector('svg.ios-dock-icon')).toHaveAttribute('data-icon-style','ios');
+    }
     expect(within(nav).getAllByRole('link').map(link=>link.getAttribute('href')))
       .toEqual(workspaceNavigation.map(item=>item.to));
     expect(within(nav).getByRole('link',{name:'Product discovery'}))
