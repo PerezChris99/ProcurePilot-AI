@@ -12,6 +12,7 @@ Base path: /api/v1
 ## Authenticated
 
 - GET /auth/me — current user.
+- GET /integrations/status — safe configuration indicators for PostgreSQL, Google Gemini, Channel3, and PayPal. Never returns credentials or webhook IDs; provider configuration does not prove credentials are valid.
 - POST /procurement-requests — create request.
 - GET /procurement-requests — list the current user's requests.
 - GET /procurement-requests/{id} — retrieve an owned request.
