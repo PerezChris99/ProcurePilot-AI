@@ -45,7 +45,7 @@
 
 - Keep DATABASE_URL, JWT_SECRET_KEY, GOOGLE_API_KEY, CHANNEL3_API_KEY, PayPal Client ID/Secret and webhook ID in backend/root environment variables. Never commit real .env files or place any secret in VITE-prefixed frontend variables.
 - The authenticated integration-status endpoint exposes boolean configuration flags, model and environment; it does not expose secrets. **Configured does not mean a credential was validated by the provider.**
-- CORS restricts public origins to FRONTEND_URL; local loopback aliases are development-only. JSON API responses now include no-store, nosniff, no-frame, no-referrer, restricted Permissions-Policy and API-only CSP; production responses set HSTS. The frontend HTML still requires its own production CSP, strict HTTPS edge configuration, WAF, rotation, monitoring and independent testing.
+- CORS restricts public origins to FRONTEND_URL; local loopback aliases are development-only. JSON API responses now include no-store, nosniff, no-frame, no-referrer, restricted Permissions-Policy and API-only CSP; production responses set HSTS. Vercel/Netlify frontend CSP headers have been added but require deployed-browser confirmation and equivalent policy on other hosts, strict HTTPS edge configuration, WAF, rotation, monitoring and independent testing.
 - Inspect Git history for leaked keys before sharing the repository. If exposed, revoke/rotate at the provider rather than simply deleting the file.
 
 ## Production blockers (not implemented)
@@ -56,7 +56,7 @@
 4. Stronger payment concurrency, retry/reconciliation, refunds and provider outage handling.
 5. Live signed webhook delivery through public HTTPS with replay, duplicate, out-of-order and load tests.
 6. Reproducible npm lockfile, dependency security scanning and pinned/approved Python dependencies.
-7. Proven TLS termination and HSTS at the edge, frontend CSP, WAF, secrets vault, encrypted backups, recovery drills, log retention and alerting.
+7. Proven TLS termination and HSTS at the edge, verified frontend CSP hosting policy, WAF, secrets vault, encrypted backups, recovery drills, log retention and alerting.
 8. Browser E2E, mobile viewport and load/security testing.
 9. Confirm country-specific PayPal merchant receiving eligibility before any live money acceptance.
 10. Verify hackathon license rules: authorized-use LICENSE is proprietary, not OSI open source.

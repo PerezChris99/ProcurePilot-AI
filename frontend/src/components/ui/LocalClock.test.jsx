@@ -12,8 +12,8 @@ describe('LocalClock',()=>{
     const zone=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
     expect(screen.getByText(new RegExp(zone.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')))).toBeInTheDocument();
     expect(screen.getByText(/GMT(?:[+-]\d{2}:\d{2})?/)).toBeInTheDocument();
-    const before=screen.getByRole('time').textContent;
+    const before=document.querySelector('.workspace-clock-time').textContent;
     act(()=>{vi.advanceTimersByTime(2000);});
-    expect(screen.getByRole('time').textContent).not.toBe(before);
+    expect(document.querySelector('.workspace-clock-time').textContent).not.toBe(before);
   });
 });

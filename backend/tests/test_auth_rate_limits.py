@@ -35,6 +35,8 @@ def test_auth_throttle_rejects_over_limit_with_retry_after(monkeypatch):
     monkeypatch.setattr(rate_limits,'_redis',lambda url: FakeRedis())
     class FakeRequest:
         client=SimpleNamespace(host='192.0.2.1')
+        async def json(self):
+            return {'email':'test@example.com'}
     with pytest.raises(HTTPException) as err:
         asyncio.run(rate_limits._guard(FakeRequest(),'login'))
     assert err.value.status_code==429
