@@ -3,8 +3,6 @@
 Only the browser origin aliases are relaxed in development; authentication
 remains enforced and production uses a single configured HTTPS origin.
 """
-from types import SimpleNamespace
-
 from app.main import allowed_frontend_origins
 
 
