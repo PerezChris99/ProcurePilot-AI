@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     db_statement_timeout_ms: int = Field(default=15000, ge=1000, le=120000)
     db_lock_timeout_ms: int = Field(default=3000, ge=100, le=30000)
     db_idle_transaction_timeout_ms: int = Field(default=15000, ge=1000, le=120000)
+    rate_limit_redis_url: str | None = None
+    # Redis auth policy: identity 8/minute, source 120/minute in public environments.
     max_request_body_bytes: int = Field(default=1048576, ge=1024, le=8388608)
     google_api_key: str | None = None
     ai_model: str | None = None
@@ -44,6 +46,10 @@ class Settings(BaseSettings):
             raise ValueError('APP_ENV must be development, test, testing, staging, or production')
         self.app_env = environment
         if environment in ('staging','production'):
+            if self.rate_limit_redis_url:
+                redis_url = urlsplit(self.rate_limit_redis_url)
+                if redis_url.scheme != 'rediss' or not redis_url.hostname:
+                    raise ValueError('Public RATE_LIMIT_REDIS_URL must use rediss:// with TLS')
             if (len(self.jwt_secret_key)<32 or self.jwt_secret_key in
                     ('development-only-change-this-secret','replace-with-a-long-random-secret')
                     or len(set(self.jwt_secret_key))<12):
