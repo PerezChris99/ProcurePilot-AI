@@ -55,7 +55,7 @@ Backend verification: run pytest and pytest --cov=app --cov-report=term-missing 
 
 Set backend-only variables: PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com, PAYPAL_WEBHOOK_ID, and FRONTEND_URL.
 
-Register the public HTTPS webhook URL /api/v1/webhooks/paypal in the PayPal Developer Dashboard. Subscribe at minimum to PAYMENT.CAPTURE.COMPLETED and PAYMENT.CAPTURE.DENIED. The backend verifies each event with PayPal before processing it.
+Register the public HTTPS webhook URL /api/v1/webhooks/paypal in the PayPal Developer Dashboard. Subscribe to CHECKOUT.ORDER.APPROVED, PAYMENT.CAPTURE.COMPLETED, and PAYMENT.CAPTURE.DENIED. The backend verifies each event with PayPal before processing it.
 
 ## Transaction safety
 

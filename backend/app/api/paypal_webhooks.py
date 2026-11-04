@@ -35,7 +35,14 @@ async def paypal_webhook(request:Request,db:Session=Depends(get_db)):
         db.rollback()
         return {'received':True,'duplicate':True,'processed':True}
     event_type=event['event_type']
-    if event_type in ('PAYMENT.CAPTURE.COMPLETED','PAYMENT.CAPTURE.DENIED'):
+    if event_type=='CHECKOUT.ORDER.APPROVED':
+        payment=db.scalar(select(Payment).where(Payment.paypal_order_id==resource.get('id'))) if resource.get('id') else None
+        if payment:
+            order=db.get(PurchaseOrder,payment.purchase_order_id)
+            if order and order.status=='payment_pending':
+                payment.status='buyer_approved'
+                db.add(AuditEvent(user_id=order.user_id,purchase_order_id=order.id,request_id=order.request_id,action='payment.paypal_buyer_approved',details={'event_id':event['id']}))
+    elif event_type in ('PAYMENT.CAPTURE.COMPLETED','PAYMENT.CAPTURE.DENIED'):
         paypal_order_id=related.get('order_id')
         payment=db.scalar(select(Payment).where(Payment.paypal_order_id==paypal_order_id)) if paypal_order_id else None
         if payment:

@@ -132,3 +132,16 @@ def test_out_of_stock_offer_cannot_become_a_purchase_order(client,monkeypatch):
     client.post(f'/api/v1/procurement-requests/{request_id}/discover',headers=headers)
     response=client.post(f'/api/v1/procurement-requests/{request_id}/purchase-orders',headers=headers,json={'product_id':'monitor-oos','offer_url':'https://retailer.example/oos'})
     assert response.status_code==422
+
+def test_checkout_approved_webhook_records_buyer_approval_for_later_capture(client,monkeypatch):
+    headers,order=approved_order(client,monkeypatch,'buyer-approved@example.com')
+    fake_paypal(monkeypatch,order['id'])
+    client.post(f"/api/v1/purchase-orders/{order['id']}/payments/paypal/create",headers=headers)
+    async def verified(self,request_headers,event): return True
+    monkeypatch.setattr(PayPalClient,'verify_webhook',verified)
+    event={'id':'WH-APPROVED-1','event_type':'CHECKOUT.ORDER.APPROVED','resource':{'id':'PAYPAL-ORDER-123','status':'APPROVED'}}
+    response=client.post('/api/v1/webhooks/paypal',json=event)
+    assert response.status_code==200
+    saved=client.get(f"/api/v1/purchase-orders/{order['id']}",headers=headers).json()
+    assert saved['payment']['status']=='buyer_approved'
+    assert any(entry['action']=='payment.paypal_buyer_approved' for entry in saved['audit_events'])

@@ -12,7 +12,7 @@ Frontend tests use Vitest and React Testing Library. Backend tests use Pytest, F
 - Rejected and unapproved purchase orders cannot create a payment.
 - PayPal order creation, buyer approval precondition, amount/currency matching, completed capture, and idempotent capture replay.
 - Cross-user purchase-order access denial.
-- Webhook signature rejection, duplicate event handling, and completed-capture reconciliation.
+- Webhook signature rejection, duplicate event handling, checkout buyer-approval events, and completed-capture reconciliation.
 - PayPal API OAuth, request idempotency header, and webhook verification payload.
 - Dashboard, procurement form, and purchase-order UI rendering/actions.
 

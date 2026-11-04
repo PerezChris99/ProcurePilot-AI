@@ -12,7 +12,7 @@ ProcurePilot AI is a modular monolith: React/JavaScript frontend, Python/FastAPI
 6. A purchase order progresses from DRAFT to PENDING_APPROVAL. Human approval or rejection is recorded in the approvals table and audit log.
 7. Only APPROVED orders can create a PayPal Orders v2 checkout. The server calculates the amount from the frozen order, requests an OAuth token, creates the Sandbox order, and returns its approval URL.
 8. After the buyer approves at PayPal and returns, the user explicitly requests capture. The backend fetches the PayPal order and validates its ID, status, custom ID, amount, and currency before capture. It then validates the completed capture and exact amount before marking the purchase order PAID.
-9. PayPal webhooks are verified through PayPal's webhook signature verification endpoint. Event IDs are unique, duplicate deliveries are idempotent, and capture events are reconciled against the saved PayPal order and approved amount.
+9. PayPal webhooks are verified through PayPal's webhook signature verification endpoint. CHECKOUT.ORDER.APPROVED records buyer approval for a later explicit capture; capture events are reconciled against the saved PayPal order and approved amount. Event IDs are unique and duplicate deliveries are idempotent.
 
 ## Transaction state
 
