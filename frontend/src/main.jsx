@@ -8,5 +8,6 @@ import './styles/index.css';
 import './styles/features.css';
 import './styles/theme.css';
 import './styles/responsive.css';
+import './styles/public.css';
 const queryClient=new QueryClient({defaultOptions:{queries:{retry:1,refetchOnWindowFocus:false,staleTime:30000}}});
 ReactDOM.createRoot(document.getElementById('root')).render(<React.StrictMode><QueryClientProvider client={queryClient}><BrowserRouter><AuthProvider><App/></AuthProvider></BrowserRouter></QueryClientProvider></React.StrictMode>);
