@@ -2,49 +2,71 @@
 
 **From purchasing request to approved purchase — intelligently.**
 
-ProcurePilot AI is an AI-assisted procurement workspace for businesses. It is designed to turn natural-language purchasing needs into structured requests, discover and compare real catalogue products, prepare purchase orders, obtain human approval, and complete a verified PayPal payment workflow.
+ProcurePilot AI is an AI-assisted procurement workspace for small businesses. It structures purchasing requests, discovers real products through Channel3, ranks options using deterministic evidence-based scoring, prepares purchase orders, records human approval, and demonstrates a separate PayPal Sandbox payment lifecycle.
 
-> Hackathon prototype in active development. The repository now contains the React/JSX workspace, FastAPI account and procurement-request APIs, Channel3 search adapter, deterministic product ranking, and a Google ADK agent endpoint. These integrations have not yet been validated with live developer credentials or run through the local test suites. Do not treat unconfigured services or unfinished workflows as operational.
+> Hackathon prototype in active development. The repository contains the initial procurement workflow and the purchase-order/approval/PayPal integration code. Developer credentials, migrations, tests, and the complete external Sandbox round trip still require local verification. Do not treat unconfigured integrations as operational.
 
-## Implemented code
+## Current implementation
 
-- React, JavaScript (ES modules), JSX, Vite, Tailwind CSS, React Router, and TanStack Query frontend.
+- React 19 with JavaScript/JSX, Vite, Tailwind CSS, React Router, and TanStack Query.
 - Python/FastAPI backend with PostgreSQL-ready SQLAlchemy models and Alembic migrations.
-- Email/password registration and login, Argon2id password hashing, and short-lived JWT access tokens.
-- Authenticated procurement request creation, listing, detail retrieval, and user-level ownership checks.
-- Channel3 product search adapter, response validation, offer normalization, and user attribution header.
-- Deterministic product ranking with explicit treatment of missing attributes, price, availability, and delivery uncertainty.
-- Google ADK procurement research agent with a restricted Channel3 search/ranking tool.
-- Initial frontend and backend test suites written.
+- Email/password authentication, Argon2id password hashing, and short-lived JWTs.
+- User-scoped procurement requests and Channel3 product discovery.
+- Deterministic product ranking and saved catalogue snapshots.
+- Google ADK procurement agent with a restricted Channel3 research tool.
+- Purchase-order creation from saved catalogue offers; the server calculates totals and snapshots product/offer details.
+- Draft, pending approval, approved, rejected, payment pending, paid, and payment-failed lifecycle states.
+- Human approval records, immutable approved amounts, payment idempotency, PayPal webhook signature verification, duplicate-event protection, and per-order audit history.
+- Frontend purchase-order workflow and explicit PayPal return/capture action.
 
-## Not yet complete
+## Important integration boundary
 
-Purchase-order generation, human approval, PayPal Orders API integration, webhook verification, payment reconciliation, complete audit history, production deployment, and full end-to-end test execution remain to be implemented.
+Channel3 provides product discovery and retailer offer links. Its public developer page currently describes merchant checkout as coming soon. PayPal Sandbox is therefore a separate hackathon payment demonstration. A Sandbox payment does not pay the Channel3 retailer or prove supplier settlement. Confirm Channel3 checkout access and PayPal live merchant eligibility separately before making a commercial settlement claim.
 
 ## Technology
 
-- Frontend: React, JavaScript/JSX, Vite, Tailwind CSS, React Router, TanStack Query.
-- Backend: Python, FastAPI, Pydantic, SQLAlchemy, Alembic.
-- Database: PostgreSQL.
-- AI: Google ADK and Gemini.
-- Product discovery: Channel3 API.
-- Payments: PayPal Orders API v2 (Sandbox for the hackathon).
-- Tests: Vitest, React Testing Library, Pytest, HTTPX, and Playwright (planned for E2E coverage).
+Frontend: React, JavaScript/JSX, Vite, Tailwind CSS, React Router, TanStack Query.
+
+Backend: Python, FastAPI, Pydantic, SQLAlchemy, Alembic.
+
+Database: PostgreSQL (SQLite is used by isolated API tests).
+
+AI: Google ADK and Gemini.
+
+Product discovery: Channel3 Product API.
+
+Payments: PayPal Orders v2 API (Sandbox).
+
+Tests: Vitest, React Testing Library, Pytest, HTTPX. Browser E2E and real Sandbox verification remain to be run.
 
 No TypeScript or TSX is used in the frontend.
 
 ## Local development
 
-See docs/development.md. Configure frontend/.env for the public API base URL and backend/.env for private credentials. Never commit secrets. Vite exposes variables prefixed with VITE_ to browser code; never put API keys, JWT secrets, database URLs, or PayPal credentials in frontend variables.
+See docs/development.md. Configure backend variables from .env.example and frontend variables from frontend/.env.example. Never commit secrets. Vite variables prefixed with VITE_ are public browser values; never put API keys, database URLs, JWT secrets, or PayPal credentials in frontend variables.
 
-## Transaction safety principles
+From backend/: install requirements, run alembic upgrade head, then start uvicorn app.main:app --reload.
 
-- AI can research, compare, explain, and prepare purchase orders; it cannot approve purchases or capture payments.
-- Human approval is mandatory before payment.
-- Backend-calculated totals are authoritative.
-- Approved purchase-order contents and price snapshots must be immutable; edits require reapproval.
-- Only verified PayPal transaction evidence may mark a purchase order as paid.
-- Channel3 product discovery and PayPal Sandbox payment are separate. A Sandbox capture is not proof that a retailer received payment.
+From frontend/: run npm ci, npm run dev, npm run lint, npm test, and npm run build.
+
+Backend verification: run pytest and pytest --cov=app --cov-report=term-missing from backend/.
+
+## PayPal Sandbox setup
+
+Set backend-only variables: PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com, PAYPAL_WEBHOOK_ID, and FRONTEND_URL.
+
+Register the public HTTPS webhook URL /api/v1/webhooks/paypal in the PayPal Developer Dashboard. Subscribe at minimum to PAYMENT.CAPTURE.COMPLETED and PAYMENT.CAPTURE.DENIED. The backend verifies each event with PayPal before processing it.
+
+## Transaction safety
+
+- The agent cannot create or approve purchase orders, or capture PayPal payments.
+- The browser cannot set authoritative item prices, totals, or payment amounts.
+- Purchase-order totals are calculated from the saved Channel3 offer snapshot and frozen in the order.
+- Only an approved purchase order can start checkout.
+- Capture is allowed only after buyer approval and backend verification of the remote order ID, custom ID, amount, currency, and capture result.
+- Webhooks are signature-verified and event IDs are idempotent.
+- Only verified, matching completed capture evidence moves an order to paid.
+- PayPal credentials remain server-side.
 
 ## Git workflow
 
