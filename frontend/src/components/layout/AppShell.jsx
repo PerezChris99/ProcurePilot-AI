@@ -1,34 +1,21 @@
 import {Link,NavLink, Outlet, useLocation} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
-import {
-  Activity, ClipboardList, LayoutDashboard, LogOut, Plus,
-  Search, ShieldCheck, Sparkles,
-} from 'lucide-react';
+import {LogOut,Sparkles} from 'lucide-react';
 import {useAuth} from '../../context/useAuth.js';
 import {getIntegrationStatus} from '../../services/api.js';
 import LocalClock from '../ui/LocalClock.jsx';
+import MobileDock from './MobileDock.jsx';
+import {workspaceNavigation} from './navigation.js';
 
-const navigation = [
-  {label:'Overview', short:'Home', to:'/dashboard', icon:LayoutDashboard, end:true, group:'workspace'},
-  {label:'New procurement', short:'New', to:'/procurement', icon:Plus, group:'workspace'},
-  {label:'Purchase orders', short:'Orders', to:'/orders', icon:ClipboardList, group:'workspace'},
-  {label:'Approvals', short:'Approve', to:'/approvals', icon:ShieldCheck, group:'workspace'},
-  {label:'Activity', short:'Activity', to:'/activity', icon:Activity, group:'manage'},
-  {label:'Product discovery', short:'Discover', to:'/discovery', icon:Search, group:'manage'},
-];
+const navigation=workspaceNavigation;
 const labels = Object.fromEntries(navigation.map(({to,label})=>[to,label]));
 
-function NavigationLinks({items, mobile=false, detailSelected=false}){
-  return items.map(({label,short,to,icon:Icon,end})=>(
-    <NavLink
-      key={to}
-      to={to}
-      end={end}
-      aria-label={label}
-      className={({isActive})=>(mobile?'mobile-dock-link':'nav-link')+((isActive||(detailSelected&&to==='/discovery'))?' active':'')}
-    >
-      <Icon size={mobile?19:18} strokeWidth={mobile?1.9:1.8} aria-hidden="true"/>
-      <span>{mobile?short:label}</span>
+function NavigationLinks({items,detailSelected=false}){
+  return items.map(({label,to,icon:Icon})=>(
+    <NavLink key={to} to={to} aria-label={label}
+      className={({isActive})=>'nav-link'+((isActive||(detailSelected&&to==='/discovery'))?' active':'')}>
+      <Icon size={18} strokeWidth={1.8} aria-hidden="true"/>
+      <span>{label}</span>
     </NavLink>
   ));
 }
@@ -114,8 +101,6 @@ export default function AppShell(){
         </nav>
       </footer>
     </main>
-    <nav className="mobile-dock" aria-label="Mobile workspace navigation">
-      <NavigationLinks items={navigation} mobile detailSelected={onRequestDetail}/>
-    </nav>
+    <MobileDock variant="workspace"/>
   </div>;
 }

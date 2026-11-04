@@ -2,6 +2,7 @@ import {useEffect} from 'react';
 import {Link,Outlet,useLocation} from 'react-router-dom';
 import {ArrowRight,ExternalLink} from 'lucide-react';
 import {useAuth} from '../../context/useAuth.js';
+import MobileDock from './MobileDock.jsx';
 
 const siteLinks=[
   {name:'About',to:'/about'},
@@ -84,5 +85,6 @@ export default function PublicLayout(){
     </header>
     <main id="site-main" className="site-main"><Outlet/></main>
     <PublicFooter/>
+    <MobileDock/>
   </div>;
 }
