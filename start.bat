@@ -22,23 +22,31 @@ if errorlevel 1 (
     exit /b 1
 )
 
-where py >nul 2>nul
+REM Prefer the Python executable already available on PATH.
+REM The Python Launcher may be installed without a 3.12 runtime registered,
+REM so do not assume that "py -3.12" exists just because "py" exists.
+set "PYTHON_LAUNCHER=python"
+python -c "import sys; raise SystemExit(0 if sys.version_info >= (3,12) else 1)" >nul 2>nul
 if errorlevel 1 (
-    where python >nul 2>nul
+    set "PYTHON_LAUNCHER=py -3"
+    py -3 -c "import sys; raise SystemExit(0 if sys.version_info >= (3,12) else 1)" >nul 2>nul
     if errorlevel 1 (
-        echo [ERROR] Python 3.12+ was not found on PATH.
-        echo Install Python 3.12 or newer and enable "Add Python to PATH".
+        echo [ERROR] Python 3.12 or newer could not be found.
+        echo.
+        echo Detected Python commands:
+        where python 2>nul
+        where py 2>nul
+        echo.
+        echo Try running "python --version" and "py -0p" to inspect installed versions.
+        echo Ensure Python 3.12+ is on PATH, or install it from python.org.
         pause
         exit /b 1
     )
-    set "PYTHON_LAUNCHER=python"
-) else (
-    set "PYTHON_LAUNCHER=py -3.12"
 )
 
 %PYTHON_LAUNCHER% --version
 if errorlevel 1 (
-    echo [ERROR] Python 3.12 could not be launched. Install Python 3.12+.
+    echo [ERROR] The detected Python runtime could not be started.
     pause
     exit /b 1
 )
