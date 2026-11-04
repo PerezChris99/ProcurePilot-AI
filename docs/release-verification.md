@@ -72,3 +72,11 @@ Run start.bat, verify.bat, and the manual walkthrough in docs/testing.md. Record
 - Authenticated Overview moved to `/dashboard`, login/register redirects updated; purchase/order/approval and PayPal Sandbox `/orders` buyer return paths unchanged. Vercel and Netlify SPA fallback rules added for direct URL refresh.
 - New RTL/Vitest tests cover landing hero carousel/FAQ, public legal links, public-versus-private routes and preserved order URL. The existing AppShell navigation test now targets the new authenticated dashboard route.
 - Remaining acceptance: current full `verify.bat` / `verify.sh`, real responsive browser/Safari tests, remote photo loading, public HTTPS API and deployment rewrites, actual provider credentials and signed webhooks, legal publication review, and previously documented production-governance gaps. Static audit or a Git merge alone cannot certify those tests as passing.
+
+## API, identity and data-volume hardening (source implementation)
+
+- Responsive live overview clock with device-local date, seconds, IANA timezone and GMT offset, updated on focus and once per second.
+- Bounded PostgreSQL pools and query/lock/idle timeouts, composite owner/status/time indexes, Alembic 0005 unique PayPal provider IDs, lean list projections, keyset pagination and bounded audit summaries.
+- API request-size guard, defensive headers, separate API-only CSP, production HSTS, validated finite currency amounts, capped Channel3 payloads/snapshot size, and typed/length-bounded PayPal webhook identifiers.
+- Shared Redis-backed authentication throttling (production/staging requires external TLS Redis, 503 on failure); issuer/audience/time-scoped JWTs reject old tokens. Remaining account recovery, token revocation, organizational separation, general route throttling, and payment race reconciliation are **not** certified.
+- New security/data regression test source authored but not yet run in a complete freshly provisioned Python/React environment; still require PostgreSQL migration, Redis integration, browser acceptance, providers and independent load/security/failure tests. See [docs/scaling.md](scaling.md).

@@ -11,7 +11,7 @@ From the repository root:
 .\verify.bat
 ~~~
 
-The launcher installs missing dependencies, applies Alembic migrations through 0004_ai_budget, opens VS Code, then executes a frontend build and starts the API/React dev server in integrated terminals. If VS Code blocks automatic tasks until trust is granted, run the named task **ProcurePilot: Build then Start (VS Code Terminals)**. Stop old backend/frontend terminals before relaunching to avoid port conflicts.
+The launcher installs missing dependencies, applies Alembic migrations through 0005_read_indexes, opens VS Code, then executes a frontend build and starts the API/React dev server in integrated terminals. If VS Code blocks automatic tasks until trust is granted, run the named task **ProcurePilot: Build then Start (VS Code Terminals)**. Stop old backend/frontend terminals before relaunching to avoid port conflicts.
 
 The verifier runs:
 1. Python compileall across backend application and tests.
@@ -78,3 +78,13 @@ It stops at the first failure. No GitHub Actions workflows are configured.
 - Verify authenticated overview at `/dashboard` and guest redirect to `/login` on direct `/dashboard` access. After login/register, the landing should not accidentally replace the dashboard. Confirm every desktop sidebar/mobile bottom-dock Overview link targets `/dashboard`.
 - Confirm that `/orders?token=...` still opens the protected order page after the PayPal Sandbox same-tab buyer return, not the public landing or a host 404. Confirm direct URL refresh works on deployed Vercel/Netlify through the SPA rewrite rules.
 - Review privacy/terms text with the project owner or qualified counsel before treating them as final commercial policies. Test actual provider credentials and webhook delivery independently of the public website source/build.
+
+## Security and scaling regression gates
+
+Execute `.\\start.bat` then `.\\verify.bat` on Windows; on macOS/Linux use `./start.sh` then `./verify.sh`. A new Redis Python dependency and Alembic 0005 migration were introduced; do not run the verifier from an un-updated virtual environment. Back up existing databases before migrations.
+
+- Validate `backend/tests/test_database_pool.py`, `test_database_indexes.py`, `test_http_security.py`, `test_auth_rate_limits.py`, `test_token_claims.py`, `test_untrusted_evidence_limits.py` and `test_read_path_limits.py`. Test local CORS preflight and main browser login again; token format changes intentionally require fresh login.
+- On a real PostgreSQL 17 database, run `alembic upgrade head` and confirm revision `0005_read_indexes`, compound indexes and unique PayPal order/capture IDs. Investigate and reconcile any historical duplicate payment IDs before restarting a failed migration.
+- Verify public auth with managed TLS Redis: 429 plus Retry-After beyond thresholds, 503 fail-closed when Redis is down, no leaked email/password in Redis key names, correct client address behind a trusted ingress proxy. Check legitimate users behind NAT are not broadly throttled.
+- Validate 1 MiB incoming body/2 MiB Channel3 response rejection, finite price/maximum amount checks, malformed webhook event rejection, and default lean procurement list behavior with `include_analysis=true` as the explicit heavy legacy mode.
+- Run Postgres explain/plan analysis and representative load/soak/fault/restore tests before claiming 100K or 1M users. Rehearse PayPal Sandbox/webhook race handling separately. Full procedures: [scaling and operations](scaling.md).

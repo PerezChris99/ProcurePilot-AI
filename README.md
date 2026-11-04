@@ -1,15 +1,21 @@
 # ProcurePilot AI
 
-## Judges: run locally in minutes
+**From a purchasing request to an informed, approved purchase.**
 
-**The quickest demo needs Python 3.12+, Node.js 22.12+ (or 20.19+), npm and Git.** Mac/Linux first-run mode uses a local SQLite file so a PostgreSQL service is **not required just to open the app**. A real Channel3 search, Gemini analysis or PayPal Sandbox checkout requires the corresponding private provider credentials in the root `.env`; the app never invents provider results.
+ProcurePilot AI is an evidence-first procurement application that combines real catalogue discovery, deterministic product/price checks, a carefully bounded Gemini analyst, human-controlled approvals, and a PayPal Sandbox payment demonstration.
+
+**Project status:** Functional prototype under active hardening. The Sandbox does not pay retailers, and a passing local build is not evidence of production readiness, unrestricted provider access, or high-load capacity.
+
+## Installation and local development
+
+**Local development requires Python 3.12+, Node.js 22.12+ (or 20.19+), npm and Git.** Mac/Linux first-run mode uses a local SQLite file so a PostgreSQL service is **not required just to open the app**. A real Channel3 search, Gemini analysis or PayPal Sandbox checkout requires the corresponding private provider credentials in the root `.env`; the app never invents provider results.
 
 | Platform | Start | Verify |
 | --- | --- | --- |
 | Windows / VS Code | `.\\start.bat` | `.\\verify.bat` |
 | macOS / Linux | `./start.sh` | `./verify.sh` |
 
-### macOS: judge quickstart
+### macOS
 
 Install [Homebrew](https://brew.sh/) if needed, then open Terminal:
 
@@ -22,7 +28,7 @@ cd ProcurePilot-AI
 
 First launch creates local `.env` and `frontend/.env`, installs dependencies, applies database migrations, **builds React before starting**, then launches the backend and frontend in the current terminal. The command preserves any existing `.env`. Keep Terminal open; **Ctrl+C** stops both servers.
 
-### Linux (Ubuntu / Debian): judge quickstart
+### Linux (Ubuntu / Debian)
 
 Install Python 3.12+ and its venv package, Git, and Node.js 22 LTS from the [official Node.js downloads](https://nodejs.org/en/download). Ubuntu 24.04 users can start with:
 
@@ -38,7 +44,7 @@ cd ProcurePilot-AI
 
 For other Linux distributions use the distribution's equivalent Python/Git packages, install a supported Node.js, and run the same `./start.sh`. Run `./verify.sh` from a second terminal for all source, test and build checks.
 
-### Windows: exactly how this project is currently run in VS Code
+### Windows and VS Code
 
 ~~~powershell
 cd "D:\NEW PROJECTS\ProcurePilot-AI"
@@ -59,21 +65,15 @@ If VS Code does not start them automatically:
 
 **Local addresses:** [UI](http://127.0.0.1:5173) · [API](http://127.0.0.1:8000) · [API docs](http://127.0.0.1:8000/docs) · [Database readiness](http://127.0.0.1:8000/api/v1/ready).
 
-**Start here:** `http://127.0.0.1:5173/` is now the public landing page; click **Get started** to register or **Sign in**. After authentication, the Overview is at `/dashboard`. The existing `/orders` PayPal Sandbox return URL is unchanged. Judges can read About, How it works, Privacy, Terms, Security, Accessibility, Responsible use and Contact before signing in.
+**Start here:** `http://127.0.0.1:5173/` is now the public landing page; click **Get started** to register or **Sign in**. After authentication, the Overview is at `/dashboard`. The existing `/orders` PayPal Sandbox return URL is unchanged. Anyone can read About, How it works, Privacy, Terms, Security, Accessibility, Responsible use and Contact before signing in.
 
 ### Optional PostgreSQL and external providers
 
-On macOS/Linux, `./start.sh --postgres` starts from the PostgreSQL template **only when no `.env` exists**. For an existing `.env`, change `DATABASE_URL` yourself; the script never overwrites it. Development SQLite is useful for judging UI and local flows; **production requires PostgreSQL**. In Windows, configure PostgreSQL before `.\start.bat`.
+On macOS/Linux, `./start.sh --postgres` starts from the PostgreSQL template **only when no `.env` exists**. For an existing `.env`, change `DATABASE_URL` yourself; the script never overwrites it. Development SQLite is useful for exploring the UI and local flows; **production requires PostgreSQL**. In Windows, configure PostgreSQL before `.\start.bat`.
 
 Supply `GOOGLE_API_KEY`, `CHANNEL3_API_KEY`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` and an optional `PAYPAL_WEBHOOK_ID` to unlock those real provider workflows. The authenticated System status panel reports exactly which credential categories are set and which are missing. A configured key **does not** prove a provider API call works; live transactions and signed HTTPS webhooks must be demonstrated separately.
 
 ---
-
-**From purchasing request to approved purchase — intelligently.**
-
-An evidence-first procurement demonstrator that brings real product discovery, deterministic purchase governance, a carefully budgeted Gemini/Google ADK analyst, and an independent PayPal Sandbox payment demonstration into one approachable workflow.
-
-> **Evaluation status:** Hackathon prototype, not a production purchasing platform. Real Gemini, Channel3, PostgreSQL and PayPal Sandbox credentials/services must be configured and verified. A successful build does not prove real-provider availability or merchant settlement.
 
 ## Why ProcurePilot exists
 
@@ -81,7 +81,7 @@ A business purchase is more than a product-search query. Teams must express requ
 
 ProcurePilot separates responsibilities: **the model explains, deterministic code decides what is orderable, people approve, and PayPal Sandbox demonstrates a verified payment lifecycle.** This makes a sophisticated workflow usable from a small set of clear screens.
 
-## A judge's five-minute tour
+## Five-minute product walkthrough
 
 1. **Visit the public landing page, then register or sign in.** A short real-photo slideshow introduces procurement challenges and the workflow; your authenticated overview is now at `/dashboard`.
 2. **New procurement.** Enter an unambiguous requirement, e.g. "Two 27-inch office monitors with IPS displays", quantity 2, currency USD and a reasonable budget. Product availability depends on the live catalogue.
@@ -91,11 +91,11 @@ ProcurePilot separates responsibilities: **the model explains, deterministic cod
 6. **Purchase orders → PayPal Sandbox.** Create a Sandbox checkout, sign in at PayPal using the **Sandbox Personal buyer**, approve in the same tab, return to ProcurePilot, and confirm capture. The backend checks the PayPal order and completed capture before marking it paid.
 7. **Review the audit trail.** The order timeline and user-scoped dashboard show the actual events. A separate public HTTPS webhook can reconcile signed PayPal notifications.
 
-**Required for a full payment demo:** a Sandbox **Business merchant** REST application and credentials, a Sandbox **Personal buyer**, and the appropriate order/currency. A PayPal Sandbox payment does **not** pay a Channel3 retailer.
+**Required for the full Sandbox flow:** a Sandbox **Business merchant** REST application and credentials, a Sandbox **Personal buyer**, and the appropriate order/currency. A PayPal Sandbox payment does **not** pay a Channel3 retailer.
 
 ### Screen map
 
-| Screen | What a judge can do |
+| Screen | Function |
 | --- | --- |
 | Public home | Concise hero, actual procurement photography, transparent technology integration strip, problem/solution, workflow, FAQs and CTA |
 | About and legal pages | Public About, How it works, Privacy, Terms, Security, Accessibility, Responsible use and Contact |
@@ -232,34 +232,7 @@ Daily allowances use atomic UTC-date reservations in the database. Limits bound 
 
 See [AI engineering and safeguards](docs/agent.md).
 
-## Windows / VS Code setup
-
-**Prerequisites:** Git, Python **3.12+**, Node.js LTS + npm, VS Code, a running PostgreSQL instance and a database named for your configured connection string. For real external operations you must also obtain the relevant provider credentials; no secrets ship in the repository.
-
-~~~powershell
-Set-Location "D:\NEW PROJECTS"
-git clone https://github.com/PerezChris99/ProcurePilot-AI.git
-Set-Location ".\ProcurePilot-AI"
-code .
-~~~
-
-1. Copy root [`.env.example`](.env.example) to `.env` and supply `DATABASE_URL`, a unique `JWT_SECRET_KEY`, and the relevant backend-only provider keys. The launcher can create the template files automatically if missing, but **cannot invent credentials or start PostgreSQL for you**.
-2. From the repository root run:
-
-   ~~~powershell
-   .\start.bat
-   ~~~
-
-3. The launcher prepares the Python virtual environment and npm dependencies, applies Alembic migrations, then opens a dedicated VS Code window. Trust the workspace and allow folder-open tasks. The task runs a frontend production build, verifies migrations, and starts FastAPI and Vite in VS Code's **integrated terminals**.
-4. If folder-open tasks are disabled, run **Terminal → Run Task → ProcurePilot: Build then Start (VS Code Terminals)**.
-
-| Local address | Purpose |
-| --- | --- |
-| http://localhost:5173 | React UI |
-| http://localhost:8000 | FastAPI |
-| http://localhost:8000/docs | API schema (development only) |
-
-### Backend-only environment
+## Environment configuration
 
 ~~~dotenv
 GOOGLE_API_KEY=
@@ -270,11 +243,24 @@ PAYPAL_CLIENT_ID=
 PAYPAL_CLIENT_SECRET=
 PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
 PAYPAL_WEBHOOK_ID=
+
+# Required for public authentication / shared rate limits
+RATE_LIMIT_REDIS_URL=rediss://USER:PASSWORD@REDIS_HOST:6380/0
+
+# Bound the number and duration of PostgreSQL connections per worker
+DB_POOL_SIZE=5
+DB_MAX_OVERFLOW=5
+DB_POOL_TIMEOUT_SECONDS=10
+DB_CONNECT_TIMEOUT_SECONDS=5
+DB_STATEMENT_TIMEOUT_MS=15000
+DB_LOCK_TIMEOUT_MS=3000
+DB_IDLE_TRANSACTION_TIMEOUT_MS=15000
+MAX_REQUEST_BODY_BYTES=1048576
 ~~~
 
-See the [full provider setup guide](docs/provider-setup.md) for merchant vs buyer Sandbox accounts and webhook registration. `PAYPAL_WEBHOOK_ID` requires a webhook registered against a **public HTTPS** endpoint; localhost cannot accept PayPal's remote webhook deliveries. Keep all keys in the backend/root environment, never a `VITE_*` frontend setting or a commit.
+See [Scaling, operations and capacity planning](docs/scaling.md) for Redis, database pool sizing, least-privilege DB roles, load tests and production operations. See the [full provider setup guide](docs/provider-setup.md) for merchant vs buyer Sandbox accounts and webhook registration. `PAYPAL_WEBHOOK_ID` requires a webhook registered against a **public HTTPS** endpoint; localhost cannot accept PayPal's remote webhook deliveries. Keep all keys in the backend/root environment, never a `VITE_*` frontend setting or a commit.
 
-### Checks before a judge demonstration
+### Verification
 
 ~~~powershell
 .\verify.bat
@@ -288,7 +274,7 @@ For a real end-to-end demonstration, additionally exercise registration, product
 
 **Implemented:** Argon2id password hashing, short-lived JWT access tokens, user-owned record filters, strict approval status checks, server-derived PO prices/totals, product/offer snapshots, constrained model tool access, atomic daily AI-call quotas, bounded provider requests, PayPal order-and-capture verification, signed webhooks and duplicate-event handling, and user-visible audit records.
 
-**Not production-certified:** true multi-person independent approval, durable edge/API request rate limiting, password reset/email verification, device/session revocation, concurrency-safe distributed payment reconciliation, browser E2E coverage, production monitoring/backup testing or live merchant receiving eligibility. The personal-workspace prototype allows self-approval. See [security posture and threat model](docs/security.md) for precise residual risks.
+**Not production-certified:** true multi-person independent approval, durable distributed rate limits for API routes beyond authentication, password reset/email verification, device/session revocation, concurrency-safe distributed payment reconciliation, browser E2E coverage, production monitoring/backup testing or live merchant receiving eligibility. The personal-workspace prototype allows self-approval. See [security posture and threat model](docs/security.md) for precise residual risks.
 
 This is not a PCI-certified payment processor. The app does not capture card numbers, and it cannot represent PayPal Sandbox captures as real retailer payouts.
 
@@ -309,16 +295,17 @@ This is not a PCI-certified payment processor. The app does not capture card num
 | `docs/provider-setup.md` | Gemini, Channel3, PayPal Sandbox credentials |
 | `docs/development.md` | Local startup and troubleshooting |
 | `docs/release-verification.md` | Outstanding acceptance gates |
+| `docs/scaling.md` | Capacity planning, database operations, load testing, incident recovery and security boundaries |
 
-## Hackathon attribution and disclosure
+## Technology, licensing and disclosure
 
 **AI:** Gemini via Google ADK; catalogue discovery uses Channel3, and purchases/payments use deterministic FastAPI workflow controls and PayPal Orders v2 Sandbox. The recommendation is LLM-assisted; product prices, scores, stock evidence, payments and approvals are not fabricated by an LLM. Model costs are bounded but not guaranteed to be zero.
 
 **Workflow:** Implement changes on `perez`, document meaningful commits, open a PR, merge into `main` and synchronize both branches. No GitHub Actions workflows.
 
-**Copyright and license:** © 2026 PerezChris99. **All rights reserved. Authorized use only.** See [LICENSE](LICENSE), which grants narrowly scoped hackathon evaluator access but no general right to reuse, modify, sell or redistribute the project. **This is a proprietary license, not an OSI-approved open-source license.** If the hackathon requires an open-source license, the owner must resolve that conflict before submission.
+**Copyright and license:** © 2026 PerezChris99. **All rights reserved. Authorized use only.** See [LICENSE](LICENSE), which grants narrowly scoped project review access but no general right to reuse, modify, sell or redistribute the code. **This is a proprietary license, not an OSI-approved open-source license.** If the hackathon requires an open-source license, the owner must resolve that conflict before submission.
 
-### Public frontend deployment
+## Public frontend deployment
 
 The standard npm run build is a localhost-compatible Windows development check. For a real public deployment, set VITE_API_BASE_URL to https://YOUR-HTTPS-API-HOST/api/v1 or to /api/v1 behind a same-origin HTTPS reverse proxy. Then run npm run build:deploy from frontend/. That build gate refuses localhost/HTTP/malformed endpoints before generating public assets. Hosting services must explicitly choose build:deploy; normal npm run build remains a local check. The browser API layer also reports a clear misconfiguration instead of attempting to send a visitor's browser to localhost.
 
@@ -333,3 +320,9 @@ The public root `/` now introduces the problem and product in a compact editoria
 The authenticated Overview moved to `/dashboard`. Other purchasing routes and PayPal's `/orders` return route are preserved. Public About, How it works, Privacy, Terms, Security, Accessibility, Responsible use and Contact are available from the footer without a login. These prototype legal notices should receive owner/counsel review before a commercial launch.
 
 For static hosting, `frontend/vercel.json` provides Vercel's SPA rewrite when the project root is `frontend/`, and `frontend/public/_redirects` provides Netlify's SPA fallback for direct legal and workspace URLs. Configure the public frontend's HTTPS backend address as `VITE_API_BASE_URL` and use `npm run build:deploy`. A simple successful `npm run build` alone does not prove a deployed domain, API connection or provider access.
+
+## Performance and security boundaries
+
+The backend now enforces finite and range-checked money, a 1 MiB HTTP request body limit, size-limited external catalogue responses, human approval and server-verified PayPal Sandbox evidence. Public authentication uses **shared Redis rate limiting** and fails closed if that service is unavailable. Secrets are never returned by the integration-status endpoint, and production API responses include defensive headers. Database access uses bounded PostgreSQL connection pools, SQL/lock timeouts, composite user-scoped indexes, unique PayPal capture/order IDs, keyset pagination for saved procurement lists and bounded audit summaries; complete order audit data remain available through the individual order endpoint.
+
+**Capacity is not a fixed user-count guarantee.** Running 100,000 or 1,000,000 accounts reliably depends on concurrent load, provider quotas, query plans, data volumes, infrastructure, backups, autoscaling and security monitoring. Use the [scaling and capacity guide](docs/scaling.md) and demonstrate throughput and p95/p99 latency through real load and failure testing before advertising those levels. Separating signed-in user accounts from simultaneous active sessions is essential.
