@@ -120,3 +120,7 @@ The launcher now checks Node.js **20.19+** or **22.12+** before dependency insta
 ## Public build verification
 
 Run npm run test:deploy-config in frontend/ to test endpoint validation with Node's built-in test runner. Configure VITE_API_BASE_URL with a real HTTPS backend URL ending in /api/v1 or the same-origin path /api/v1 behind a reverse proxy, then run npm run build:deploy. The default local npm run build remains unchanged. Configure your deployment service to use the strict command and do not place provider credentials inside VITE-prefixed values.
+
+## Windows batch parser resilience
+
+The launcher runs small, checked-in Node and Python preflight scripts instead of embedding nested JavaScript/Python expressions within Windows CMD conditional blocks. This avoids CMD interpreting parentheses or shell control symbols before displaying the first setup stage. If an older startup script reports an unexpected token, pull the latest perez branch before retrying. The frontend Node version tests run through verify.bat; the Python preflight requires only the standard library.

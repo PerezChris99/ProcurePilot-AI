@@ -30,20 +30,20 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-node -e "const v=process.versions.node.split('.').map(Number);process.exit(Number(!((v[0]===20&&v[1]>=19)||(v[0]>=22&&(v[0]>22||v[1]>=12)))))" >nul 2>nul
+node "%PROJECT_ROOT%\frontend\scripts\check-node-version.cjs"
 if errorlevel 1 (
-    echo [ERROR] Your Node.js version is not supported by Vite 7.
-    echo Install Node.js 20.19+ or 22.12+ (LTS recommended).
+    echo [ERROR] Node.js does not meet the minimum Vite 7 version.
+    echo Install Node.js 20.19 or newer, or Node.js 22.12 or newer.
     node --version
     pause
     exit /b 1
 )
 
 set "PYTHON_LAUNCHER=python"
-python -c "import sys; raise SystemExit(0 if sys.version_info >= (3,12) else 1)" >nul 2>nul
+python "%PROJECT_ROOT%\backend\scripts\check_python_version.py" >nul 2>nul
 if errorlevel 1 (
     set "PYTHON_LAUNCHER=py -3"
-    py -3 -c "import sys; raise SystemExit(0 if sys.version_info >= (3,12) else 1)" >nul 2>nul
+    py -3 "%PROJECT_ROOT%\backend\scripts\check_python_version.py" >nul 2>nul
     if errorlevel 1 (
         echo [ERROR] Python 3.12 or newer could not be found.
         echo Run "python --version" and "py -0p" to inspect installed versions.
