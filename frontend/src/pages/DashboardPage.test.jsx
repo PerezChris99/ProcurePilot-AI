@@ -25,7 +25,7 @@ describe('DashboardPage',()=>{
   renderPage();
   expect(await screen.findByText('Google Gemini')).toBeInTheDocument();
   expect(screen.getByText('PayPal Sandbox')).toBeInTheDocument();
-  expect(screen.getAllByText('Configured').length).toBe(3);
+  expect((await screen.findAllByText('Configured')).length).toBe(3);
   expect(screen.getByText('Webhook pending')).toBeInTheDocument();
  });
 });

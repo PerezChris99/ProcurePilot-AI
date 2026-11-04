@@ -176,3 +176,13 @@ def test_webhook_rejects_malformed_resource_after_signature_verification(client,
         'id':'WH-BAD-RESOURCE','event_type':'PAYMENT.CAPTURE.COMPLETED',
         'resource':['not','a','payment']})
     assert response.status_code==400
+
+
+def test_purchase_order_list_returns_complete_details_without_n_plus_one_queries(client,monkeypatch):
+    headers,order=make_order(client,monkeypatch,email='list-batch@example.com')
+    response=client.get('/api/v1/purchase-orders',headers=headers)
+    assert response.status_code==200
+    assert len(response.json())==1
+    assert response.json()[0]['id']==order['id']
+    assert response.json()[0]['items'][0]['product_title']=='Business monitor 27 inch'
+    assert any(event['action']=='purchase_order.created' for event in response.json()[0]['audit_events'])

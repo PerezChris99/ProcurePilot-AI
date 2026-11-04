@@ -105,3 +105,7 @@ This is a configuration/readiness check, not proof that an external API key is v
 8. Verify webhook delivery over HTTPS and inspect the purchase-order audit timeline.
 
 Do not paste API keys or secrets into ChatGPT or commit them to Git. If a credential has been exposed, revoke and rotate it in the provider dashboard.
+
+### Why Sandbox approval stays in the same browser tab
+
+The frontend stores the login token in browser `sessionStorage`. PayPal Sandbox checkout must navigate in the **same tab** so the redirect back to `/orders?paypal=return&po=...` retains that session and the user can confirm capture without logging in again. Opening a `noopener` checkout tab would not reliably preserve the authenticated return context. Never paste API secrets into the frontend.
