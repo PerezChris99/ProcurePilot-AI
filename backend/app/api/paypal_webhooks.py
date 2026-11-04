@@ -27,7 +27,8 @@ async def paypal_webhook(request:Request,db:Session=Depends(get_db)):
     if existing: return {'received':True,'duplicate':True,'processed':existing.processed_at is not None}
     resource=event.get('resource') or {}
     related=(resource.get('supplementary_data') or {}).get('related_ids') or {}
-    safe_payload={'id':event['id'],'event_type':event['event_type'],'resource':{'id':resource.get('id'),'status':resource.get('status'),'amount':resource.get('amount'),'related_order_id':related.get('order_id')}}
+    amount_data=resource.get('amount') or {}
+    safe_payload={'id':event['id'],'event_type':event['event_type'],'resource':{'id':resource.get('id'),'status':resource.get('status'),'amount':{'currency_code':amount_data.get('currency_code'),'value':amount_data.get('value')},'related_order_id':related.get('order_id')}}
     record=WebhookEvent(provider_event_id=event['id'],event_type=event['event_type'],verified=True,payload=safe_payload)
     db.add(record)
     try: db.flush()

@@ -3,6 +3,7 @@ from datetime import datetime,timezone
 from decimal import Decimal,InvalidOperation
 from fastapi import APIRouter,Depends,HTTPException,Query,status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import get_db
@@ -124,7 +125,15 @@ async def create_paypal_order(order_id:str,db:Session=Depends(get_db),user:User=
     else:
         payment=Payment(purchase_order_id=order.id,idempotency_key=uuid.uuid4().hex,status='creating',amount=order.total_amount,currency=order.currency)
         db.add(payment)
-    db.commit(); db.refresh(payment)
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        existing=db.scalar(select(Payment).where(Payment.purchase_order_id==order.id))
+        if existing and existing.paypal_order_id and existing.approval_url:
+            return {'payment':_payment_data(existing),'approval_url':existing.approval_url,'idempotent_replay':True}
+        raise HTTPException(status_code=409,detail='A PayPal checkout attempt is already being created for this purchase order.') from exc
+    db.refresh(payment)
     item=db.scalar(select(PurchaseOrderItem).where(PurchaseOrderItem.purchase_order_id==order.id))
     settings=get_settings()
     try:
