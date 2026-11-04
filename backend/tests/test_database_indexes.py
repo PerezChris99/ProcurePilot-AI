@@ -25,7 +25,7 @@ def test_payment_provider_identifiers_are_uniquely_indexed_in_sqlite_test_schema
     try:
         indexes=inspect(db.bind).get_indexes('payments')
         ids={item['name']:item for item in indexes}
-        assert ids['ix_payments_paypal_order_id']['unique'] is True
-        assert ids['ix_payments_capture_id']['unique'] is True
+        assert bool(ids['ix_payments_paypal_order_id']['unique'])
+        assert bool(ids['ix_payments_capture_id']['unique'])
     finally:
         db_generator.close()
