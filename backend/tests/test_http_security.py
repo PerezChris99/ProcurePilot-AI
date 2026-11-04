@@ -1,5 +1,3 @@
-from app.main import app
-
 def test_api_security_headers_and_no_store_on_authenticated_and_public(client):
     for path in ('/api/v1/health', '/api/v1/auth/me'):
         response=client.get(path)
@@ -20,9 +18,10 @@ def test_cors_preflight_keeps_required_headers(client):
     assert response.headers['x-content-type-options']=='nosniff'
 
 def test_oversized_content_length_rejected_before_body_parsing(client):
+    # Let HTTPX create a valid Content-Length to avoid transport-specific
+    # protocol errors from a deliberately mismatched advertised length.
     response=client.post('/api/v1/auth/login',
-        headers={'Content-Length':'999999999'},
-        content=b'{}')
+        content=b'x'*1_048_577,headers={'Content-Type':'application/json'})
     assert response.status_code==413
     assert 'size limit' in response.json()['detail']
     assert response.headers['cache-control']=='no-store'
