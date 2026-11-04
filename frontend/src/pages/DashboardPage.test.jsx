@@ -43,8 +43,9 @@ describe('Live overview',()=>{
  it('renders real overview counts and recent activity',async()=>{
   renderPage();
   const completed=await screen.findByText('Completed purchases');
-  const active=screen.getByText('Active purchase orders');
+  const active=screen.getByText('Active orders');
   const requests=screen.getByText('Requests with results');
+  expect(screen.getByText('Pending approval')).toBeInTheDocument();
   // Labels render synchronously; totals arrive after the React Query promise settles.
   await waitFor(()=>{
    expect(within(completed.closest('article')).getByText('2')).toBeInTheDocument();

@@ -11,7 +11,7 @@ ProcurePilot is designed for clear reading across public, account and authentica
 | Selective accent | Sweet Yellow | `#FFD66B` | Closing CTA on dark navy and genuine caution states, not decorative borders or heading underlines |
 | Contrast anchor | Midnight Navy | `#0B1B3D` | Body headings, dark footer/callouts and text on yellow |
 
-Yellow intentionally appears **sparingly**, mainly as a CTA surface on dark navy or in meaningful caution states, with dark lettering. A yellow dash before the hero kicker, yellow hero-word underline, yellow footer strip, yellow selection hairlines, and colored edges on overview metric cards have been removed. Small yellow text on white would have insufficient contrast and is prohibited by design. Link blue used on white is a darker `#075CA9`, not the lower-contrast bright Sky Blue token.
+Yellow intentionally appears **sparingly**, mainly as a CTA surface with dark navy lettering and in meaningful caution states. A yellow dash before the hero kicker, yellow hero-word underline, yellow footer strip, yellow selection hairlines, and colored edges on overview metric cards have been removed. Small yellow text on white would have insufficient contrast and is prohibited by design. Link blue used on white is a darker `#075CA9`, not the lower-contrast bright Sky Blue token.
 
 Our unit-level WCAG contrast calculation checks the following representative pairs using actual sRGB relative luminance:
 
@@ -48,8 +48,8 @@ Source-level automated checks cannot guarantee full accessibility or universal v
 
 ## Layout restraint and content hierarchy
 
-The public page uses a unified responsive edge gutter `clamp(16px, 2.4vw, 44px)` instead of a fixed maximum width. Header, legal/footer and content sections align. The entire desktop hero is one 510px-high photograph-backed section; the headline, description, and CTAs sit inside it over an intentionally deep navy scrim so text remains readable when the slideshow changes. Smaller screens retain the one-section layout, with a taller minimum height for readable text and touch controls. Paragraph widths stay limited for comfortable reading.
+The public landing has returned to an editorial, **centered maximum width of 1180px**. It uses comfortable 24px desktop side clearance, a text-left / photograph-right hero, and a 510px desktop photo panel—not a full-bleed image behind every word. At tablet and mobile sizes the sections stack with 18px or 16px side gutters, while the slideshow becomes shorter. Headline, paragraph and action areas remain separate from image captions. The page uses a near-white paper background (`#FBFBFA`), lighter typography and small neutral dividers; yellow is reserved for the closing call to action and meaningful caution.
 
-The dashboard replaces four separate rounded, color-edged metric cards with a single neutral data strip separated by fine rules. The promotional dashboard hero is removed because the overview already has a primary procurement action. The activity and system-status sections remain, including explicit configuration-versus-connectivity disclaimers.
+The dashboard remains centered within 1090px, with the four real metrics in one flat, uncolored summary strip divided by thin neutral rules. Heading weights are reduced to approximately 570–600, labels and metadata are generally 470–550, and surfaces have no ornamental shadows or colored tile edges. The primary procurement action, activity and system-status panel remain unchanged functionally. The app avoids competing decorative banners and retains its explicit configuration-versus-connectivity disclaimer.
 
 Visual and assistive-tech checks remain necessary at 320–960px, 200%/400% zoom, high-contrast mode, and desktop widths above 1920px.

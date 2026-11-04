@@ -68,22 +68,34 @@ test('yellow remains an intentional, high-contrast accent without decorative und
   assert.doesNotMatch(styles,/\.site-kicker::before\s*\{[^}]*content:""/);
   assert.doesNotMatch(styles,/background:linear-gradient\(transparent 81%,var\(--brand-yellow\)/);
   assert.match(layout,/\.site-kicker::before\{content:none\}/);
-  assert.match(layout,/\.site-hero-text h1 em\{color:#d8efff;background:none;text-decoration:none\}/);
+  assert.match(layout,/\.site-hero-text h1 em\{background:none;text-decoration:none\}/);
   assert.match(styles,/\.mobile-dock-link\.active::before\{background:#0865cc/);
   assert.match(styles,/@media\(max-width:519px\)/);
   assert.match(styles,/@media\(prefers-reduced-motion:reduce\)/);
 });
 
-test('image fills the hero and every CTA belongs to the photographic section',()=>{
+test('paper design restores a composed hero and centered page rather than full bleed',()=>{
   assert.match(main,/import '\.\/styles\/accessibility-brand\.css';\s*import '\.\/styles\/layout-refinement\.css';/);
-  assert.match(layout,/--site-gutter:clamp\(16px,2\.4vw,44px\)/);
-  assert.match(layout,/\.site-container,\s*\.site-footer-top\s*\{[^}]*width:calc\(100% - 2 \* var\(--site-gutter\)\)/);
-  assert.match(layout,/\.site-hero\.site-hero-visual\s*\{[^}]*width:calc\(100% - 2 \* var\(--site-gutter\)\);[^}]*height:510px;\s*min-height:510px/);
-  assert.match(layout,/\.site-hero-content\s*\{[^}]*z-index:2/);
-  assert.match(landing,/<HeroSlideshow>\s*<div className="site-hero-text">/);
-  assert.match(landing,/<div className="site-hero-content">\{children\}<\/div>/);
-  assert.match(layout,/\.site-hero-mist\s*\{[^}]*linear-gradient\(90deg,rgba\(5,18,38,\.91\)/);
-  assert.match(layout,/@media\(max-width:1279px\)/);
+  assert.match(layout,/\.site-container,\.site-footer-top\s*\{\s*width:min\(calc\(100% - 48px\),1180px\);\s*max-width:1180px;/);
+  assert.match(layout,/\.site-hero\s*\{\s*display:grid;\s*grid-template-columns:minmax\(0,\.93fr\) minmax\(0,1\.07fr\)/);
+  assert.match(layout,/\.site-hero-visual\s*\{[^}]*height:510px;\s*min-height:510px/);
+  assert.match(landing,/<section className="site-hero site-container" aria-labelledby="landing-headline">/);
+  assert.match(landing,/<HeroSlideshow\/>/);
+  assert.doesNotMatch(landing,/<HeroSlideshow>\s*<div className="site-hero-text">/);
+  assert.doesNotMatch(landing,/className="site-hero-content"/);
+  assert.match(layout,/@media\(max-width:960px\)\s*\{[^}]*\.site-container/);
+});
+
+test('public and dashboard typography use calm, readable paper surfaces',()=>{
+  assert.match(layout,/--site-paper:#fbfbfa/);
+  assert.match(layout,/\.site-shell h1,\.site-shell h2,\.site-shell h3\{font-weight:600\}/);
+  assert.match(layout,/\.site-final-cta\s*\{[^}]*background:#f5f6f5;[^}]*border:1px solid/);
+  assert.match(layout,/\.site-footer\s*\{\s*background:#f7f8f8;/);
+  assert.match(layout,/\.dashboard-refined\s*\{[^}]*max-width:1090px/);
+  assert.match(layout,/\.dashboard-refined \.metric-label\s*\{[^}]*font-weight:470/);
+  assert.match(layout,/\.app-frame \.dashboard-refined \.metric-value\s*\{[^}]*font-weight:590/);
+  assert.match(layout,/\.dashboard-refined \.panel\s*\{[^}]*box-shadow:none/);
+  assert.doesNotMatch(layout,/minmax\(0,\.76fr\) minmax\(0,1\.44fr\)/);
 });
 
 test('parallax is bounded and motion-safe; anchor navigation follows user preference',()=>{
