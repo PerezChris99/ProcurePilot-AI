@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     frontend_url: str = 'http://localhost:5173'
     database_url: str = 'sqlite:///./procurepilot.db'
     jwt_secret_key: str = 'development-only-change-this-secret'
-    access_token_expire_minutes: int = 30
+    access_token_expire_minutes: int = Field(default=30, ge=5, le=120)
     # Conservative per-process pool caps: scale API replicas, not DB connections.
     db_pool_size: int = Field(default=5, ge=1, le=40)
     db_max_overflow: int = Field(default=5, ge=0, le=20)
