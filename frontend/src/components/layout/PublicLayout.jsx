@@ -26,7 +26,7 @@ export function PublicFooter(){
           <img src="/favicon.svg" alt="" width="31" height="31"/>
           <span>procurepilot<span className="site-footer-brand-dot">.</span></span>
         </Link>
-        <p>Smarter sourcing. Clearer approvals. Human-controlled purchasing.</p>
+        <p>Procurement with clarity.</p>
       </div>
       <nav aria-label="Platform pages" className="site-footer-links">
         <strong>Explore</strong>
@@ -38,8 +38,7 @@ export function PublicFooter(){
         {legalLinks.map(link=><Link key={link.to} to={link.to}>{link.name}</Link>)}
       </nav>
       <div className="site-footer-brief">
-        <span className="site-foot-eyebrow">BUILT FOR DECISIONS</span>
-        <p>A hackathon prototype. Live provider access depends on your configured credentials.</p>
+        <p>Prototype. External services require configured credentials.</p>
         <a href="https://github.com/PerezChris99/ProcurePilot-AI" target="_blank" rel="noopener noreferrer">Project on GitHub <ExternalLink size={13} aria-hidden="true"/></a>
         <a href="https://unsplash.com/license" target="_blank" rel="noopener noreferrer">Photography: Unsplash <ExternalLink size={13} aria-hidden="true"/></a>
       </div>

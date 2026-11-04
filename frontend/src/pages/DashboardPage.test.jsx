@@ -19,7 +19,9 @@ describe('DashboardPage',()=>{
  it('renders the procurement overview and primary action',()=>{
   renderPage();
   expect(screen.getByRole('heading',{name:/good (morning|afternoon|evening), amina/i})).toBeInTheDocument();
-  expect(screen.getByRole('heading',{name:/let's buy smarter/i})).toBeInTheDocument();
+  expect(screen.getByRole('heading',{name:'Purchase overview'})).toBeInTheDocument();
+  expect(screen.queryByText(/let's buy smarter/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/YOUR AI PROCUREMENT COPILOT/i)).not.toBeInTheDocument();
   expect(screen.getByRole('link',{name:/new procurement/i})).toBeInTheDocument();
  });
  it('shows live provider configuration rather than hard-coded not configured labels',async()=>{
