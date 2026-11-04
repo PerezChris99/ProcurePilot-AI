@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.auth import router as auth_router
+from app.api.dashboard import router as dashboard_router
 from app.api.health import router as health_router
 from app.api.integrations import router as integrations_router
 from app.api.paypal_webhooks import router as paypal_webhooks_router
@@ -27,6 +28,7 @@ app.add_middleware(
 )
 app.include_router(health_router, prefix=settings.api_v1_prefix)
 app.include_router(auth_router, prefix=settings.api_v1_prefix)
+app.include_router(dashboard_router, prefix=settings.api_v1_prefix)
 app.include_router(integrations_router, prefix=settings.api_v1_prefix)
 app.include_router(procurement_router, prefix=settings.api_v1_prefix)
 app.include_router(purchase_orders_router, prefix=settings.api_v1_prefix)

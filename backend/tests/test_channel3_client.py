@@ -30,3 +30,37 @@ def test_search_rejects_invalid_response():
     transport=httpx.MockTransport(lambda request:httpx.Response(200,json={'products':[{'title':'missing id'}]}))
     client=Channel3Client(api_key='test-key',transport=transport)
     with pytest.raises(Channel3Unavailable): asyncio.run(client.search_products('monitor'))
+
+
+@pytest.mark.parametrize('envelope', [
+    {'data': [{'id': 'real-1', 'title': 'Monitor'}], 'next_cursor': 'cursor-2'},
+    {'items': [{'id': 'real-1', 'title': 'Monitor'}], 'pagination': {'next_cursor': 'cursor-2'}},
+    {'products': [{'id': 'real-1', 'title': 'Monitor'}], 'nextPageToken': 'cursor-2'},
+])
+def test_search_accepts_current_and_legacy_paginated_product_envelopes(envelope):
+    transport=httpx.MockTransport(lambda request:httpx.Response(200,json=envelope))
+    client=Channel3Client(api_key='test-key',transport=transport)
+    result=asyncio.run(client.search_products('monitor'))
+    assert [product.id for product in result.products]==['real-1']
+    assert result.next_page_token=='cursor-2'
+
+
+@pytest.mark.parametrize('payload', [
+    {'error':'invalid subscription'},
+    {'data':{'products':[]}},
+    [],
+])
+def test_search_rejects_unknown_page_shape_instead_of_silently_reporting_no_products(payload):
+    transport=httpx.MockTransport(lambda request:httpx.Response(200,json=payload))
+    client=Channel3Client(api_key='test-key',transport=transport)
+    with pytest.raises(Channel3Unavailable):
+        asyncio.run(client.search_products('monitor'))
+
+
+def test_offer_without_stock_confirmation_does_not_claim_availability():
+    from app.integrations.channel3.schemas import Channel3Offer
+    offer=Channel3Offer.model_validate({
+        'url':'https://retailer.example/item',
+        'price':{'amount':'125.00','currency':'USD'},
+    })
+    assert offer.availability=='Unknown'

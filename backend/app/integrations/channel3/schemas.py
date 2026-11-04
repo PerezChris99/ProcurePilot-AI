@@ -1,5 +1,5 @@
 from decimal import Decimal
-from pydantic import AliasChoices,BaseModel,ConfigDict,Field,HttpUrl
+from pydantic import AliasChoices,BaseModel,ConfigDict,Field,HttpUrl,model_validator
 
 class Channel3Brand(BaseModel):
     model_config=ConfigDict(extra='ignore')
@@ -22,9 +22,9 @@ class Channel3Price(BaseModel):
 class Channel3Offer(BaseModel):
     model_config=ConfigDict(extra='ignore')
     url: HttpUrl
-    domain: str
+    domain: str = ''
     price: Channel3Price
-    availability: str
+    availability: str = 'Unknown'
     condition: str | None = None
     max_commission_rate: Decimal | None = None
 
@@ -40,6 +40,29 @@ class Channel3Product(BaseModel):
     offers: list[Channel3Offer] = Field(default_factory=list)
 
 class Channel3SearchResponse(BaseModel):
+    """Normalize documented paged catalogue responses without treating errors as empty results."""
+
     model_config=ConfigDict(extra='ignore')
-    products: list[Channel3Product] = Field(default_factory=list)
+    products: list[Channel3Product]
     next_page_token: str | None = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def normalize_page(cls, value):
+        if not isinstance(value, dict):
+            raise ValueError('Channel3 response must be an object')
+        products = value.get('products')
+        if products is None:
+            products = value.get('data', value.get('items'))
+        if not isinstance(products, list):
+            raise ValueError('Channel3 response is missing a product list')
+        pagination = value.get('pagination')
+        if not isinstance(pagination, dict):
+            pagination = {}
+        token = (
+            value.get('next_page_token') or value.get('nextPageToken')
+            or value.get('next_cursor') or value.get('nextCursor')
+            or pagination.get('next_cursor') or pagination.get('next_page_token')
+        )
+        return {**value, 'products': products, 'next_page_token': token}
+

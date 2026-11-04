@@ -1,3 +1,4 @@
+from collections import defaultdict
 import uuid,hashlib
 from datetime import datetime,timezone
 from decimal import Decimal,InvalidOperation
@@ -32,6 +33,46 @@ def _serialize(order,db):
     payment=db.scalar(select(Payment).where(Payment.purchase_order_id==order.id))
     events=db.scalars(select(AuditEvent).where(AuditEvent.purchase_order_id==order.id).order_by(AuditEvent.created_at)).all()
     return {'id':order.id,'po_number':order.po_number,'request_id':order.request_id,'status':order.status,'currency':order.currency,'subtotal':order.subtotal,'total_amount':order.total_amount,'submitted_at':order.submitted_at,'approved_by':order.approved_by,'approved_at':order.approved_at,'rejection_reason':order.rejection_reason,'created_at':order.created_at,'updated_at':order.updated_at,'items':items,'approvals':approvals,'payment':_payment_data(payment),'audit_events':events}
+
+def _serialize_many(orders, db):
+    """Load all order details in four bounded queries, not four per order."""
+    if not orders:
+        return []
+    ids = [order.id for order in orders]
+    item_map = defaultdict(list)
+    for item in db.scalars(select(PurchaseOrderItem).where(
+        PurchaseOrderItem.purchase_order_id.in_(ids)
+    )):
+        item_map[item.purchase_order_id].append(item)
+    approval_map = defaultdict(list)
+    for approval in db.scalars(select(Approval).where(
+        Approval.purchase_order_id.in_(ids)
+    ).order_by(Approval.created_at)):
+        approval_map[approval.purchase_order_id].append(approval)
+    payments = {
+        payment.purchase_order_id: payment
+        for payment in db.scalars(select(Payment).where(Payment.purchase_order_id.in_(ids)))
+    }
+    event_map = defaultdict(list)
+    for event in db.scalars(select(AuditEvent).where(
+        AuditEvent.purchase_order_id.in_(ids)
+    ).order_by(AuditEvent.created_at)):
+        event_map[event.purchase_order_id].append(event)
+    return [
+        {
+            'id': order.id, 'po_number': order.po_number, 'request_id': order.request_id,
+            'status': order.status, 'currency': order.currency,
+            'subtotal': order.subtotal, 'total_amount': order.total_amount,
+            'submitted_at': order.submitted_at, 'approved_by': order.approved_by,
+            'approved_at': order.approved_at, 'rejection_reason': order.rejection_reason,
+            'created_at': order.created_at, 'updated_at': order.updated_at,
+            'items': item_map[order.id], 'approvals': approval_map[order.id],
+            'payment': _payment_data(payments.get(order.id)),
+            'audit_events': event_map[order.id],
+        }
+        for order in orders
+    ]
+
 
 def _paypal_order_matches(payload,order,payment):
     if payload.get('id')!=payment.paypal_order_id or payload.get('status') not in ('APPROVED','COMPLETED'):
@@ -75,7 +116,7 @@ def create_purchase_order(request_id:str,payload:PurchaseOrderCreate,db:Session=
 @router.get('/purchase-orders',response_model=list[PurchaseOrderResponse])
 def list_purchase_orders(limit:int=Query(default=50,ge=1,le=100),db:Session=Depends(get_db),user:User=Depends(get_current_user)):
     orders=db.scalars(select(PurchaseOrder).where(PurchaseOrder.user_id==user.id).order_by(PurchaseOrder.created_at.desc()).limit(limit)).all()
-    return [_serialize(order,db) for order in orders]
+    return _serialize_many(orders,db)
 
 @router.get('/purchase-orders/{order_id}',response_model=PurchaseOrderResponse)
 def get_purchase_order(order_id:str,db:Session=Depends(get_db),user:User=Depends(get_current_user)):

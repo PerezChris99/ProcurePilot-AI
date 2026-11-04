@@ -32,7 +32,7 @@
    .\\start.bat
    ```
 
-The bootstrap prepares the backend virtual environment, installs Python and frontend dependencies, preserves existing local environment files, and opens a dedicated VS Code window. The workspace task builds the frontend before starting FastAPI and Vite in separate integrated terminals. On first launch, trust the workspace and allow automatic tasks.
+The bootstrap prepares the backend virtual environment, installs Python and frontend dependencies, preserves existing local environment files, runs pending database migrations, and opens a dedicated VS Code window. The workspace task builds the frontend, verifies migrations, and starts FastAPI and Vite in separate integrated terminals. A missing database or failed migration stops startup rather than giving a misleading running UI. On first launch, trust the workspace and allow automatic tasks.
 
 Local URLs:
 
@@ -42,7 +42,7 @@ Local URLs:
 
 ## Database
 
-The launcher does not install or start PostgreSQL. Configure `DATABASE_URL` in the root `.env`, create the database, then run migrations from `backend/`:
+The launcher cannot install or start PostgreSQL. Configure `DATABASE_URL` in the root `.env`, create the database, and make sure the PostgreSQL service is running. **Every `start.bat` run now executes `alembic upgrade head` automatically and stops before opening the app on migration failure.** The VS Code auto-start task repeats this idempotent migration check before the backend starts. For manual diagnosis, run from `backend/`:
 
 ```powershell
 .\\.venv\\Scripts\\Activate.ps1
@@ -100,3 +100,7 @@ pytest
 pytest --cov=app --cov-report=term-missing
 ```
 
+
+## Single-command code checks
+
+From the repository root on Windows, run `verify.bat` after `start.bat` has created the environments. It executes backend pytest, frontend ESLint, Vitest and the Vite production build in sequence. It stops on the first failure; it does **not** claim live Gemini/Channel3/PayPal calls, webhook delivery or deployed infrastructure readiness. The checked-in npm manifest presently does not have a tracked package lock, so dependency resolution can vary between installs. Record a validated lockfile before calling production builds reproducible.
