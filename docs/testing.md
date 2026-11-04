@@ -14,10 +14,11 @@ From the repository root:
 The launcher installs missing dependencies, applies Alembic migrations through 0004_ai_budget, opens VS Code, then executes a frontend build and starts the API/React dev server in integrated terminals. If VS Code blocks automatic tasks until trust is granted, run the named task **ProcurePilot: Build then Start (VS Code Terminals)**. Stop old backend/frontend terminals before relaunching to avoid port conflicts.
 
 The verifier runs:
-1. Backend Pytest.
-2. Frontend ESLint.
-3. Frontend Vitest/React Testing Library.
-4. Frontend Vite production build.
+1. Python compileall across backend application and tests.
+2. Backend Pytest.
+3. Frontend ESLint.
+4. Frontend Vitest/React Testing Library.
+5. Frontend Vite production build.
 
 It stops at the first failure. No GitHub Actions workflows are configured.
 

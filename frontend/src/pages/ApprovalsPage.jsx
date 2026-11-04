@@ -39,7 +39,7 @@ export default function ApprovalsPage(){
       <span><strong>Human-controlled approval.</strong> In this personal-workspace demo, the signed-in owner can approve their own order. Independent approver roles are not implemented.</span>
     </div>
     {decide.isError&&<p className="form-error" role="alert">{decide.error.message}</p>}
-    {decide.isSuccess&&<p className="inline-notice" role="status">Decision recorded. The purchase-order status and audit trail have been updated.</p>}
+    {decide.isSuccess&&<p className="inline-notice" role="status">Decision recorded and audit trail updated. <Link to="/orders" className="text-link">Continue to purchase orders</Link> to start Sandbox checkout after approval.</p>}
     {approvals.isError&&<div className="panel error-panel" role="alert">
       <strong>Approval queue unavailable</strong>
       <p>{approvals.error.message}</p>
