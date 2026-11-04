@@ -6,8 +6,16 @@
       "type": "npm",
       "script": "build",
       "path": "frontend",
-      "group": "build",
-      "problemMatcher": []
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
     },
     {
       "label": "ProcurePilot: Backend (Integrated Terminal)",
@@ -41,8 +49,10 @@
       },
       "presentation": {
         "reveal": "always",
+        "focus": false,
         "panel": "dedicated",
-        "group": "procurepilot"
+        "group": "procurepilot",
+        "clear": true
       }
     },
     {
@@ -70,8 +80,10 @@
       },
       "presentation": {
         "reveal": "always",
+        "focus": false,
         "panel": "dedicated",
-        "group": "procurepilot"
+        "group": "procurepilot",
+        "clear": true
       }
     },
     {
@@ -82,6 +94,13 @@
         "ProcurePilot: Frontend Dev Server (Integrated Terminal)"
       ],
       "dependsOrder": "sequence",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
       "problemMatcher": [],
       "presentation": {
         "reveal": "always",

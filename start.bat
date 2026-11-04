@@ -1,27 +1,28 @@
 @echo off
 setlocal EnableExtensions
 
-REM ProcurePilot AI - Windows + VS Code local development bootstrap.
-REM Run from the VS Code integrated terminal after pulling the perez branch.
+REM ProcurePilot AI - Windows local development bootstrap.
+REM Run from PowerShell or a VS Code terminal. This script installs dependencies,
+REM then opens a dedicated VS Code window. The workspace-folder task starts the
+REM build gate and application terminals automatically after workspace trust.
 
 cd /d "%~dp0"
 set "PROJECT_ROOT=%CD%"
 
 echo.
 echo ============================================================
-echo  ProcurePilot AI - VS Code Development Setup
+echo  ProcurePilot AI - Local Development Setup
 echo ============================================================
 echo.
 
 where npm >nul 2>nul
 if errorlevel 1 (
     echo [ERROR] Node.js and npm were not found on PATH.
-    echo Install Node.js LTS, reopen VS Code, and retry.
+    echo Install Node.js LTS, reopen your terminal, and retry.
     pause
     exit /b 1
 )
 
-REM Prefer the Python executable already available on PATH.
 set "PYTHON_LAUNCHER=python"
 python -c "import sys; raise SystemExit(0 if sys.version_info >= (3,12) else 1)" >nul 2>nul
 if errorlevel 1 (
@@ -29,11 +30,6 @@ if errorlevel 1 (
     py -3 -c "import sys; raise SystemExit(0 if sys.version_info >= (3,12) else 1)" >nul 2>nul
     if errorlevel 1 (
         echo [ERROR] Python 3.12 or newer could not be found.
-        echo.
-        echo Detected Python commands:
-        where python 2>nul
-        where py 2>nul
-        echo.
         echo Run "python --version" and "py -0p" to inspect installed versions.
         pause
         exit /b 1
@@ -94,9 +90,8 @@ if exist "package-lock.json" (
     call npm ci --no-audit --no-fund
     if errorlevel 1 (
         echo.
-        echo [WARNING] npm ci rejected the existing lockfile because it is
-        echo          out of sync with package.json or otherwise invalid.
-        echo          Repairing the lockfile and dependencies with npm install...
+        echo [WARNING] npm ci rejected the local lockfile.
+        echo Reconciling it with package.json using npm install...
         call npm install --no-audit --no-fund
     )
 ) else (
@@ -105,8 +100,8 @@ if exist "package-lock.json" (
 )
 if errorlevel 1 (
     popd
-    echo [ERROR] Frontend dependency installation failed, including lockfile recovery.
-    echo Review the npm error above, correct any network or dependency issue, and retry.
+    echo [ERROR] Frontend dependency installation failed.
+    echo Review the npm error above, resolve it, and run start.bat again.
     pause
     exit /b 1
 )
@@ -114,15 +109,15 @@ popd
 
 echo.
 echo ============================================================
-echo  Setup complete. Handing startup to VS Code tasks.
+echo  Dependencies are ready.
 echo.
-echo  VS Code will run the frontend production build first.
-echo  Backend and frontend integrated terminals start only if
-echo  that build succeeds.
+echo  Opening ProcurePilot in a dedicated VS Code window.
+echo  VS Code will automatically:
+echo    1. Run the frontend production build.
+echo    2. Start the backend terminal if the build succeeds.
+echo    3. Start the frontend terminal if the backend is ready.
 echo.
-echo  In the task picker, select:
-echo  ProcurePilot: Build then Start (VS Code Terminals)
-echo.
+echo  First run: trust this workspace and allow automatic tasks.
 echo  Frontend: http://localhost:5173
 echo  Backend:  http://localhost:8000
 echo  API docs: http://localhost:8000/docs
@@ -132,17 +127,17 @@ echo.
 where code >nul 2>nul
 if errorlevel 1 (
     echo [ERROR] VS Code command-line launcher "code" is not on PATH.
-    echo Open this folder in VS Code, then use Terminal ^> Run Task.
-    echo Select: ProcurePilot: Build then Start (VS Code Terminals)
+    echo Open VS Code, press Ctrl+Shift+P, and run:
+    echo Shell Command: Install 'code' command in PATH
+    echo Then reopen the terminal and run start.bat again.
     pause
     exit /b 1
 )
 
-code --reuse-window "%PROJECT_ROOT%" --command workbench.action.tasks.runTask
+code --new-window "%PROJECT_ROOT%"
 if errorlevel 1 (
-    echo [ERROR] Could not invoke the VS Code task picker.
-    echo In VS Code, use Terminal ^> Run Task and select:
-    echo ProcurePilot: Build then Start (VS Code Terminals)
+    echo [ERROR] Could not open the project in VS Code.
+    echo Run "code --help" to diagnose the VS Code command-line installation.
     pause
     exit /b 1
 )

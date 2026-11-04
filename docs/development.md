@@ -10,32 +10,39 @@
 
 ## Windows + VS Code quick start
 
-1. Open the repository folder in VS Code.
-2. Open the integrated terminal (**Terminal → New Terminal**).
-3. Switch to the development branch and pull the latest changes:
+1. Clone the repository and open it in VS Code:
+
+   ```powershell
+   Set-Location "D:\\NEW PROJECTS"
+   git clone https://github.com/PerezChris99/ProcurePilot-AI.git
+   Set-Location ".\\ProcurePilot-AI"
+   code .
+   ```
+
+2. Switch to the development branch and pull the latest changes:
 
    ```powershell
    git switch perez
    git pull origin perez
    ```
 
-4. Run the repository bootstrap:
+3. Run the bootstrap from the repository root (PowerShell or a terminal):
 
    ```powershell
-   .\start.bat
+   .\\start.bat
    ```
 
-The bootstrap creates `backend\.venv` when needed, installs `backend/requirements.txt`, creates local environment files from the examples only when they do not already exist, and installs frontend dependencies. It attempts `npm ci` when a lockfile exists; if npm rejects a stale or inconsistent lockfile, it falls back to `npm install` to reconcile the lockfile with `package.json`. If that recovery also fails, the bootstrap stops and displays the npm error. It then opens the VS Code task picker. Select **ProcurePilot: Build then Start (VS Code Terminals)**.
+The bootstrap creates `backend\\.venv` when needed, installs `backend/requirements.txt`, creates local environment files from examples only when they do not already exist, and installs frontend dependencies. It attempts `npm ci` when a lockfile exists; if npm rejects a stale or inconsistent lockfile, it falls back to `npm install`. If dependency installation fails, the bootstrap stops and displays the underlying error.
 
-The task sequence is deliberately gated:
+After installation, the script opens a **dedicated VS Code window** for the repository. The compound task in `.vscode/tasks.json` is configured to run automatically when that workspace opens:
 
 1. Runs `npm run build` in `frontend/`.
-2. Only after a successful build, starts FastAPI in a VS Code integrated terminal.
-3. Starts the Vite development server in a second VS Code integrated terminal.
+2. Only after a successful build, starts FastAPI in one VS Code integrated terminal.
+3. Waits for FastAPI readiness, then starts Vite in a second VS Code integrated terminal.
 
-If the production build fails, the task sequence stops and neither application server is started. Build errors appear in the integrated terminal; fix them before retrying. The two server tasks remain running in VS Code and can be stopped with the terminal's stop/kill control.
+**First launch requirements:** VS Code may ask whether you trust the folder and whether to allow automatic tasks. Choose **Trust** and **Allow Automatic Tasks**. If the workspace is in Restricted Mode or automatic tasks are denied, VS Code will not launch the terminals automatically. The batch file does not use an undocumented VS Code CLI command; it opens the workspace and lets VS Code's supported folder-open task mechanism start the processes.
 
-You can also start the same sequence without the batch file using **Terminal → Run Task → ProcurePilot: Build then Start (VS Code Terminals)**. The task definitions live in `.vscode/tasks.json`.
+The build is a gate: if it fails, the backend and frontend servers are not started. Read the build error in the VS Code terminal, fix it, then run **Terminal → Run Task → ProcurePilot: Build then Start (VS Code Terminals)** or press **Ctrl+Shift+B** (the compound task is the default build task).
 
 Local URLs:
 
@@ -43,13 +50,13 @@ Local URLs:
 - Backend: http://localhost:8000
 - API documentation: http://localhost:8000/docs
 
-The launcher does not install or start PostgreSQL. The root `.env.example` configures PostgreSQL at `localhost:5432` with database name `procurepilot`; start PostgreSQL and create that database, or change `DATABASE_URL` in the root `.env` before starting the backend. Do not replace an existing `.env` file: the launcher intentionally preserves local credentials and configuration.
+The launcher does not install or start PostgreSQL. The root `.env.example` configures PostgreSQL at `localhost:5432` with database name `procurepilot`; start PostgreSQL and create that database, or change `DATABASE_URL` in the root `.env` before starting the backend. The launcher preserves existing local configuration.
 
 After configuring the database, apply migrations once from the repository root:
 
 ```powershell
 Set-Location backend
-.venv\Scripts\Activate.ps1
+.venv\\Scripts\\Activate.ps1
 alembic upgrade head
 ```
 
@@ -89,7 +96,7 @@ alembic upgrade head
 python -m uvicorn app.main:app --reload
 ```
 
-If PowerShell blocks virtual-environment activation, either use `backend\.venv\Scripts\python.exe -m pip ...` directly or adjust the current user's PowerShell execution policy according to your organization's policy. The batch bootstrap avoids PowerShell activation-policy issues.
+If PowerShell blocks virtual-environment activation, either use `backend\\.venv\\Scripts\\python.exe -m pip ...` directly or adjust the current user's PowerShell execution policy according to your organization's policy. The batch bootstrap avoids PowerShell activation-policy issues.
 
 Run backend tests from `backend/`:
 
