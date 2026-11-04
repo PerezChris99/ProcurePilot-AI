@@ -4,12 +4,13 @@ from decimal import Decimal,InvalidOperation
 from fastapi import APIRouter,Depends,HTTPException,Query,status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.integrations.paypal.client import PayPalClient,PayPalConfigurationError,PayPalUnavailable
 from app.models import Approval,AuditEvent,Payment,ProcurementRequest,PurchaseOrder,PurchaseOrderItem,User
-from app.schemas.purchase_order import ApprovalAction,PurchaseOrderCreate
+from app.schemas.purchase_order import ApprovalAction,PayPalCheckoutResponse,PurchaseOrderCreate,PurchaseOrderResponse
 from app.security.tokens import get_current_user
 
 router=APIRouter(tags=['purchase orders and payments'])
@@ -43,7 +44,7 @@ def _paypal_order_matches(payload,order,payment):
     except (InvalidOperation,ValueError,TypeError): return False
     return unit.get('custom_id')==order.id and amount.get('currency_code')==order.currency and value==Decimal(order.total_amount)
 
-@router.post('/procurement-requests/{request_id}/purchase-orders',status_code=status.HTTP_201_CREATED)
+@router.post('/procurement-requests/{request_id}/purchase-orders',status_code=status.HTTP_201_CREATED,response_model=PurchaseOrderResponse)
 def create_purchase_order(request_id:str,payload:PurchaseOrderCreate,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
     request=db.scalar(select(ProcurementRequest).where(ProcurementRequest.id==request_id,ProcurementRequest.user_id==user.id))
     if request is None: raise HTTPException(status_code=404,detail='Procurement request not found')
@@ -72,16 +73,16 @@ def create_purchase_order(request_id:str,payload:PurchaseOrderCreate,db:Session=
     db.commit(); db.refresh(order)
     return _serialize(order,db)
 
-@router.get('/purchase-orders')
+@router.get('/purchase-orders',response_model=list[PurchaseOrderResponse])
 def list_purchase_orders(limit:int=Query(default=50,ge=1,le=100),db:Session=Depends(get_db),user:User=Depends(get_current_user)):
     orders=db.scalars(select(PurchaseOrder).where(PurchaseOrder.user_id==user.id).order_by(PurchaseOrder.created_at.desc()).limit(limit)).all()
     return [_serialize(order,db) for order in orders]
 
-@router.get('/purchase-orders/{order_id}')
+@router.get('/purchase-orders/{order_id}',response_model=PurchaseOrderResponse)
 def get_purchase_order(order_id:str,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
     return _serialize(_owned_order(order_id,user,db),db)
 
-@router.post('/purchase-orders/{order_id}/submit')
+@router.post('/purchase-orders/{order_id}/submit',response_model=PurchaseOrderResponse)
 def submit_purchase_order(order_id:str,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
     order=_owned_order(order_id,user,db)
     if order.status!='draft': raise HTTPException(status_code=409,detail='Only draft purchase orders can be submitted.')
@@ -90,7 +91,7 @@ def submit_purchase_order(order_id:str,db:Session=Depends(get_db),user:User=Depe
     db.commit(); db.refresh(order)
     return _serialize(order,db)
 
-@router.post('/purchase-orders/{order_id}/approve')
+@router.post('/purchase-orders/{order_id}/approve',response_model=PurchaseOrderResponse)
 def approve_purchase_order(order_id:str,payload:ApprovalAction,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
     order=_owned_order(order_id,user,db)
     if order.status!='pending_approval': raise HTTPException(status_code=409,detail='Only purchase orders awaiting approval can be approved.')
@@ -100,7 +101,7 @@ def approve_purchase_order(order_id:str,payload:ApprovalAction,db:Session=Depend
     db.commit(); db.refresh(order)
     return _serialize(order,db)
 
-@router.post('/purchase-orders/{order_id}/reject')
+@router.post('/purchase-orders/{order_id}/reject',response_model=PurchaseOrderResponse)
 def reject_purchase_order(order_id:str,payload:ApprovalAction,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
     order=_owned_order(order_id,user,db)
     if order.status!='pending_approval': raise HTTPException(status_code=409,detail='Only purchase orders awaiting approval can be rejected.')
@@ -110,7 +111,7 @@ def reject_purchase_order(order_id:str,payload:ApprovalAction,db:Session=Depends
     db.commit(); db.refresh(order)
     return _serialize(order,db)
 
-@router.post('/purchase-orders/{order_id}/payments/paypal/create')
+@router.post('/purchase-orders/{order_id}/payments/paypal/create',response_model=PayPalCheckoutResponse)
 async def create_paypal_order(order_id:str,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
     order=_owned_order(order_id,user,db)
     if order.status not in ('approved','payment_pending'): raise HTTPException(status_code=409,detail='A human-approved purchase order is required before starting PayPal checkout.')
@@ -152,7 +153,7 @@ async def create_paypal_order(order_id:str,db:Session=Depends(get_db),user:User=
     db.commit(); db.refresh(payment)
     return {'payment':_payment_data(payment),'approval_url':approval_url,'idempotent_replay':False}
 
-@router.post('/purchase-orders/{order_id}/payments/paypal/capture')
+@router.post('/purchase-orders/{order_id}/payments/paypal/capture',response_model=PurchaseOrderResponse)
 async def capture_paypal_order(order_id:str,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
     order=_owned_order(order_id,user,db)
     payment=db.scalar(select(Payment).where(Payment.purchase_order_id==order.id))

@@ -48,6 +48,11 @@ class PaymentResponse(BaseModel):
     approval_url: str|None
     created_at: datetime
 
+class PayPalCheckoutResponse(BaseModel):
+    payment: PaymentResponse
+    approval_url: str
+    idempotent_replay: bool
+
 class PurchaseOrderResponse(BaseModel):
     id: str
     po_number: str
