@@ -55,7 +55,8 @@ export default function PublicLayout(){
   const location=useLocation();
   useEffect(()=>{
     if(location.hash){
-      const id=decodeURIComponent(location.hash.slice(1));
+      let id=location.hash.slice(1);
+      try{id=decodeURIComponent(id)}catch{ /* Ignore malformed URL escapes. */ }
       document.getElementById(id)?.scrollIntoView({behavior:'auto',block:'start'});
     }else{
       document.documentElement.scrollTop=0;

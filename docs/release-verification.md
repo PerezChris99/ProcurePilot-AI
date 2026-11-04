@@ -64,3 +64,11 @@ Run start.bat, verify.bat, and the manual walkthrough in docs/testing.md. Record
 - Responsive six-destination navigation with a bottom iPhone safe-area dock below 961px and a flat desktop sidebar, plus dedicated Activity and saved Discovery views instead of duplicated links.
 - Authenticated, secret-safe dynamic configuration panel with database engine/schema readiness, Gemini, Channel3, PayPal credentials, separate webhook flag, actual environment and manual/periodic refresh. Configured is not the same as remotely verified.
 - Release acceptance still requires native macOS/Linux/Windows script execution, all local tests/builds, responsive browser/device review and live third-party provider workflows. A SQLite local judging database is not production readiness.
+
+## Public landing and legal site implementation (source audit, November 2026)
+
+- Public `/` now renders a compact responsive editorial landing page with verified real Unsplash CDN photo URLs, transparent translucent mist, keyboard-operable previous/next/pause and reduced-motion awareness, evidence-first product explanation, truthful technology integration strip, FAQ and CTA. No invented customer counts/testimonials or payments claims.
+- Eight actual public pages: About, How It Works, Privacy, Terms, Security, Accessibility, Responsible Use, Contact. Public footer, pre-login legal links and a thin signed-in legal footer are source-authored. Legal text is a prototype disclosure and requires owner/counsel acceptance before commercial use.
+- Authenticated Overview moved to `/dashboard`, login/register redirects updated; purchase/order/approval and PayPal Sandbox `/orders` buyer return paths unchanged. Vercel and Netlify SPA fallback rules added for direct URL refresh.
+- New RTL/Vitest tests cover landing hero carousel/FAQ, public legal links, public-versus-private routes and preserved order URL. The existing AppShell navigation test now targets the new authenticated dashboard route.
+- Remaining acceptance: current full `verify.bat` / `verify.sh`, real responsive browser/Safari tests, remote photo loading, public HTTPS API and deployment rewrites, actual provider credentials and signed webhooks, legal publication review, and previously documented production-governance gaps. Static audit or a Git merge alone cannot certify those tests as passing.

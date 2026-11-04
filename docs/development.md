@@ -152,3 +152,11 @@ Open `D:\\NEW PROJECTS\\ProcurePilot-AI` in VS Code and run `.\\start.bat`. The 
 ## Responsive navigation and status
 
 Desktop uses six distinct sidebar routes; phones/tablets get the same six links in an iPhone-safe-area bottom dock. Status is refreshed from the authenticated `/api/v1/integrations/status` endpoint, which checks DB/required schema and reports non-secret Gemini, Channel3 and PayPal credential flags. It is not a live provider ping and does not spend Gemini tokens. The user can refresh the panel manually and it polls while the workspace is active. Configure actual provider credentials in the root .env and restart the backend after changing them.
+
+## Public site, authentication and provider landing tour
+
+The browser now opens a **public** landing page at `/` for judges and guests. Sign in or register to enter the protected Overview at `/dashboard`. The remaining protected procurement paths (`/procurement`, `/discovery`, `/requests/:id`, `/approvals`, `/activity`, `/orders`) are unchanged. PayPal Sandbox returns to `/orders`; do not change that path in production without updating the PayPal return settings. The public website has honest About, How it works, Privacy, Terms, Security, Accessibility, Responsible use and Contact pages linked from the legal footer. The signed-in workspace and auth screens also link to legal pages.
+
+The hero includes real Unsplash photography loaded from an HTTPS CDN. Judges need normal internet access to see remote photos; the content/navigation remain usable if media cannot load. Source and license: https://unsplash.com/license. Social proof is limited to named **integrated technologies**, not invented adoption statistics or endorsements.
+
+Vercel SPA deep links: deploy with Root Directory `frontend`; `frontend/vercel.json` supplies the `/(.*)` → `/index.html` rewrite. Netlify: publish `frontend/dist`; the Vite build copies `frontend/public/_redirects` into the output. For both, use `npm run build:deploy` and a real public `VITE_API_BASE_URL`; a Vite development build with localhost must not be deployed unchanged.
