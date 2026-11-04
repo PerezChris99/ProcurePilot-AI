@@ -41,3 +41,10 @@ Run start.bat, verify.bat, and the manual walkthrough in docs/testing.md. Record
 ## Acceptance status
 
 **Code changes authored and version-controlled; runtime and commercial readiness not certified.** A smooth judge experience must be confirmed in a genuine local/browser/Sandbox rehearsal rather than inferred.
+
+## Final source audit follow-up (November 2026)
+
+- Gemini 3.8 Flash: removed outdated low-temperature sampling parameters and added an explicitly low thinking level to reduce cost/latency while retaining the existing 900-output-token cap and one-ADK-call limit; legacy model IDs do not receive a Gemini-3-only setting.
+- Added production startup validation for persistent PostgreSQL via installed psycopg driver, a canonical HTTPS frontend origin, and the existing strong JWT secret requirement. The Windows development bootstrap remains unchanged.
+- Added regression tests for model generation settings and incorrect production database/frontend URLs.
+- Still not release-certified until the user runs the full Windows verify.bat (including frontend lint/Vitest/build) and exercises live provider credentials and PayPal Sandbox with signed HTTPS webhooks. No checked-in frontend lockfile or browser E2E suite exists.

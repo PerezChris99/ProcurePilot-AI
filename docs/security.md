@@ -62,3 +62,7 @@
 10. Verify hackathon license rules: authorized-use LICENSE is proprietary, not OSI open source.
 
 **Status boundary:** Source-written tests and a GitHub merge are not evidence that local Pytest, Vite, Windows startup, third-party credentials or PayPal Sandbox have passed. This is not PCI certification or a guarantee against vulnerabilities.
+
+## Production startup configuration gate (November 2026)
+
+When `APP_ENV=production`, application settings now reject known JWT signing-key placeholders, SQLite/uninstalled `postgresql://` driver defaults, and non-HTTPS or non-origin `FRONTEND_URL`. This is fail-closed configuration validation, not a guarantee that public DNS, PostgreSQL credentials, TLS termination, or PayPal webhooks are actually available. Configure `DATABASE_URL=postgresql+psycopg://...` and a public HTTPS frontend origin before deploying; local `APP_ENV=development` bootstrap is unchanged. A production frontend must also set its public API endpoint, `VITE_API_BASE_URL`, to the real HTTPS API URL at build time.
