@@ -90,13 +90,23 @@ echo.
 echo [4/4] Installing frontend dependencies...
 pushd "frontend"
 if exist "package-lock.json" (
-    call npm ci
+    echo Found package-lock.json. Attempting a clean, reproducible install...
+    call npm ci --no-audit --no-fund
+    if errorlevel 1 (
+        echo.
+        echo [WARNING] npm ci rejected the existing lockfile because it is
+        echo          out of sync with package.json or otherwise invalid.
+        echo          Repairing the lockfile and dependencies with npm install...
+        call npm install --no-audit --no-fund
+    )
 ) else (
-    call npm install
+    echo No package-lock.json found. Resolving dependencies from package.json...
+    call npm install --no-audit --no-fund
 )
 if errorlevel 1 (
     popd
-    echo [ERROR] Frontend dependency installation failed.
+    echo [ERROR] Frontend dependency installation failed, including lockfile recovery.
+    echo Review the npm error above, correct any network or dependency issue, and retry.
     pause
     exit /b 1
 )
