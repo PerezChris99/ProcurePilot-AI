@@ -43,3 +43,12 @@ Foreign-owned resources return 404.
 ## Dashboard
 
 Authenticated `GET /api/v1/dashboard/summary` returns user-scoped counts of completed, active and awaiting-approval orders; requests with discovered products; and the latest eight order audit events. It does not sum amounts in unrelated currencies. Provider status is separately available via `GET /api/v1/integrations/status`.
+
+## Approval queue, AI-budgeted analysis and demo operation
+
+- GET /api/v1/purchase-orders?status=pending_approval returns only pending orders owned by the authenticated user. Unsupported status values return 422. The screen at /approvals is a real authenticated view rather than a redirect.
+- POST /api/v1/procurement-requests/{request_id}/analyze automatically performs one Channel3 discovery if needed, then uses a saved compact evidence shortlist for one Gemini/ADK call. Responses include request_id, explanation, status, cached, source (gemini or catalogue_only), and optional usage token counters.
+- Identical repeated analyses return cached=true and do not re-invoke Gemini. A verified empty catalogue returns source=catalogue_only, usage=null, without a Gemini call.
+- Daily exhausted global/user LLM allowance returns HTTP 429 with Retry-After, while product discovery/PO paths remain usable. Missing model key returns 503; live provider failure is reported separately. AI budget defaults are documented in docs/agent.md.
+- Latest database migration: 0004_ai_budget, auto-applied by start.bat and the VS Code startup task.
+- PayPal Sandbox buyer approval must return in the same tab for frontend sessionStorage continuity. The browser return does not establish paid status; capture verification does.

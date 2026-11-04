@@ -1,46 +1,84 @@
-# Architecture
+# Architecture: evidence-first procurement monolith
 
-ProcurePilot AI is a modular monolith: React/JavaScript frontend, Python/FastAPI backend, PostgreSQL persistence, Google ADK agent orchestration, Channel3 product discovery, and PayPal Orders v2 Sandbox.
+ProcurePilot AI is a modular monolith: React 19/JavaScript frontend, FastAPI/Python backend, PostgreSQL persistence, Channel3 product discovery, Google ADK/Gemini explanation, and a distinct PayPal Orders v2 Sandbox payment demonstration.
 
-## Implemented flows
+## Boundaries and responsibilities
 
-1. Registration and login use Argon2id password hashing and short-lived JWT access tokens.
-2. Procurement requests are scoped to their authenticated owner.
-3. Channel3 product search validates nested product, offer, price, and pagination data. Results and ranking snapshots are persisted on the request.
-4. The ADK agent can research and explain products through a controlled Channel3 tool. It has no purchase approval or payment capability.
-5. A buyer selects a product and retailer offer from the saved Channel3 snapshot. The backend verifies the product and exact offer URL, currency, price, and stock status, calculates quantity multiplied by unit price, checks the request budget, and freezes a purchase-order item snapshot.
-6. A purchase order progresses from DRAFT to PENDING_APPROVAL. Human approval or rejection is recorded in the approvals table and audit log.
-7. Only APPROVED orders can create a PayPal Orders v2 checkout. The server calculates the amount from the frozen order, requests an OAuth token, creates the Sandbox order, and returns its approval URL.
-8. After the buyer approves at PayPal and returns, the user explicitly requests capture. The backend fetches the PayPal order and validates its ID, status, custom ID, amount, and currency before capture. It then validates the completed capture and exact amount before marking the purchase order PAID.
-9. PayPal webhooks are verified through PayPal's webhook signature verification endpoint. CHECKOUT.ORDER.APPROVED records buyer approval for a later explicit capture; capture events are reconciled against the saved PayPal order and approved amount. Event IDs are unique and duplicate deliveries are idempotent.
+~~~mermaid
+flowchart TB
+  Browser[React / JWT session] --> API[FastAPI auth and procurement routes]
+  API --> DB[(PostgreSQL / Alembic)]
+  API --> Channel3[Channel3 product API]
+  API --> Rules[Deterministic ranking and PO validation]
+  Rules --> Packet[Compact evidence packet]
+  Packet --> Budget[Atomic UTC-day AI budget]
+  Budget --> ADK[One-call Google ADK analyst]
+  ADK --> Gemini[Gemini]
+  API --> Paypal[PayPal Orders v2 Sandbox]
+  Paypal --> Webhook[Verified HTTPS webhook]
+  Webhook --> API
+~~~
 
-## Transaction state
+### Domain flow
 
-DRAFT -> PENDING_APPROVAL -> APPROVED -> PAYMENT_PENDING -> PAID
+1. A new registered personal-workspace user gets an Argon2id-hashed password and short-lived JWT; sessionStorage holds the browser access token. The logged-in landing view greets them by first name.
+2. The buyer creates a user-scoped procurement request with description, quantity, currency and optional budget.
+3. Product discovery calls Channel3, validates paginated products/offers/attribute arrays and persists deterministically ranked results.
+4. Asking for AI first triggers a single Channel3 discovery if necessary; if ranked evidence already exists, it is reused. Repeated unchanged AI assessments return cached text. A verified empty catalogue returns no model hallucination or spend.
+5. An allowlisted evidence packet of at most four candidates is passed to the ADK analysis_agent with one-call and output/time limits. A global+user call reservation in ai_daily_budgets prevents unbounded call volume. The normal analyst has NO order/payment tools.
+6. The buyer selects a saved real Channel3 offer. Server code verifies its exact product and offer URL, price, currency, stock, mandatory attributes and budget; it derives quantity*unit price, then freezes a PO and item snapshot.
+7. Submission moves a draft PO to pending_approval. The dedicated Approvals route loads owner-scoped pending items and records approve/reject actions. **The personal-workspace owner may approve their own order: true independent approver roles do not exist.**
+8. Approved orders may create a separate PayPal Sandbox checkout. Buyer approves in the SAME browser tab to preserve the session on return. Capture validates remote order/custom IDs, currency, amounts and final completed capture evidence.
+9. PayPal webhooks are validated through PayPal's signature endpoint. Event IDs and capture matching reduce duplicates and mismatch risk; a real HTTPS webhook still needs environment configuration.
+10. The dashboard reads user-scoped SQL counts and recent order audit history. Provider status displays configuration flags, not proof of live connectivity.
 
-Alternative states: REJECTED, PAYMENT_FAILED, CANCELLED, and EXPIRED.
+## Purchase lifecycle
 
-A failed or incomplete payment never marks an order paid. Approved order contents are immutable; a changed item or amount must be represented by a new order and approval.
+~~~mermaid
+stateDiagram-v2
+  [*] --> draft
+  draft --> pending_approval: Submit
+  pending_approval --> approved: Owner records approval (demo)
+  pending_approval --> rejected: Owner rejects
+  approved --> payment_pending: Sandbox order created
+  payment_pending --> paid: Verified capture
+  payment_pending --> payment_failed: Denied capture
+  paid --> [*]
+  rejected --> [*]
+~~~
 
-## Persistence
+## Tables / data ownership
 
-- purchase_orders: owner, request, PO reference, frozen currency/total, status, approval metadata.
-- purchase_order_items: product and retailer offer snapshot, quantity, unit price, line total.
-- approvals: human actor, decision, comment, timestamp.
-- payments: PayPal order/capture IDs, idempotency key, status, frozen amount/currency, approval URL.
-- webhook_events: unique provider event ID, verified flag, redacted event snapshot, processed timestamp.
-- audit_events: user, order/request, action, minimal details, timestamp.
+| Table | Purpose |
+| --- | --- |
+| users | Email, Argon2id hash, active flag |
+| procurement_requests | Owner, requirements, quantity/budget/currency, ranked Channel3 snapshot, optional cached explanation and usage |
+| purchase_orders | Frozen currency/amount, request/owner, approval and payment state |
+| purchase_order_items | Saved catalogue ID, title, merchant, HTTPS offer URL, quantity, unit price, full product snapshot |
+| approvals | Actor, decision, comment and timestamp |
+| payments | PayPal order/capture IDs, stable idempotency key, status, amount and currency |
+| webhook_events | Unique verified event ID, minimal payload and processed time |
+| audit_events | User/order/request actions and time |
+| ai_daily_budgets | Atomic per-scope UTC-day call count; no prompts or secrets |
 
-## Trust boundaries
+Migration chain: 0001_users → 0002_requests → 0003_orders → 0004_ai_budget. Windows startup automatically runs Alembic upgrade head before serving the app.
 
-- The browser is untrusted; it never supplies authoritative amounts.
-- All user-owned resources are queried with the authenticated user ID.
-- The AI agent is limited to product research and explanation.
-- Channel3 product descriptions are untrusted data, not instructions.
-- PayPal credentials and API calls remain server-side.
-- Webhook authenticity is established through PayPal's verification API, not by trusting request headers alone.
-- Channel3 retailer checkout and PayPal Sandbox are separate systems. Sandbox payment is not retailer settlement.
+## API surface
 
-## Known scope limitations
+Auth: POST /api/v1/auth/register, POST /api/v1/auth/login, GET /api/v1/auth/me.
 
-The current approval model records the authenticated owner as the human approver; role-based multi-person approval and organization workspaces are not yet implemented. The integration still needs live developer-credential verification, browser E2E testing, deployment, and operational monitoring.
+Procurement: POST and GET /api/v1/procurement-requests, GET /{id}, POST /{id}/discover, POST /{id}/analyze.
+
+Orders: POST /api/v1/procurement-requests/{request_id}/purchase-orders, GET /api/v1/purchase-orders (optional status filter), GET /{id}, POST /{id}/submit, /approve, /reject.
+
+Payments: POST /api/v1/purchase-orders/{id}/payments/paypal/create and /capture; POST /api/v1/webhooks/paypal.
+
+Readiness: GET /api/v1/health, GET /api/v1/integrations/status, GET /api/v1/dashboard/summary.
+
+## Security/trust boundaries
+
+Browser controls and catalogue content are untrusted. Amounts and transitions are determined by server code; the AI cannot modify PO/payment state. JWT ownership checks constrain records. Database-backed daily model quotas avoid process-local budget bypass. Payment authenticity is checked with PayPal and not inferred from browser redirects or webhook headers alone.
+
+## Outstanding engineering work
+
+No multi-actor role-based approvals, reconciliation worker, distributed auth/discovery/checkout rate limiter, session revocation, live provider acceptance tests, end-to-end browser suite, immutable audit ledger or proven production monitoring/recovery. Channel3 merchant checkout is separate from PayPal Sandbox and is not implemented. The project is a demonstration, not a live multi-merchant payment processor.
