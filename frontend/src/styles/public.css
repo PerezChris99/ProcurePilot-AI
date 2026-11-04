@@ -371,3 +371,11 @@
   .site-hero-image,.site-slide-dot::after,.site-slide-arrows button,
   .site-button,.site-top-cta,.site-faq-item summary>svg{transition:none!important;transform:none!important}
 }
+
+/* Legal links are available before authentication as well. */
+.auth-legal-links{
+  display:flex;gap:14px;align-items:center;justify-content:center;
+  flex-wrap:wrap;max-width:420px;margin:9px auto 0;
+  color:#61758c;font-size:11px;line-height:1.6;
+}
+.auth-legal-links a:hover{color:#087eae;text-decoration:underline}

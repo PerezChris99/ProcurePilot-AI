@@ -40,10 +40,11 @@ export function PublicFooter(){
         <span className="site-foot-eyebrow">BUILT FOR DECISIONS</span>
         <p>A hackathon prototype. Live provider access depends on your configured credentials.</p>
         <a href="https://github.com/PerezChris99/ProcurePilot-AI" target="_blank" rel="noopener noreferrer">Project on GitHub <ExternalLink size={13} aria-hidden="true"/></a>
+        <a href="https://unsplash.com/license" target="_blank" rel="noopener noreferrer">Photography: Unsplash <ExternalLink size={13} aria-hidden="true"/></a>
       </div>
     </div>
     <div className="site-footer-bottom">
-      <span>© 2026 ProcurePilot AI. All rights reserved.</span>
+      <span>© 2026 ProcurePilot AI. Code and branding rights reserved.</span>
       <span>Independent prototype · PayPal Sandbox is not supplier settlement</span>
     </div>
   </footer>;
