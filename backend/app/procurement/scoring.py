@@ -22,7 +22,7 @@ def score_product(product: Channel3Product,requirements: ProcurementRequirements
     if preferred_total: spec_values.append(Decimal(preferred_matches*100)/Decimal(preferred_total))
     spec_score=sum(spec_values)/Decimal(len(spec_values)) if spec_values else None
     matching_offers=[offer for offer in product.offers if offer.price.currency==requirements.currency]
-    in_stock_offers=[offer for offer in matching_offers if re.sub(r'[\\s_-]','',offer.availability.casefold())=='instock']
+    in_stock_offers=[offer for offer in matching_offers if re.sub(r'[\s_-]','',offer.availability.casefold())=='instock']
     prices=[]
     for offer in in_stock_offers:
         try: prices.append(Decimal(str(offer.price.amount)))
