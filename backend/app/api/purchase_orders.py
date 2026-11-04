@@ -3,7 +3,7 @@ import uuid,hashlib
 from datetime import datetime,timezone
 from decimal import Decimal,InvalidOperation
 from fastapi import APIRouter,Depends,HTTPException,Query,status
-from sqlalchemy import select
+from sqlalchemy import select,func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.core.config import get_settings
@@ -53,10 +53,19 @@ def _serialize_many(orders, db):
         payment.purchase_order_id: payment
         for payment in db.scalars(select(Payment).where(Payment.purchase_order_id.in_(ids)))
     }
+    # List summaries retain only the latest 25 events per order. Individual
+    # GET /purchase-orders/{id} preserves the full immutable audit history.
+    ranked_events=select(
+        AuditEvent.id.label('event_id'),
+        func.row_number().over(
+            partition_by=AuditEvent.purchase_order_id,
+            order_by=(AuditEvent.created_at.desc(),AuditEvent.id.desc()),
+        ).label('rn'),
+    ).where(AuditEvent.purchase_order_id.in_(ids)).subquery()
     event_map = defaultdict(list)
-    for event in db.scalars(select(AuditEvent).where(
-        AuditEvent.purchase_order_id.in_(ids)
-    ).order_by(AuditEvent.created_at)):
+    for event in db.scalars(select(AuditEvent).join(
+        ranked_events,AuditEvent.id==ranked_events.c.event_id,
+    ).where(ranked_events.c.rn<=25).order_by(AuditEvent.created_at)):
         event_map[event.purchase_order_id].append(event)
     return [
         {
