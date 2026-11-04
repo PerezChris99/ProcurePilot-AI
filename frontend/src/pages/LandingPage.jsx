@@ -1,8 +1,8 @@
 import {useEffect,useState} from 'react';
 import {Link} from 'react-router-dom';
 import {
-  ArrowLeft,ArrowRight,ArrowUpRight,Check,ChevronDown,ClipboardCheck,
-  Layers3,Pause,Play,SearchCheck,ShieldCheck,Sparkles,
+  ArrowLeft,ArrowRight,ArrowUpRight,ChevronDown,ClipboardCheck,
+  Pause,Play,SearchCheck,ShieldCheck,Sparkles,
 } from 'lucide-react';
 import {useAuth} from '../context/useAuth.js';
 

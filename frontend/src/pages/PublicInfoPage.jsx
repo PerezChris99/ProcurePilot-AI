@@ -1,5 +1,5 @@
 import {Link} from 'react-router-dom';
-import {ArrowRight,ArrowUpRight,ExternalLink,ShieldCheck} from 'lucide-react';
+import {ArrowRight,ExternalLink,ShieldCheck} from 'lucide-react';
 
 const PAGES={
   about:{

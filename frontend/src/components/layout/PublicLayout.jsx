@@ -69,7 +69,8 @@ export default function PublicLayout(){
       const id=decodeURIComponent(location.hash.slice(1));
       document.getElementById(id)?.scrollIntoView({behavior:'auto',block:'start'});
     }else{
-      window.scrollTo?.({top:0,behavior:'instant'});
+      document.documentElement.scrollTop=0;
+      document.body.scrollTop=0;
     }
   },[location.pathname,location.hash]);
   return <div className="site-shell">
