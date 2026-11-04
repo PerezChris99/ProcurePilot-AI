@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import {useAuth} from '../../context/useAuth.js';
 import {getIntegrationStatus} from '../../services/api.js';
+import LocalClock from '../ui/LocalClock.jsx';
 
 const navigation = [
   {label:'Overview', short:'Home', to:'/dashboard', icon:LayoutDashboard, end:true, group:'workspace'},
@@ -92,6 +93,7 @@ export default function AppShell(){
           <strong>{pageLabel}</strong>
         </div>
         <div className="topbar-right">
+          {pathname==='/dashboard'&&<LocalClock/>}
           <span className="environment-pill" title="Server environment and PayPal mode are read from your backend">
             <span className={'status-dot '+(isError?'status-dot-muted':'')}/>
             {environmentLabel}
