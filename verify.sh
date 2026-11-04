@@ -9,7 +9,8 @@ if [[ ! -x "$VENV_PY" || ! -d "$ROOT/frontend/node_modules" ]]; then
 fi
 
 printf '\n=== ProcurePilot AI | Local verification ===\n'
-echo '[1/5] Python syntax and source'
+echo '[1/5] Bash and Python syntax and source'
+bash -n "$ROOT/start.sh" "$ROOT/verify.sh"
 (cd "$ROOT/backend" && "$VENV_PY" -m compileall -q app tests)
 echo '[2/5] Backend tests'
 (cd "$ROOT/backend" && "$VENV_PY" -m pytest -q)

@@ -20,6 +20,7 @@ function renderShell(path='/'){
           <Route path="/" element={<p>Overview content</p>}/>
           <Route path="/activity" element={<p>Activity content</p>}/>
           <Route path="/discovery" element={<p>Discovery content</p>}/>
+          <Route path="/requests/:requestId" element={<p>Research detail</p>}/>
         </Route>
       </Routes>
     </MemoryRouter>
@@ -55,6 +56,13 @@ describe('AppShell navigation and environment',()=>{
       .getByRole('link',{name:'Activity'})).toHaveClass('active');
     expect(within(screen.getByRole('navigation',{name:'Management navigation'}))
       .getByRole('link',{name:'Product discovery'})).toHaveAttribute('href','/discovery');
+  });
+
+  it('keeps the Discover dock selected while inspecting a saved request',()=>{
+    renderShell('/requests/r-123');
+    expect(screen.getByText('Research detail')).toBeInTheDocument();
+    expect(within(screen.getByRole('navigation',{name:'Mobile workspace navigation'}))
+      .getByRole('link',{name:'Product discovery'})).toHaveClass('active');
   });
 
   it('reflects actual live environment configuration rather than fixed sandbox copy',async()=>{
