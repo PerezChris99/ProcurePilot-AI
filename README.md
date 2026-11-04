@@ -6,7 +6,7 @@
 
 | Platform | Start | Verify |
 | --- | --- | --- |
-| Windows / VS Code | ` .\\start.bat ` | ` .\\verify.bat ` |
+| Windows / VS Code | `.\\start.bat` | `.\\verify.bat` |
 | macOS / Linux | `./start.sh` | `./verify.sh` |
 
 ### macOS: judge quickstart

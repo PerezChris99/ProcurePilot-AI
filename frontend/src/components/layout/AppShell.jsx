@@ -17,14 +17,14 @@ const navigation = [
 ];
 const labels = Object.fromEntries(navigation.map(({to,label})=>[to,label]));
 
-function NavigationLinks({items, mobile=false}){
+function NavigationLinks({items, mobile=false, detailSelected=false}){
   return items.map(({label,short,to,icon:Icon,end})=>(
     <NavLink
       key={to}
       to={to}
       end={end}
       aria-label={label}
-      className={({isActive})=>(mobile?'mobile-dock-link':'nav-link')+(isActive?' active':'')}
+      className={({isActive})=>(mobile?'mobile-dock-link':'nav-link')+((isActive||(detailSelected&&to==='/discovery'))?' active':'')}
     >
       <Icon size={mobile?19:18} strokeWidth={mobile?1.9:1.8} aria-hidden="true"/>
       <span>{mobile?short:label}</span>
@@ -43,14 +43,15 @@ export default function AppShell(){
     refetchOnWindowFocus:true,
   });
   const initials=(user?.full_name||user?.email||'U').slice(0,1).toUpperCase();
-  const pageLabel=labels[pathname]||(pathname.startsWith('/requests/')?'Product discovery':'Workspace');
+  const onRequestDetail=pathname.startsWith('/requests/');
+  const pageLabel=labels[pathname]||(onRequestDetail?'Product discovery':'Workspace');
   const aiConfigured=integrations?.ai?.configured===true;
   const aiState=isPending?'Checking settings':isError?'Status unavailable':aiConfigured?'Key configured':'Key not configured';
   const payMode=integrations?.paypal?.environment;
   const runtime=integrations?.runtime?.environment;
   const environmentLabel=isPending?'CHECKING ENVIRONMENT':
     isError?'ENVIRONMENT UNAVAILABLE':
-    [runtime==='production'?'PRODUCTION':runtime==='staging'?'STAGING':'LOCAL DEMO',
+    [runtime==='production'?'PRODUCTION':runtime==='staging'?'STAGING':runtime==='development'?'LOCAL DEMO':runtime==='testing'||runtime==='test'?'TEST ENVIRONMENT':'ENVIRONMENT UNKNOWN',
      payMode==='live'?'PAYPAL LIVE':payMode==='sandbox'?'PAYPAL SANDBOX':'PAYPAL UNKNOWN'].join(' · ');
 
   return <div className="app-frame">
@@ -69,7 +70,7 @@ export default function AppShell(){
       </nav>
       <p className="nav-label nav-label-spaced">MANAGE</p>
       <nav className="primary-nav" aria-label="Management navigation">
-        <NavigationLinks items={navigation.filter(item=>item.group==='manage')}/>
+        <NavigationLinks items={navigation.filter(item=>item.group==='manage')} detailSelected={onRequestDetail}/>
       </nav>
       <div className="sidebar-bottom">
         <div className="ai-status">
@@ -102,7 +103,7 @@ export default function AppShell(){
       <div className="page-content"><Outlet/></div>
     </main>
     <nav className="mobile-dock" aria-label="Mobile workspace navigation">
-      <NavigationLinks items={navigation} mobile/>
+      <NavigationLinks items={navigation} mobile detailSelected={onRequestDetail}/>
     </nav>
   </div>;
 }
