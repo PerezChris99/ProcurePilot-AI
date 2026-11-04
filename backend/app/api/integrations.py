@@ -1,62 +1,115 @@
+"""Authenticated, secret-safe integration configuration and local readiness state.
+
+Configuration flags reflect the current server environment; no automatic paid or
+rate-limited provider requests are made just to paint the dashboard.
+"""
+from urllib.parse import urlsplit
+
 from fastapi import APIRouter, Depends
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.models.user import User
+from app.models import AiDailyBudget, User
 from app.security.tokens import get_current_user
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
 
-@router.get("/status", summary="Show integration configuration without exposing credentials")
+def _set(value: str | None) -> bool:
+    """Empty and common template values are not configured credentials."""
+    if not isinstance(value, str):
+        return False
+    trimmed = value.strip()
+    if not trimmed or trimmed.lower() in {
+        "replace-me", "changeme", "your-api-key", "your_api_key_here",
+        "your-client-id", "your-client-secret", "xxx", "placeholder",
+    }:
+        return False
+    return not trimmed.lower().startswith(("your-", "replace-with-", "paste-your-"))
+
+
+def _https_endpoint(value: str | None) -> bool:
+    if not isinstance(value, str) or not value.strip():
+        return False
+    try:
+        parsed = urlsplit(value.strip())
+        return (
+            parsed.scheme == "https" and bool(parsed.hostname)
+            and not parsed.username and not parsed.password
+            and not parsed.fragment and not parsed.query
+        )
+    except ValueError:
+        return False
+
+
+def _paypal_mode(value: str | None) -> str:
+    host = (value or "").rstrip("/")
+    return {
+        "https://api-m.sandbox.paypal.com": "sandbox",
+        "https://api-m.paypal.com": "live",
+    }.get(host, "unknown")
+
+
+@router.get("/status", summary="Show live server configuration and database readiness, not provider availability")
 def integration_status(
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
-    """Return safe configuration/readiness metadata for the signed-in operator.
-
-    This endpoint deliberately reports booleans and model/environment labels only.
-    It never returns API keys, client secrets, database URLs, or webhook IDs.
-    """
+    """Report safely observable settings; never return secrets or claim provider validation."""
     settings = get_settings()
+    try:
+        dialect = db.get_bind().dialect.name
+    except (SQLAlchemyError, AttributeError):
+        dialect = "unknown"
 
+    connected = False
+    schema_ready = False
     try:
         db.execute(text("SELECT 1"))
-        database_connected = True
+        connected = True
+        # Unlike SELECT 1 this verifies the latest required migration exists.
+        db.scalar(select(AiDailyBudget.scope).limit(1))
+        schema_ready = True
     except SQLAlchemyError:
         db.rollback()
-        database_connected = False
 
-    paypal_base_url = (settings.paypal_base_url or "").rstrip("/")
-    paypal_environment = (
-        "sandbox"
-        if paypal_base_url == "https://api-m.sandbox.paypal.com"
-        else "live"
-        if paypal_base_url == "https://api-m.paypal.com"
-        else "unknown"
-    )
-
+    google_key_set = _set(settings.google_api_key)
+    channel_key_set = _set(settings.channel3_api_key)
+    channel_url_set = _https_endpoint(settings.channel3_base_url)
+    paypal_id_set = _set(settings.paypal_client_id)
+    paypal_secret_set = _set(settings.paypal_client_secret)
+    paypal_webhook_set = _set(settings.paypal_webhook_id)
     return {
-        "database": {"connected": database_connected},
+        "runtime": {
+            "environment": settings.app_env,
+            "provider_checks": "configuration_only",
+        },
+        "database": {
+            "connected": connected,
+            "schema_ready": schema_ready,
+            "engine": dialect,
+        },
         "ai": {
             "provider": "Google Gemini",
-            "configured": bool(settings.google_api_key),
-            "model": settings.ai_model or "gemini-flash-latest",
+            "configured": google_key_set,
+            "api_key_set": google_key_set,
+            "model": settings.ai_model or "gemini-3.8-flash",
         },
         "channel3": {
             "provider": "Channel3",
-            "configured": bool(settings.channel3_api_key),
-            "base_url_configured": bool(settings.channel3_base_url),
+            "configured": channel_key_set and channel_url_set,
+            "api_key_set": channel_key_set,
+            "base_url_configured": channel_url_set,
         },
         "paypal": {
             "provider": "PayPal",
-            "credentials_configured": bool(
-                settings.paypal_client_id and settings.paypal_client_secret
-            ),
-            "webhook_configured": bool(settings.paypal_webhook_id),
-            "environment": paypal_environment,
+            "credentials_configured": paypal_id_set and paypal_secret_set,
+            "client_id_set": paypal_id_set,
+            "client_secret_set": paypal_secret_set,
+            "webhook_configured": paypal_webhook_set,
+            "environment": _paypal_mode(settings.paypal_base_url),
         },
     }
