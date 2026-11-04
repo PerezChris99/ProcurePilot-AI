@@ -49,7 +49,7 @@ const faqs=[
   },
 ];
 
-function HeroSlideshow({children}){
+function HeroSlideshow(){
   const heroRef=useRef(null);
   const [active,setActive]=useState(0);
   const [paused,setPaused]=useState(false);
@@ -110,7 +110,7 @@ function HeroSlideshow({children}){
   const change=amount=>setActive(index=>(index+amount+photography.length)%photography.length);
   return <section
     ref={heroRef}
-    className="site-hero site-container site-hero-visual"
+    className="site-hero-visual"
     aria-roledescription="carousel"
     aria-label="Procurement photography"
     onMouseEnter={()=>setPaused(true)}
@@ -133,7 +133,6 @@ function HeroSlideshow({children}){
       />)}
     </div>
     <div className="site-hero-mist" aria-hidden="true"/>
-    <div className="site-hero-content">{children}</div>
     <div className="site-hero-caption" aria-live={paused?'polite':'off'}>
       <div>
         <span className="site-photo-eyebrow">{photography[active].eyebrow}</span>
@@ -175,7 +174,7 @@ function Point({index,title,copy}){
 export default function LandingPage(){
   const {user}=useAuth();
   return <>
-    <HeroSlideshow>
+    <section className="site-hero site-container" aria-labelledby="landing-headline">
       <div className="site-hero-text">
         <span className="site-kicker">A BETTER WAY TO BUY FOR WORK</span>
         <h1 id="landing-headline">Purchase with <em>clarity.</em><br/>Not guesswork.</h1>
@@ -190,7 +189,8 @@ export default function LandingPage(){
         </div>
         <div className="site-trust-note"><ShieldCheck size={16} aria-hidden="true"/> AI insights · Human approvals · Sandbox payments.</div>
       </div>
-    </HeroSlideshow>
+      <HeroSlideshow/>
+    </section>
 
     <section className="site-evidence-strip" aria-label="Technology foundation">
       <div className="site-container site-evidence-inner">

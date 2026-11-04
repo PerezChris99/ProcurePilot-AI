@@ -25,8 +25,8 @@ export default function DashboardPage(){
   const value=key=>summary?String(summary[key]??0):'—';
   const metrics=[
     {label:'Completed purchases',value:value('completed_orders')},
-    {label:'Active purchase orders',value:value('active_orders')},
-    {label:'Awaiting approval',value:value('pending_approvals')},
+    {label:'Active orders',value:value('active_orders')},
+    {label:'Pending approval',value:value('pending_approvals')},
     {label:'Requests with results',value:value('requests_with_results')},
   ];
 
