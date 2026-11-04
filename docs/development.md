@@ -128,3 +128,27 @@ The launcher runs small, checked-in Node and Python preflight scripts instead of
 ## Local CORS and expired sessions
 
 The React/Vite server may be visited as either `http://localhost:5173` or `http://127.0.0.1:5173`, which are different browser origins. In development/test environments, FastAPI now allows the configured loopback origin **and** its equivalent loopback hostname at the same scheme/port. Staging/production continue allowing only the exact HTTPS `FRONTEND_URL`, with no wildcard or extra origins. If a browser preflight for `/api/v1/auth/login` returns HTTP 400, verify the address bar origin against the configured frontend URL and restart the backend after changing `.env`. An `/auth/me` HTTP 401 normally indicates that an existing short-lived bearer token has expired or been rejected; the frontend clears it and offers sign-in, and a fresh successful login obtains a new token. CORS restrictions should not be relaxed to solve an invalid token.
+
+## Judges on macOS / Linux
+
+From the repository root after installing Python 3.12+, Node.js 22.12+ (or 20.19+), npm and Git:
+
+~~~bash
+./start.sh
+~~~
+
+The Bash 3.2-compatible launcher detects the installed Python version, creates backend/.venv, installs Python/npm dependencies, copies env templates only if absent, defaults to SQLite for a **new** local demo, runs Alembic and a successful React production build before launching both local servers. Existing .env is **never modified**. Press Ctrl+C to stop. For a fresh PostgreSQL template use `./start.sh --postgres` and configure the local database before migrations. In a separate terminal run:
+
+~~~bash
+./verify.sh
+~~~
+
+Both scripts are executable in Git; if archive extraction strips execute permission use `bash ./start.sh` and `bash ./verify.sh`. They use the same real backend, React app and provider endpoints as Windows, with no mocked catalogue or payment responses.
+
+## Current Windows VS Code routine
+
+Open `D:\\NEW PROJECTS\\ProcurePilot-AI` in VS Code and run `.\\start.bat`. The launcher opens a dedicated VS Code window. If automatic folder-open tasks are blocked, press **Ctrl+Shift+P → Tasks: Run Task → ProcurePilot: Build then Start (VS Code Terminals)**. This runs the frontend build and migrations before opening the backend/frontend **integrated** terminals. Run `.\\verify.bat` independently from the repository root. Ensure PostgreSQL is already running; no launcher starts the database daemon.
+
+## Responsive navigation and status
+
+Desktop uses six distinct sidebar routes; phones/tablets get the same six links in an iPhone-safe-area bottom dock. Status is refreshed from the authenticated `/api/v1/integrations/status` endpoint, which checks DB/required schema and reports non-secret Gemini, Channel3 and PayPal credential flags. It is not a live provider ping and does not spend Gemini tokens. The user can refresh the panel manually and it polls while the workspace is active. Configure actual provider credentials in the root .env and restart the backend after changing them.

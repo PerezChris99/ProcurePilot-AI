@@ -1,5 +1,72 @@
 # ProcurePilot AI
 
+## Judges: run locally in minutes
+
+**The quickest demo needs Python 3.12+, Node.js 22.12+ (or 20.19+), npm and Git.** Mac/Linux first-run mode uses a local SQLite file so a PostgreSQL service is **not required just to open the app**. A real Channel3 search, Gemini analysis or PayPal Sandbox checkout requires the corresponding private provider credentials in the root `.env`; the app never invents provider results.
+
+| Platform | Start | Verify |
+| --- | --- | --- |
+| Windows / VS Code | ` .\\start.bat ` | ` .\\verify.bat ` |
+| macOS / Linux | `./start.sh` | `./verify.sh` |
+
+### macOS: judge quickstart
+
+Install [Homebrew](https://brew.sh/) if needed, then open Terminal:
+
+~~~bash
+brew install git python@3.12 node
+git clone https://github.com/PerezChris99/ProcurePilot-AI.git
+cd ProcurePilot-AI
+./start.sh
+~~~
+
+First launch creates local `.env` and `frontend/.env`, installs dependencies, applies database migrations, **builds React before starting**, then launches the backend and frontend in the current terminal. The command preserves any existing `.env`. Keep Terminal open; **Ctrl+C** stops both servers.
+
+### Linux (Ubuntu / Debian): judge quickstart
+
+Install Python 3.12+ and its venv package, Git, and Node.js 22 LTS from the [official Node.js downloads](https://nodejs.org/en/download). Ubuntu 24.04 users can start with:
+
+~~~bash
+sudo apt update
+sudo apt install -y git python3 python3-venv python3-pip
+node --version    # must be at least 22.12, or 20.19
+python3 --version # must be at least 3.12
+git clone https://github.com/PerezChris99/ProcurePilot-AI.git
+cd ProcurePilot-AI
+./start.sh
+~~~
+
+For other Linux distributions use the distribution's equivalent Python/Git packages, install a supported Node.js, and run the same `./start.sh`. Run `./verify.sh` from a second terminal for all source, test and build checks.
+
+### Windows: exactly how this project is currently run in VS Code
+
+~~~powershell
+cd "D:\NEW PROJECTS\ProcurePilot-AI"
+git switch perez
+git pull origin perez
+.\start.bat
+~~~
+
+The Windows launcher installs requirements, applies the configured PostgreSQL migrations, opens the project in VS Code, builds React and starts the **FastAPI and React servers in VS Code integrated terminals**.
+
+If VS Code does not start them automatically:
+
+1. Open the project folder in VS Code and accept workspace trust.
+2. Press **Ctrl+Shift+P** to open **Command Palette**.
+3. Type **Tasks: Run Task** and press Enter.
+4. Choose **ProcurePilot: Build then Start (VS Code Terminals)**.
+5. Open **Terminal → New Terminal** and run `.\verify.bat` to verify Python, frontend lint, Vitest and Vite build.
+
+**Local addresses:** [UI](http://127.0.0.1:5173) · [API](http://127.0.0.1:8000) · [API docs](http://127.0.0.1:8000/docs) · [Database readiness](http://127.0.0.1:8000/api/v1/ready).
+
+### Optional PostgreSQL and external providers
+
+On macOS/Linux, `./start.sh --postgres` starts from the PostgreSQL template **only when no `.env` exists**. For an existing `.env`, change `DATABASE_URL` yourself; the script never overwrites it. Development SQLite is useful for judging UI and local flows; **production requires PostgreSQL**. In Windows, configure PostgreSQL before `.\start.bat`.
+
+Supply `GOOGLE_API_KEY`, `CHANNEL3_API_KEY`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` and an optional `PAYPAL_WEBHOOK_ID` to unlock those real provider workflows. The authenticated System status panel reports exactly which credential categories are set and which are missing. A configured key **does not** prove a provider API call works; live transactions and signed HTTPS webhooks must be demonstrated separately.
+
+---
+
 **From purchasing request to approved purchase — intelligently.**
 
 An evidence-first procurement demonstrator that brings real product discovery, deterministic purchase governance, a carefully budgeted Gemini/Google ADK analyst, and an independent PayPal Sandbox payment demonstration into one approachable workflow.
@@ -28,11 +95,12 @@ ProcurePilot separates responsibilities: **the model explains, deterministic cod
 
 | Screen | What a judge can do |
 | --- | --- |
-| Overview | Personalized greeting, persisted order/approval statistics, recent audit events, safe integration-configuration indicators |
+| Overview | Personalized greeting, persisted order/approval statistics, recent audit events, live-refreshing integration-configuration indicators (configured vs missing, not provider connectivity) |
 | New procurement | Enter business requirements, quantity, currency and budget |
-| Product discovery | Search Channel3, compare deterministic rankings and offer evidence, request a bounded AI assessment, create a PO |
+| Product discovery | Reopen saved requests and their catalogue evidence, with a searchable user-scoped history |
 | Approvals | Review pending purchase orders and record a human approve/reject decision |
 | Purchase orders | Submit, review status, create a Sandbox checkout, capture after buyer approval, inspect the audit timeline |
+| Activity | Review the latest eight stored purchasing events and open full order-level audit trails |
 
 ## System architecture
 
@@ -249,3 +317,7 @@ This is not a PCI-certified payment processor. The app does not capture card num
 ### Public frontend deployment
 
 The standard npm run build is a localhost-compatible Windows development check. For a real public deployment, set VITE_API_BASE_URL to https://YOUR-HTTPS-API-HOST/api/v1 or to /api/v1 behind a same-origin HTTPS reverse proxy. Then run npm run build:deploy from frontend/. That build gate refuses localhost/HTTP/malformed endpoints before generating public assets. Hosting services must explicitly choose build:deploy; normal npm run build remains a local check. The browser API layer also reports a clear misconfiguration instead of attempting to send a visitor's browser to localhost.
+
+## Responsive layout and integration-state honesty
+
+Phones and tablets below 961px use a six-destination fixed bottom dock (Overview, New, Orders, Approvals, Activity, Discover) with iPhone safe-area spacing and accessible link labels. Desktop screens retain a flat, no-pill sidebar. All six destinations are genuine routes; Activity and saved Product discovery no longer duplicate Purchase orders/New procurement. The status panel distinguishes **API reachable**, **database connected with required schema**, **credentials configured**, **partially configured**, and **not configured**. It reads real non-secret backend environment flags, refreshes on request and periodically, and never claims configured APIs have been authenticated with external providers.

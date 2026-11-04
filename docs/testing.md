@@ -61,3 +61,11 @@ It stops at the first failure. No GitHub Actions workflows are configured.
 - [ ] Navigation, session restoration, mobile screen sizes and the favicon inspected in browser.
 - [ ] No secrets exposed, no phantom branch or unmerged PR.
 - [ ] Hackathon license/submission requirements reconciled with the proprietary authorized-use license.
+
+## Mobile and cross-platform judge acceptance matrix
+
+- Verify `./start.sh` and `./verify.sh` on macOS and Linux, and `.\\start.bat` plus `.\\verify.bat` on Windows. The macOS/Linux default creates SQLite only if .env does not exist; do not accidentally replace a judge's PostgreSQL credentials.
+- In Chrome/Firefox responsive mode and Safari/iOS where available, test 320px, 375px, 430px, 768px, 960px, 961px and 1440px widths, the six accessible mobile dock links, desktop flat sidebar, safe-area spacing, keyboard focus, and no horizontal overflow.
+- Verify Activity lists actual saved audit events, Discovery lists the signed-in user's saved procurement requests, and neither reveals another account's data.
+- System status: check all keys unset, only Channel3 URL present, PayPal client ID without secret, full Sandbox credentials, webhook ID unset/set, SQLite vs PostgreSQL, and schema missing. Confirm the UI labels these as configuration signals rather than validated provider connectivity.
+- Exercise real provider operations only with authorized test credentials; compare dashboard flags with outcomes. Do not report a Sandbox payment as a supplier settlement.
