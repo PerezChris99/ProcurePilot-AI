@@ -29,7 +29,7 @@ describe('ProcurementPage',()=>{
     expect(submit).toBeEnabled();
   });
 
-  it('submits only the user's request to the authenticated API',async()=>{
+  it('submits only the user request to the authenticated API',async()=>{
     apiRequest.mockResolvedValue({id:'request-123'});
     renderPage();
     fireEvent.change(screen.getByLabelText(/what are you looking to purchase/i),{

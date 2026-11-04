@@ -1,6 +1,5 @@
-import {createContext,useContext,useEffect,useState} from 'react';
+import {useEffect,useState} from 'react';
+import {AuthContext} from './auth-context.js';
 import {apiRequest,setAuthToken} from '../services/api.js';
-const AuthContext=createContext(null);
 const TOKEN_KEY='procurepilot_access_token';
 export function AuthProvider({children}){const [user,setUser]=useState(null);const [busy,setBusy]=useState(false);const [initializing,setInitializing]=useState(()=>Boolean(sessionStorage.getItem(TOKEN_KEY)));useEffect(()=>{const token=sessionStorage.getItem(TOKEN_KEY);if(!token)return;setAuthToken(token);apiRequest('/auth/me').then(setUser).catch(()=>{sessionStorage.removeItem(TOKEN_KEY);setAuthToken(null)}).finally(()=>setInitializing(false))},[]);async function authenticate(path,payload){setBusy(true);try{const result=await apiRequest(path,{method:'POST',body:JSON.stringify(payload)});sessionStorage.setItem(TOKEN_KEY,result.access_token);setAuthToken(result.access_token);setUser(result.user);return result.user}finally{setBusy(false)}}async function login(payload){return authenticate('/auth/login',payload)}async function register(payload){return authenticate('/auth/register',payload)}function logout(){sessionStorage.removeItem(TOKEN_KEY);setAuthToken(null);setUser(null)}return <AuthContext.Provider value={{user,busy,initializing,login,register,logout}}>{children}</AuthContext.Provider>}
-export function useAuth(){const context=useContext(AuthContext);if(!context)throw new Error('useAuth must be used inside AuthProvider');return context}
