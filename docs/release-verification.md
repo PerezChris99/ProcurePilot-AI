@@ -53,3 +53,5 @@ Run start.bat, verify.bat, and the manual walkthrough in docs/testing.md. Record
 - The model config regression accepts the SDK's enum/string representation of the low thinking level.
 
 - Added a separate unauthenticated readiness probe at `/api/v1/ready`, which runs cheap SQL checks against the users table and latest AI-budget migration, returning 503 on unavailable database/schema. `/api/v1/health` remains process liveness; external provider validity is checked separately.
+
+- Introduced a dedicated strict public frontend build gate, a Node-native URL test suite, and a browser runtime guard against a deployed UI calling localhost. Hosting must use npm run build:deploy explicitly, while the Windows local build remains unchanged.

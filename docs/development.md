@@ -116,3 +116,7 @@ Before each startup, stop existing VS Code backend/frontend terminal tasks or fr
 ## Node.js / local browser safety
 
 The launcher now checks Node.js **20.19+** or **22.12+** before dependency installation because Vite 7 requires these ranges. Node 18 and 21 are unsupported. The development server defaults to loopback (`127.0.0.1`) rather than listening on the public network. Local bootstrap still works with `APP_ENV=development`; production mode requires an HTTPS frontend origin, a strong JWT secret, and a PostgreSQL URL using the installed psycopg driver.
+
+## Public build verification
+
+Run npm run test:deploy-config in frontend/ to test endpoint validation with Node's built-in test runner. Configure VITE_API_BASE_URL with a real HTTPS backend URL ending in /api/v1 or the same-origin path /api/v1 behind a reverse proxy, then run npm run build:deploy. The default local npm run build remains unchanged. Configure your deployment service to use the strict command and do not place provider credentials inside VITE-prefixed values.
