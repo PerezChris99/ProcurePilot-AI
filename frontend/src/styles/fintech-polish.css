@@ -237,7 +237,13 @@
   background:rgba(255,255,255,.96);
   box-shadow:0 11px 35px rgba(11,27,61,.13);
 }
-.mobile-dock-link{border-radius:0;background:transparent;color:#536780}
+.mobile-dock-link{
+  border-radius:0;
+  background:transparent;
+  color:#536780;
+  font-size:10px;
+  font-weight:690;
+}
 .mobile-dock-link.active{color:#0b1b3d}
 .mobile-dock-link.active::before{background:#0865cc}
 .mobile-dock-link:hover{background:transparent}
@@ -295,4 +301,14 @@
 @media(prefers-reduced-motion:reduce){
   .site-hero-image,.site-slide-dot::after,.site-top-cta,
   .site-button,.site-nav a{transition:none!important;transform:none!important}
+}
+
+/* A single quiet entrance, not an always-running parallax effect. */
+@keyframes site-welcome{
+  from{opacity:0;transform:translateY(9px)}
+  to{opacity:1;transform:translateY(0)}
+}
+@media(prefers-reduced-motion:no-preference){
+  .site-hero-text{animation:site-welcome .52s ease-out both}
+  .site-hero-visual{animation:site-welcome .62s ease-out .06s both}
 }

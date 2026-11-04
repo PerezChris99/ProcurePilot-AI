@@ -23,7 +23,7 @@ export function publicNavigation(signedIn){
     {label:'Frequently asked questions',short:'FAQ',to:'/#faq',icon:CircleHelp},
     {label:'About ProcurePilot',short:'About',to:'/about',icon:BookOpenText},
     signedIn
-      ?{label:'Open workspace',short:'Workspace',to:'/dashboard',icon:LayoutDashboard}
+      ?{label:'Open workspace',short:'App',to:'/dashboard',icon:LayoutDashboard}
       :{label:'Sign in',short:'Account',to:'/login',icon:UserRound},
   ];
 }
