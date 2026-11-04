@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -12,6 +14,37 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
+
+def allowed_frontend_origins(frontend_url: str, app_env: str) -> list[str]:
+    """Allow only the configured origin and its loopback alias in local development.
+
+    Browsers treat localhost and 127.0.0.1 as different origins even when they
+    reach the same Vite server. Never add these aliases in staging/production.
+    """
+    primary = frontend_url.rstrip("/")
+    origins = [primary]
+    if app_env not in ("development", "test", "testing"):
+        return origins
+
+    parsed = urlsplit(primary)
+    if parsed.scheme not in ("http", "https") or parsed.hostname not in ("localhost", "127.0.0.1"):
+        return origins
+    if parsed.path or parsed.query or parsed.fragment or parsed.username or parsed.password:
+        return origins
+
+    try:
+        port = parsed.port
+    except ValueError:
+        return origins
+
+    alternative = "127.0.0.1" if parsed.hostname == "localhost" else "localhost"
+    alias = f"{parsed.scheme}://{alternative}"
+    if port is not None:
+        alias += f":{port}"
+    origins.append(alias)
+    return origins
+
+
 app = FastAPI(
     title=settings.app_name,
     version="0.2.0",
@@ -21,7 +54,7 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url],
+    allow_origins=allowed_frontend_origins(settings.frontend_url, settings.app_env),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],

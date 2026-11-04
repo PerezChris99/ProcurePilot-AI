@@ -124,3 +124,7 @@ Run npm run test:deploy-config in frontend/ to test endpoint validation with Nod
 ## Windows batch parser resilience
 
 The launcher runs small, checked-in Node and Python preflight scripts instead of embedding nested JavaScript/Python expressions within Windows CMD conditional blocks. This avoids CMD interpreting parentheses or shell control symbols before displaying the first setup stage. If an older startup script reports an unexpected token, pull the latest perez branch before retrying. The frontend Node version tests run through verify.bat; the Python preflight requires only the standard library.
+
+## Local CORS and expired sessions
+
+The React/Vite server may be visited as either `http://localhost:5173` or `http://127.0.0.1:5173`, which are different browser origins. In development/test environments, FastAPI now allows the configured loopback origin **and** its equivalent loopback hostname at the same scheme/port. Staging/production continue allowing only the exact HTTPS `FRONTEND_URL`, with no wildcard or extra origins. If a browser preflight for `/api/v1/auth/login` returns HTTP 400, verify the address bar origin against the configured frontend URL and restart the backend after changing `.env`. An `/auth/me` HTTP 401 normally indicates that an existing short-lived bearer token has expired or been rejected; the frontend clears it and offers sign-in, and a fresh successful login obtains a new token. CORS restrictions should not be relaxed to solve an invalid token.
