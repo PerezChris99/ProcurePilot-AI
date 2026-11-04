@@ -110,7 +110,7 @@ popd
 echo.
 echo [5/5] Applying database migrations...
 pushd "backend"
-"%PROJECT_ROOT%\\backend\\.venv\\Scripts\\python.exe" -m alembic upgrade head
+"%PROJECT_ROOT%\backend\.venv\Scripts\python.exe" -m alembic upgrade head
 if errorlevel 1 (
     popd
     echo [ERROR] Database migrations failed. The application was not started.

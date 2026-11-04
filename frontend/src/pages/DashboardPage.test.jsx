@@ -19,7 +19,6 @@ describe('DashboardPage',()=>{
   renderPage();
   expect(screen.getByRole('heading',{name:/let's buy smarter/i})).toBeInTheDocument();
   expect(screen.getByRole('link',{name:/new procurement/i})).toBeInTheDocument();
-  expect(screen.getByRole('link',{name:/new procurement/i})).toBeInTheDocument();
  });
  it('shows live provider configuration rather than hard-coded not configured labels',async()=>{
   renderPage();

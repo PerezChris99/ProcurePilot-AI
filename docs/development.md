@@ -100,3 +100,7 @@ pytest
 pytest --cov=app --cov-report=term-missing
 ```
 
+
+## Single-command code checks
+
+From the repository root on Windows, run `verify.bat` after `start.bat` has created the environments. It executes backend pytest, frontend ESLint, Vitest and the Vite production build in sequence. It stops on the first failure; it does **not** claim live Gemini/Channel3/PayPal calls, webhook delivery or deployed infrastructure readiness. The checked-in npm manifest presently does not have a tracked package lock, so dependency resolution can vary between installs. Record a validated lockfile before calling production builds reproducible.
