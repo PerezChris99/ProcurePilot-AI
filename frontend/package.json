@@ -13,7 +13,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "build:deploy": "node scripts/validate-deploy.mjs && vite build",
-    "test:deploy-config": "node --test scripts/validate-deploy.test.mjs"
+    "test:deploy-config": "node --test scripts/check-node-version.test.cjs scripts/validate-deploy.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

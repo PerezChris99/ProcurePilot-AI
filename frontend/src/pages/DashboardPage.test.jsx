@@ -1,5 +1,5 @@
 import {describe,expect,it,vi} from 'vitest';
-import {render,screen,within} from '@testing-library/react';
+import {render,screen,waitFor,within} from '@testing-library/react';
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {MemoryRouter} from 'react-router-dom';
 import DashboardPage from './DashboardPage.jsx';
@@ -37,9 +37,12 @@ describe('Live overview',()=>{
   const completed=await screen.findByText('Completed purchases');
   const active=screen.getByText('Active purchase orders');
   const requests=screen.getByText('Requests with results');
-  expect(within(completed.closest('article')).getByText('2')).toBeInTheDocument();
-  expect(within(active.closest('article')).getByText('3')).toBeInTheDocument();
-  expect(within(requests.closest('article')).getByText('4')).toBeInTheDocument();
+  // Labels render synchronously; totals arrive after the React Query promise settles.
+  await waitFor(()=>{
+   expect(within(completed.closest('article')).getByText('2')).toBeInTheDocument();
+   expect(within(active.closest('article')).getByText('3')).toBeInTheDocument();
+   expect(within(requests.closest('article')).getByText('4')).toBeInTheDocument();
+  });
   expect(await screen.findByText('purchase order · created')).toBeInTheDocument();
  });
 });
