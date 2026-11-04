@@ -99,7 +99,7 @@ ProcurePilot separates responsibilities: **the model explains, deterministic cod
 | --- | --- |
 | Public home | Concise hero, actual procurement photography, transparent technology integration strip, problem/solution, workflow, FAQs and CTA |
 | About and legal pages | Public About, How it works, Privacy, Terms, Security, Accessibility, Responsible use and Contact |
-| Overview | Personalized greeting, persisted order/approval statistics, recent audit events, live-refreshing integration-configuration indicators (configured vs missing, not provider connectivity) |
+| Overview | Personalized greeting, persisted order/approval statistics, recent audit events, a live date/time/timezone clock, activity counts and dynamic integration configuration (configured vs missing, not provider connectivity) |
 | New procurement | Enter business requirements, quantity, currency and budget |
 | Product discovery | Reopen saved requests and their catalogue evidence, with a searchable user-scoped history |
 | Approvals | Review pending purchase orders and record a human approve/reject decision |
@@ -323,6 +323,6 @@ For static hosting, `frontend/vercel.json` provides Vercel's SPA rewrite when th
 
 ## Performance and security boundaries
 
-The backend now enforces finite and range-checked money, a 1 MiB HTTP request body limit, size-limited external catalogue responses, human approval and server-verified PayPal Sandbox evidence. Public authentication uses **shared Redis rate limiting** and fails closed if that service is unavailable. Secrets are never returned by the integration-status endpoint, and production API responses include defensive headers. Database access uses bounded PostgreSQL connection pools, SQL/lock timeouts, composite user-scoped indexes, unique PayPal capture/order IDs, keyset pagination for saved procurement lists and bounded audit summaries; complete order audit data remain available through the individual order endpoint.
+The protected Overview also shows a ticking local device time, date, IANA time zone and UTC offset. The backend now enforces finite and range-checked money, a 1 MiB HTTP request body limit, size-limited external catalogue responses, human approval and server-verified PayPal Sandbox evidence. Public authentication uses **shared Redis rate limiting** and fails closed if that service is unavailable. Secrets are never returned by the integration-status endpoint, and production API responses include defensive headers. Database access uses bounded PostgreSQL connection pools, SQL/lock timeouts, composite user-scoped indexes, unique PayPal capture/order IDs, keyset pagination for saved procurement lists and bounded audit summaries; complete order audit data remain available through the individual order endpoint.
 
 **Capacity is not a fixed user-count guarantee.** Running 100,000 or 1,000,000 accounts reliably depends on concurrent load, provider quotas, query plans, data volumes, infrastructure, backups, autoscaling and security monitoring. Use the [scaling and capacity guide](docs/scaling.md) and demonstrate throughput and p95/p99 latency through real load and failure testing before advertising those levels. Separating signed-in user accounts from simultaneous active sessions is essential.
