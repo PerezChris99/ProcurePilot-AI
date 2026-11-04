@@ -51,3 +51,5 @@ Run start.bat, verify.bat, and the manual walkthrough in docs/testing.md. Record
 
 - Windows bootstrap now rejects incompatible Node.js versions before attempting to install Vite 7 dependencies; package.json declares the corresponding Node engines, and the Vite dev server defaults to localhost binding.
 - The model config regression accepts the SDK's enum/string representation of the low thinking level.
+
+- Added a separate unauthenticated readiness probe at `/api/v1/ready`, which runs cheap SQL checks against the users table and latest AI-budget migration, returning 503 on unavailable database/schema. `/api/v1/health` remains process liveness; external provider validity is checked separately.
