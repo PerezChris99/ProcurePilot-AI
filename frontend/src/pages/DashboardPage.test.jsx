@@ -8,10 +8,10 @@ vi.mock('../services/api.js',()=>({
  getHealth:vi.fn().mockResolvedValue({status:'ok'}),
  getDashboardSummary:vi.fn().mockResolvedValue({completed_orders:2,active_orders:3,pending_approvals:1,requests_with_results:4,recent_activity:[{id:'event-1',action:'purchase_order.created',created_at:'2026-11-04T12:00:00Z'}]}),
  getIntegrationStatus:vi.fn().mockResolvedValue({
-  database:{connected:true},
-  ai:{provider:'Google Gemini',configured:true,model:'gemini-3.8-flash'},
-  channel3:{provider:'Channel3',configured:true},
-  paypal:{provider:'PayPal',credentials_configured:true,webhook_configured:false,environment:'sandbox'}
+  database:{connected:true,schema_ready:true,engine:'postgresql'},
+  ai:{provider:'Google Gemini',configured:true,api_key_set:true,model:'gemini-3.8-flash'},
+  channel3:{provider:'Channel3',configured:true,api_key_set:true,base_url_configured:true},
+  paypal:{provider:'PayPal',credentials_configured:true,client_id_set:true,client_secret_set:true,webhook_configured:false,environment:'sandbox'}
  })
 }));
 function renderPage(){const client=new QueryClient({defaultOptions:{queries:{retry:false}}});return render(<QueryClientProvider client={client}><MemoryRouter><DashboardPage/></MemoryRouter></QueryClientProvider>)}
@@ -27,7 +27,9 @@ describe('DashboardPage',()=>{
   expect(await screen.findByText('Google Gemini')).toBeInTheDocument();
   expect(screen.getByText('PayPal Sandbox')).toBeInTheDocument();
   expect((await screen.findAllByText('Configured')).length).toBe(3);
-  expect(screen.getByText('Webhook pending')).toBeInTheDocument();
+  expect(screen.getByText('Webhook ID missing')).toBeInTheDocument();
+  expect(screen.getByText('PayPal webhook')).toBeInTheDocument();
+  expect(screen.getByText(/configured means credentials are present, not verified/i)).toBeInTheDocument();
  });
 });
 
