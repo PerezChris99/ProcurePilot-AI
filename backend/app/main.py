@@ -11,6 +11,7 @@ from app.api.paypal_webhooks import router as paypal_webhooks_router
 from app.api.procurement_requests import router as procurement_router
 from app.api.purchase_orders import router as purchase_orders_router
 from app.core.config import get_settings
+from app.security.http import SecurityMiddleware
 
 settings = get_settings()
 
@@ -59,6 +60,8 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
 )
+# Installed last so every CORS preflight, error and authenticated response is guarded.
+app.add_middleware(SecurityMiddleware, max_body_bytes=settings.max_request_body_bytes, production=settings.app_env=='production')
 app.include_router(health_router, prefix=settings.api_v1_prefix)
 app.include_router(auth_router, prefix=settings.api_v1_prefix)
 app.include_router(dashboard_router, prefix=settings.api_v1_prefix)
