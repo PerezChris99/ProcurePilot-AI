@@ -186,3 +186,17 @@ def test_purchase_order_list_returns_complete_details_without_n_plus_one_queries
     assert response.json()[0]['id']==order['id']
     assert response.json()[0]['items'][0]['product_title']=='Business monitor 27 inch'
     assert any(event['action']=='purchase_order.created' for event in response.json()[0]['audit_events'])
+
+
+def test_approvals_query_only_returns_owners_pending_orders(client, monkeypatch):
+    headers, order = make_order(client, monkeypatch, email='approvals-owner@example.com')
+    other = register(client, 'approvals-other@example.com')
+    assert client.get('/api/v1/purchase-orders?status=pending_approval', headers=headers).json() == []
+    assert client.post(f"/api/v1/purchase-orders/{order['id']}/submit", headers=headers).status_code == 200
+    result = client.get('/api/v1/purchase-orders?status=pending_approval', headers=headers)
+    assert result.status_code == 200
+    assert [entry['id'] for entry in result.json()] == [order['id']]
+    assert client.get('/api/v1/purchase-orders?status=pending_approval', headers=other).json() == []
+    assert client.get('/api/v1/purchase-orders?status=unknown', headers=headers).status_code == 422
+    assert client.post(f"/api/v1/purchase-orders/{order['id']}/approve", headers=headers, json={'comment':'Reviewed'}).status_code == 200
+    assert client.get('/api/v1/purchase-orders?status=pending_approval', headers=headers).json() == []

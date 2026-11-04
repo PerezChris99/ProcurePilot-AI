@@ -2,76 +2,246 @@
 
 **From purchasing request to approved purchase — intelligently.**
 
-ProcurePilot AI is an AI-assisted procurement workspace for small businesses. It structures purchasing requests, discovers real products through Channel3, ranks options using deterministic evidence-based scoring, prepares purchase orders, records human approval, and demonstrates a separate PayPal Sandbox payment lifecycle.
+An evidence-first procurement demonstrator that brings real product discovery, deterministic purchase governance, a carefully budgeted Gemini/Google ADK analyst, and an independent PayPal Sandbox payment demonstration into one approachable workflow.
 
-> Hackathon prototype in active development. Provider adapters and the procurement workflow are implemented, but live Gemini, Channel3, and PayPal credentials must be configured and verified locally. Do not treat configured credentials as proof of successful external transactions.
+> **Evaluation status:** Hackathon prototype, not a production purchasing platform. Real Gemini, Channel3, PostgreSQL and PayPal Sandbox credentials/services must be configured and verified. A successful build does not prove real-provider availability or merchant settlement.
 
-## Current implementation
+## Why ProcurePilot exists
 
-- React 19 with JavaScript/JSX, Vite, Tailwind CSS, React Router, and TanStack Query.
-- Python/FastAPI backend with PostgreSQL-ready SQLAlchemy models and Alembic migrations.
-- Email/password authentication, Argon2id password hashing, and short-lived JWTs.
-- User-scoped procurement requests and Channel3 product discovery.
-- Deterministic product ranking and saved catalogue snapshots.
-- Google ADK procurement agent with a restricted Channel3 research tool.
-- Gemini model selection through the backend-only `AI_MODEL` setting.
-- Authenticated integration status endpoint and live dashboard configuration indicators for PostgreSQL, Gemini, Channel3, and PayPal.
-- Purchase-order creation from saved catalogue offers; the server calculates totals and snapshots product/offer details.
-- Draft, pending approval, approved, rejected, payment pending, paid, and payment-failed lifecycle states.
-- Human approval records, immutable approved amounts, payment idempotency, PayPal webhook signature verification, duplicate-event protection, and per-order audit history.
-- Frontend purchase-order workflow and explicit PayPal return/capture action.
+A business purchase is more than a product-search query. Teams must express requirements, compare trustworthy offer evidence, stay within budget, document decisions, request human sign-off and reconcile a payment. Generic chatbots may invent stock or prices and cannot substitute for purchase controls.
 
-## Important integration boundary
+ProcurePilot separates responsibilities: **the model explains, deterministic code decides what is orderable, people approve, and PayPal Sandbox demonstrates a verified payment lifecycle.** This makes a sophisticated workflow usable from a small set of clear screens.
 
-Channel3 provides product discovery and retailer offer links. Its public developer documentation describes product search and retailer offers; catalogue discovery is not itself retailer checkout. PayPal Sandbox is a separate hackathon payment demonstration. A Sandbox payment does not pay the Channel3 retailer or prove supplier settlement. Confirm Channel3 checkout access and PayPal live merchant eligibility separately before making a commercial settlement claim.
+## A judge's five-minute tour
 
-## Technology
+1. **Register or sign in.** The dashboard greets you by your first name and displays your own saved purchase activity.
+2. **New procurement.** Enter an unambiguous requirement, e.g. "Two 27-inch office monitors with IPS displays", quantity 2, currency USD and a reasonable budget. Product availability depends on the live catalogue.
+3. **Ask AI to analyze** or **Search products**. Asking AI first automatically performs one Channel3 discovery if none has been saved, ranks the returned products in backend code, and sends a short shortlist to Gemini. Repeating an unchanged assessment uses its saved response without a new model call.
+4. **Inspect the offers.** Only verified-in-stock, matching-currency, HTTPS offers within budget can become a purchase order. Review the retailer link, select **Create PO**, then **Submit for approval**.
+5. **Approvals.** Open the dedicated Approvals screen, inspect the frozen item and price, and approve or reject. The personal-workspace demo permits the requester to approve their own order; this is explicitly **not independent segregation of duties**.
+6. **Purchase orders → PayPal Sandbox.** Create a Sandbox checkout, sign in at PayPal using the **Sandbox Personal buyer**, approve in the same tab, return to ProcurePilot, and confirm capture. The backend checks the PayPal order and completed capture before marking it paid.
+7. **Review the audit trail.** The order timeline and user-scoped dashboard show the actual events. A separate public HTTPS webhook can reconcile signed PayPal notifications.
 
-Frontend: React, JavaScript/JSX, Vite, Tailwind CSS, React Router, TanStack Query.
+**Required for a full payment demo:** a Sandbox **Business merchant** REST application and credentials, a Sandbox **Personal buyer**, and the appropriate order/currency. A PayPal Sandbox payment does **not** pay a Channel3 retailer.
 
-Backend: Python, FastAPI, Pydantic, SQLAlchemy, Alembic.
+### Screen map
 
-Database: PostgreSQL (SQLite is used by isolated API tests).
+| Screen | What a judge can do |
+| --- | --- |
+| Overview | Personalized greeting, persisted order/approval statistics, recent audit events, safe integration-configuration indicators |
+| New procurement | Enter business requirements, quantity, currency and budget |
+| Product discovery | Search Channel3, compare deterministic rankings and offer evidence, request a bounded AI assessment, create a PO |
+| Approvals | Review pending purchase orders and record a human approve/reject decision |
+| Purchase orders | Submit, review status, create a Sandbox checkout, capture after buyer approval, inspect the audit timeline |
 
-AI: Google ADK and Gemini.
+## System architecture
 
-Product discovery: Channel3 Product API.
+~~~mermaid
+flowchart LR
+    UI["React 19 · JavaScript/JSX · Vite"] -->|"JWT / HTTPS"| API["FastAPI · Python"]
+    API --> DB[("PostgreSQL · Alembic")]
+    API -->|"Product search"| C3["Channel3 Product API"]
+    API -->|"Compact evidence"| ADK["Google ADK · bounded analyst"]
+    ADK -->|"One model call"| GEM["Gemini"]
+    API -->|"OAuth · Orders v2"| PP["PayPal Sandbox"]
+    PP -->|"Verified HTTPS webhooks"| API
+    API -->|"Server-derived PO totals"| DB
+~~~
 
-Payments: PayPal Orders v2 API (Sandbox).
+**Frontend:** React 19, JavaScript/JSX, Vite, Tailwind CSS, React Router, TanStack Query, Vitest and Testing Library. No TS/TSX files.
 
-Tests: Vitest, React Testing Library, Pytest, HTTPX. Browser E2E and real Sandbox verification remain to be run.
+**Backend:** FastAPI, Pydantic, SQLAlchemy, PostgreSQL, Alembic, HTTPX, Argon2id, JWT authentication and Pytest.
 
-No TypeScript or TSX is used in the frontend.
+**AI:** Google ADK/Gemini for explanation. Channel3 is the actual catalogue source. Deterministic Python scoring and order validation are the authority for eligibility, quantity, budgets and saved prices.
 
-## Local development
+**Payments:** PayPal REST Orders v2 **Sandbox**. Webhook signature verification is server-side. There is no merchant fulfillment, Channel3 checkout or live supplier settlement integration.
 
-See [docs/development.md](docs/development.md). Configure the root `.env` using [.env.example](.env.example) and [the provider setup guide](docs/provider-setup.md). Never commit secrets. Vite variables prefixed with `VITE_` are public browser values; never put API keys, database URLs, JWT secrets, or PayPal credentials in frontend variables.
+## End-to-end purchasing workflow
 
-From `backend/`: install requirements, run `alembic upgrade head`, then start `uvicorn app.main:app --reload`.
+~~~mermaid
+sequenceDiagram
+    autonumber
+    actor Buyer
+    participant UI as React UI
+    participant API as FastAPI
+    participant C3 as Channel3
+    participant AI as Gemini via ADK
+    participant DB as PostgreSQL
+    participant PP as PayPal Sandbox
 
-From `frontend/`: run `npm install`, `npm run dev`, `npm run lint`, `npm test`, and `npm run build`.
+    Buyer->>UI: Describe purchase and budget
+    UI->>API: POST procurement request
+    API->>DB: Save user-scoped request
+    Buyer->>UI: Search or Ask AI
+    UI->>API: Discover / Analyze
+    API->>C3: Search real catalogue once
+    C3-->>API: Offers and product evidence
+    API->>API: Validate and rank deterministically
+    API->>DB: Save ranked snapshot
+    opt AI requested and daily budget remains
+        API->>DB: Reserve one model call
+        API->>AI: Compact top-ranked evidence
+        AI-->>API: Bounded assessment + usage
+        API->>DB: Cache explanation
+    end
+    API-->>UI: Ranked products / assessment
+    Buyer->>UI: Select qualified offer
+    UI->>API: Create purchase order
+    API->>DB: Freeze price, quantity, URL and audit
+    Buyer->>UI: Submit purchase order
+    UI->>API: Submit for approval
+    Buyer->>UI: Open Approvals and approve
+    UI->>API: Record decision
+    API->>DB: Approval and audit event
+    Buyer->>UI: Start Sandbox checkout
+    UI->>API: Create PayPal order
+    API->>PP: Orders v2 create
+    PP-->>UI: Approval URL (same tab)
+    Buyer->>PP: Approve with Sandbox Personal account
+    PP-->>UI: Return to ProcurePilot
+    UI->>API: Capture request
+    API->>PP: Verify order and capture
+    PP-->>API: Confirmed capture evidence
+    API->>DB: Mark paid only on matching evidence
+~~~
 
-Backend verification: run `pytest` and `pytest --cov=app --cov-report=term-missing` from `backend/`.
+### Order state machine
 
-## PayPal Sandbox setup
+~~~mermaid
+stateDiagram-v2
+    [*] --> draft: Create PO from saved offer
+    draft --> pending_approval: Submit
+    pending_approval --> approved: Human approves
+    pending_approval --> rejected: Human rejects
+    approved --> payment_pending: Sandbox checkout created
+    payment_pending --> paid: Verified completed capture
+    payment_pending --> payment_failed: Capture denied
+    rejected --> [*]
+    paid --> [*]
+~~~
 
-Follow [docs/provider-setup.md](docs/provider-setup.md). PayPal credentials remain server-side. Register the public HTTPS webhook URL `/api/v1/webhooks/paypal` in the same Sandbox REST app and subscribe to `CHECKOUT.ORDER.APPROVED`, `PAYMENT.CAPTURE.COMPLETED`, and `PAYMENT.CAPTURE.DENIED`.
+No LLM can directly approve a purchase or capture money. A product price, stock status or delivery promise generated in free text does not become authoritative purchasing evidence.
 
-## Transaction safety
+## Economical, guarded AI engineering
 
-- The agent cannot create or approve purchase orders, or capture PayPal payments.
-- The browser cannot set authoritative item prices, totals, or payment amounts.
-- Purchase-order totals are calculated from the saved Channel3 offer snapshot and frozen in the order.
-- Only an approved purchase order can start checkout.
-- Capture is allowed only after buyer approval and backend verification of the remote order ID, custom ID, amount, currency, and capture result.
-- Webhooks are signature-verified and event IDs are idempotent.
-- Only verified, matching completed capture evidence moves an order to paid.
-- PayPal credentials remain server-side.
+The normal analysis path favors deterministic work and predictable spend:
 
-## Git workflow
+~~~mermaid
+flowchart TD
+    A["Analyze request"] --> B{"Saved assessment?"}
+    B -->|Yes| C["Return cached answer · 0 calls"]
+    B -->|No| D{"Saved Channel3 results?"}
+    D -->|No| E["One product search + deterministic ranking"]
+    D -->|Yes| F["Reuse saved evidence"]
+    E --> F
+    F --> G{"Any catalogue products?"}
+    G -->|No| H["Honest catalogue-only result · 0 calls"]
+    G -->|Yes| I["Allowlist up to 4 candidate summaries"]
+    I --> J{"Daily global and user budgets available?"}
+    J -->|No| K["429 · preserve catalogue results"]
+    J -->|Yes| L["Reserve call atomically in PostgreSQL"]
+    L --> M["One ADK Gemini call · capped output/time"]
+    M --> N["Persist explanation + available usage metadata"]
+~~~
 
-Implementation is developed on `perez`, reviewed through a pull request, and merged into `main` after verification. No additional development branches or GitHub Actions workflows are used.
+| Safeguard | Current default |
+| --- | --- |
+| ADK calls per normal assessment | **1 maximum** |
+| Model output cap | **900 tokens** |
+| Assessment timeout | **35 seconds** |
+| Evidence shortlist | **4 products** |
+| Daily calls per user | **12** |
+| Daily calls across the app | **100** |
+| Repeat unchanged assessment | **Cached: no model call** |
+| Empty verified catalogue | **No Gemini call** |
+| Model tools able to approve/pay | **None** |
 
-## License
+Daily allowances use atomic UTC-date reservations in the database. Limits bound **call count**, not a guaranteed monetary bill; token prices vary, and metadata may be unavailable. The model sees a short JSON evidence packet without raw seller descriptions, tracking URLs or the complete catalogue. Product data remain untrusted; backend offer/price validation and human approvals remain separate from AI.
 
-MIT. See LICENSE.
+See [AI engineering and safeguards](docs/agent.md).
+
+## Windows / VS Code setup
+
+**Prerequisites:** Git, Python **3.12+**, Node.js LTS + npm, VS Code, a running PostgreSQL instance and a database named for your configured connection string. For real external operations you must also obtain the relevant provider credentials; no secrets ship in the repository.
+
+~~~powershell
+Set-Location "D:\NEW PROJECTS"
+git clone https://github.com/PerezChris99/ProcurePilot-AI.git
+Set-Location ".\ProcurePilot-AI"
+code .
+~~~
+
+1. Copy root [`.env.example`](.env.example) to `.env` and supply `DATABASE_URL`, a unique `JWT_SECRET_KEY`, and the relevant backend-only provider keys. The launcher can create the template files automatically if missing, but **cannot invent credentials or start PostgreSQL for you**.
+2. From the repository root run:
+
+   ~~~powershell
+   .\start.bat
+   ~~~
+
+3. The launcher prepares the Python virtual environment and npm dependencies, applies Alembic migrations, then opens a dedicated VS Code window. Trust the workspace and allow folder-open tasks. The task runs a frontend production build, verifies migrations, and starts FastAPI and Vite in VS Code's **integrated terminals**.
+4. If folder-open tasks are disabled, run **Terminal → Run Task → ProcurePilot: Build then Start (VS Code Terminals)**.
+
+| Local address | Purpose |
+| --- | --- |
+| http://localhost:5173 | React UI |
+| http://localhost:8000 | FastAPI |
+| http://localhost:8000/docs | API schema (development only) |
+
+### Backend-only environment
+
+~~~dotenv
+GOOGLE_API_KEY=
+AI_MODEL=gemini-3.8-flash
+CHANNEL3_API_KEY=
+CHANNEL3_BASE_URL=https://api.trychannel3.com/v1
+PAYPAL_CLIENT_ID=
+PAYPAL_CLIENT_SECRET=
+PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
+PAYPAL_WEBHOOK_ID=
+~~~
+
+See the [full provider setup guide](docs/provider-setup.md) for merchant vs buyer Sandbox accounts and webhook registration. `PAYPAL_WEBHOOK_ID` requires a webhook registered against a **public HTTPS** endpoint; localhost cannot accept PayPal's remote webhook deliveries. Keep all keys in the backend/root environment, never a `VITE_*` frontend setting or a commit.
+
+### Checks before a judge demonstration
+
+~~~powershell
+.\verify.bat
+~~~
+
+This runs backend Pytest, frontend ESLint, Vitest and a Vite production build. It stops at the first failure. **Source-authored tests do not count as passing tests** until this command completes on a machine with the dependencies installed.
+
+For a real end-to-end demonstration, additionally exercise registration, product discovery, Gemini analysis, purchase-order submission/approval, PayPal Sandbox buyer return, capture, and verified webhook delivery. See [development](docs/development.md), [testing](docs/testing.md) and [release verification](docs/release-verification.md). A frontend npm lockfile is not currently committed, so dependency resolution is not yet fully reproducible.
+
+## Security and correctness: what's real, what's not
+
+**Implemented:** Argon2id password hashing, short-lived JWT access tokens, user-owned record filters, strict approval status checks, server-derived PO prices/totals, product/offer snapshots, constrained model tool access, atomic daily AI-call quotas, bounded provider requests, PayPal order-and-capture verification, signed webhooks and duplicate-event handling, and user-visible audit records.
+
+**Not production-certified:** true multi-person independent approval, durable edge/API request rate limiting, password reset/email verification, device/session revocation, concurrency-safe distributed payment reconciliation, browser E2E coverage, production monitoring/backup testing or live merchant receiving eligibility. The personal-workspace prototype allows self-approval. See [security posture and threat model](docs/security.md) for precise residual risks.
+
+This is not a PCI-certified payment processor. The app does not capture card numbers, and it cannot represent PayPal Sandbox captures as real retailer payouts.
+
+## Documentation and source layout
+
+| Location | Contents |
+| --- | --- |
+| `frontend/` | React UI, views, routing, accessible controls, theme and favicon |
+| `backend/app/api/` | Auth, procurement, approvals/order/payment and webhook HTTP routes |
+| `backend/app/agents/` | Bounded Gemini/ADK runtime, evidence shaping and daily budgets |
+| `backend/app/procurement/` | Deterministic requirements and product scoring |
+| `backend/app/integrations/` | Channel3 and PayPal network clients |
+| `backend/app/models/` | SQLAlchemy domain tables; Alembic migrations in `backend/alembic/` |
+| `backend/tests/`, `frontend/src/**/*.test.jsx` | Unit/integration regression tests |
+| `docs/architecture.md` | Domain architecture and trust boundaries |
+| `docs/agent.md` | AI limits and safety engineering |
+| `docs/security.md` | Implemented controls, threat model and remaining gaps |
+| `docs/provider-setup.md` | Gemini, Channel3, PayPal Sandbox credentials |
+| `docs/development.md` | Local startup and troubleshooting |
+| `docs/release-verification.md` | Outstanding acceptance gates |
+
+## Hackathon attribution and disclosure
+
+**AI:** Gemini via Google ADK; catalogue discovery uses Channel3, and purchases/payments use deterministic FastAPI workflow controls and PayPal Orders v2 Sandbox. The recommendation is LLM-assisted; product prices, scores, stock evidence, payments and approvals are not fabricated by an LLM. Model costs are bounded but not guaranteed to be zero.
+
+**Workflow:** Implement changes on `perez`, document meaningful commits, open a PR, merge into `main` and synchronize both branches. No GitHub Actions workflows.
+
+**Copyright and license:** © 2026 PerezChris99. **All rights reserved. Authorized use only.** See [LICENSE](LICENSE), which grants narrowly scoped hackathon evaluator access but no general right to reuse, modify, sell or redistribute the project. **This is a proprietary license, not an OSI-approved open-source license.** If the hackathon requires an open-source license, the owner must resolve that conflict before submission.

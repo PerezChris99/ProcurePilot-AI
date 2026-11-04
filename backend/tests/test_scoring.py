@@ -30,3 +30,26 @@ def test_budget_ranking_accounts_for_requested_quantity():
 def test_availability_normalizes_documented_values():
     result=score_product(product('p1',{},availability='In Stock'),ProcurementRequirements(query='monitor'))
     assert result.available is True
+
+
+def test_channel3_attribute_arrays_match_expected_value_without_parser_error():
+    item=product('p1',{'colors':['Navy','Sky Blue'],'screen_size':['27 inch','24 inch']})
+    requirements=ProcurementRequirements(query='office monitor',mandatory_attributes={'colors':'sky blue'},preferred_attributes={'screen_size':'27 inch'})
+    score=score_product(item,requirements)
+    assert score.eligible is True
+    assert score.matched_attributes==['colors']
+    assert score.score is not None
+
+
+def test_ranker_does_not_reward_out_of_stock_discount_as_buyable_price():
+    item=Channel3Product(id='p1',title='Office monitor',offers=[
+      Channel3Offer(url='https://shop.example/oos',domain='shop.example',price=Channel3Price(amount=Decimal('10'),currency='USD'),availability='OutOfStock'),
+      Channel3Offer(url='https://shop.example/available',domain='shop.example',price=Channel3Price(amount=Decimal('100'),currency='USD'),availability='InStock')
+    ])
+    result=score_product(item,ProcurementRequirements(query='office monitor',budget=Decimal('150')))
+    assert result.best_unit_price==Decimal('100')
+    assert result.available is True
+    only_oos=product('p2',{},price='10',availability='OutOfStock')
+    score=score_product(only_oos,ProcurementRequirements(query='office monitor',budget=Decimal('150')))
+    assert score.best_unit_price is None
+    assert score.available is False

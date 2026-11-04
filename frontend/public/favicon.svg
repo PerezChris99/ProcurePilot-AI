@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ProcurePilot AI">
+  <title>ProcurePilot AI</title>
+  <path d="M14 21h36l5 32H9z" fill="#0B1B3D"/>
+  <path d="M14 21h36l1.65 10H12.35z" fill="#FFD66B"/>
+  <path d="M23 22v-6a9 9 0 0 1 18 0v6" fill="none" stroke="#0B1B3D" stroke-linecap="round" stroke-width="5"/>
+  <circle cx="32" cy="40" r="12.5" fill="none" stroke="#38BDF8" stroke-width="4.5"/>
+  <path d="m25.8 40.1 4.3 4.3 8.7-9.2" fill="none" stroke="#FFFFFF" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M5 52c15 9 41 3 54-10" fill="none" stroke="#FFD66B" stroke-width="4" stroke-linecap="round"/>
+  <path d="m52 13 2 4.5 4.5 2-4.5 2-2 4.5-2-4.5-4.5-2 4.5-2z" fill="#38BDF8"/>
+</svg>

@@ -18,7 +18,17 @@ if not exist "frontend\node_modules" (
     echo [ERROR] Frontend dependencies missing. Run start.bat first.
     exit /b 1
 )
-echo [1/4] Backend tests
+echo [1/5] Python syntax and importable source check
+pushd "backend"
+".venv\Scripts\python.exe" -m compileall -q app tests
+if errorlevel 1 (
+    popd
+    echo [FAILED] Python compileall
+    exit /b 1
+)
+popd
+echo.
+echo [2/5] Backend tests
 pushd "backend"
 ".venv\Scripts\python.exe" -m pytest -q
 if errorlevel 1 (
@@ -28,7 +38,7 @@ if errorlevel 1 (
 )
 popd
 echo.
-echo [2/4] Frontend lint
+echo [3/5] Frontend lint
 pushd "frontend"
 call npm run lint
 if errorlevel 1 (
@@ -37,7 +47,7 @@ if errorlevel 1 (
     exit /b 1
 )
 echo.
-echo [3/4] Frontend tests
+echo [4/5] Frontend tests
 call npm test
 if errorlevel 1 (
     popd
@@ -45,7 +55,7 @@ if errorlevel 1 (
     exit /b 1
 )
 echo.
-echo [4/4] Frontend production build
+echo [5/5] Frontend production build
 call npm run build
 if errorlevel 1 (
     popd

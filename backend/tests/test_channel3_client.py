@@ -64,3 +64,12 @@ def test_offer_without_stock_confirmation_does_not_claim_availability():
         'price':{'amount':'125.00','currency':'USD'},
     })
     assert offer.availability=='Unknown'
+
+
+def test_search_parses_documented_array_valued_structured_attributes():
+    transport=httpx.MockTransport(lambda request:httpx.Response(200,json={
+      'data':[{'id':'desk-1','title':'Office chair', 'structured_attributes':{'color':['Navy','Blue'],'material':['Fabric']},'offers':[]}]
+    }))
+    client=Channel3Client(api_key='test-key',transport=transport)
+    result=asyncio.run(client.search_products('desk chair'))
+    assert result.products[0].structured_attributes['color']==['Navy','Blue']

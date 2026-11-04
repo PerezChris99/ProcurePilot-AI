@@ -3,6 +3,7 @@ import {render,screen} from '@testing-library/react';
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {MemoryRouter} from 'react-router-dom';
 import DashboardPage from './DashboardPage.jsx';
+vi.mock('../context/AuthContext.jsx',()=>({useAuth:()=>({user:{full_name:'Amina Kombe'}})}));
 vi.mock('../services/api.js',()=>({
  getHealth:vi.fn().mockResolvedValue({status:'ok'}),
  getDashboardSummary:vi.fn().mockResolvedValue({completed_orders:2,active_orders:3,pending_approvals:1,requests_with_results:4,recent_activity:[{id:'event-1',action:'purchase_order.created',created_at:'2026-11-04T12:00:00Z'}]}),
@@ -17,6 +18,7 @@ function renderPage(){const client=new QueryClient({defaultOptions:{queries:{ret
 describe('DashboardPage',()=>{
  it('renders the procurement overview and primary action',()=>{
   renderPage();
+  expect(screen.getByRole('heading',{name:/good (morning|afternoon|evening), amina/i})).toBeInTheDocument();
   expect(screen.getByRole('heading',{name:/let's buy smarter/i})).toBeInTheDocument();
   expect(screen.getByRole('link',{name:/new procurement/i})).toBeInTheDocument();
  });

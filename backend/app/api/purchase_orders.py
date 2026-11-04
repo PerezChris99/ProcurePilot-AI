@@ -114,8 +114,22 @@ def create_purchase_order(request_id:str,payload:PurchaseOrderCreate,db:Session=
     return _serialize(order,db)
 
 @router.get('/purchase-orders',response_model=list[PurchaseOrderResponse])
-def list_purchase_orders(limit:int=Query(default=50,ge=1,le=100),db:Session=Depends(get_db),user:User=Depends(get_current_user)):
-    orders=db.scalars(select(PurchaseOrder).where(PurchaseOrder.user_id==user.id).order_by(PurchaseOrder.created_at.desc()).limit(limit)).all()
+def list_purchase_orders(
+    limit: int = Query(default=50, ge=1, le=100),
+    status_filter: str | None = Query(
+        default=None,
+        alias="status",
+        pattern=r"^(draft|pending_approval|approved|rejected|payment_pending|payment_failed|paid)$",
+    ),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    query = select(PurchaseOrder).where(PurchaseOrder.user_id == user.id)
+    if status_filter:
+        query = query.where(PurchaseOrder.status == status_filter)
+    orders = db.scalars(
+        query.order_by(PurchaseOrder.created_at.desc()).limit(limit)
+    ).all()
     return _serialize_many(orders,db)
 
 @router.get('/purchase-orders/{order_id}',response_model=PurchaseOrderResponse)

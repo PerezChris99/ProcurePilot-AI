@@ -17,7 +17,7 @@ ProcurePilot keeps all provider credentials on the FastAPI backend. Configure th
 5. In ProcurePilot, open a procurement request and use **Ask AI to analyze**.
 6. Confirm the request returns an AI explanation and that the backend logs contain no authentication, quota, or model errors.
 
-The current default model remains configurable through `AI_MODEL`. `gemini-3.8-flash` is the selected stable model for this setup; `gemini-flash-latest` is the ADK documented rolling alias. Check Google's model availability and pricing for the project before changing models.
+The normal AI analysis also enforces AI_MAX_OUTPUT_TOKENS=900, AI_TIMEOUT_SECONDS=35, AI_DAILY_USER_RUNS=12, AI_DAILY_GLOBAL_RUNS=100 and AI_EVIDENCE_CANDIDATES=4 by default. Changes go in backend .env only. Repeating the unchanged assessment is cached with no second Gemini request. The current default model remains configurable through `AI_MODEL`. `gemini-3.8-flash` is the selected stable model for this setup; `gemini-flash-latest` is the ADK documented rolling alias. Check Google's model availability and pricing for the project before changing models.
 
 The agent is intentionally limited to research and explanation. It must not approve purchase orders or execute payments.
 
@@ -27,7 +27,7 @@ References:
 
 ## 2. Channel3 product catalogue
 
-1. Obtain a developer API key from the [Channel3 developer platform](https://channel3.ai/).
+1. Obtain a developer API key from the [Channel3 developer platform](https://trychannel3.com/developers).
 2. Add these values to the root `.env`:
 
    ```dotenv
@@ -49,7 +49,7 @@ Reference: [Channel3 API documentation](https://docs.trychannel3.com/).
 ## 3. PayPal Orders v2 Sandbox
 
 1. Open the [PayPal Developer Dashboard](https://developer.paypal.com/dashboard/).
-2. Select **Apps & Credentials**, switch to **Sandbox**, and create a REST application.
+2. Select **Apps & Credentials**, switch to **Sandbox**, and create a REST application named **ProcurePilot AI**. Choose the **Merchant** application type (not Partner/Platform) and link it to a **Sandbox Business merchant account**. An existing default Sandbox Business account is suitable; create one first in Testing Tools → Sandbox Accounts if necessary.
 3. Copy its **Client ID** and **Secret**. These are application credentials, not the buyer's sandbox account login.
 4. Add them to the root `.env`:
 
@@ -59,7 +59,7 @@ Reference: [Channel3 API documentation](https://docs.trychannel3.com/).
    PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
    ```
 
-5. Create/use a Sandbox Business account as the receiving test merchant and a separate Sandbox Personal account as the buyer.
+5. Under **Testing Tools → Sandbox Accounts**, keep that linked **Business** account as the simulated receiving merchant, and create/use a separate **Personal** account as the test buyer. Use the Personal buyer email/password ONLY at PayPal's Sandbox approval page; neither account password belongs in the app .env.
 6. After the backend is reachable through a public HTTPS URL, register this webhook URL for the same Sandbox REST app:
 
    `https://YOUR_PUBLIC_API_HOST/api/v1/webhooks/paypal`
