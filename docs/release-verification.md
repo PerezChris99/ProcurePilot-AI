@@ -41,3 +41,19 @@ Run start.bat, verify.bat, and the manual walkthrough in docs/testing.md. Record
 ## Acceptance status
 
 **Code changes authored and version-controlled; runtime and commercial readiness not certified.** A smooth judge experience must be confirmed in a genuine local/browser/Sandbox rehearsal rather than inferred.
+
+## Final source audit follow-up (November 2026)
+
+- Gemini 3.8 Flash: removed outdated low-temperature sampling parameters and added an explicitly low thinking level to reduce cost/latency while retaining the existing 900-output-token cap and one-ADK-call limit; legacy model IDs do not receive a Gemini-3-only setting.
+- Added production startup validation for persistent PostgreSQL via installed psycopg driver, a canonical HTTPS frontend origin, and the existing strong JWT secret requirement. The Windows development bootstrap remains unchanged.
+- Added regression tests for model generation settings and incorrect production database/frontend URLs.
+- Still not release-certified until the user runs the full Windows verify.bat (including frontend lint/Vitest/build) and exercises live provider credentials and PayPal Sandbox with signed HTTPS webhooks. No checked-in frontend lockfile or browser E2E suite exists.
+
+- Windows bootstrap now rejects incompatible Node.js versions before attempting to install Vite 7 dependencies; package.json declares the corresponding Node engines, and the Vite dev server defaults to localhost binding.
+- The model config regression accepts the SDK's enum/string representation of the low thinking level.
+
+- Added a separate unauthenticated readiness probe at `/api/v1/ready`, which runs cheap SQL checks against the users table and latest AI-budget migration, returning 503 on unavailable database/schema. `/api/v1/health` remains process liveness; external provider validity is checked separately.
+
+- Introduced a dedicated strict public frontend build gate, a Node-native URL test suite, and a browser runtime guard against a deployed UI calling localhost. Hosting must use npm run build:deploy explicitly, while the Windows local build remains unchanged.
+
+- The Windows verify.bat frontend test stage now also executes the Node-only public API endpoint validator test suite before attempting the Vite build. The validator was separately exercised in this review with nine passing Node tests (not a complete frontend build).

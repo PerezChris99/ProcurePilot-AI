@@ -4,7 +4,8 @@ Base path: /api/v1
 
 ## Public
 
-- GET /health — liveness response.
+- GET /health — process liveness, independent of database availability.
+- GET /ready — checks database access and the required users/AI-budget schema; HTTP 503 if the database or latest required migration is unavailable. Point deployment readiness probes here instead of /health.
 - POST /auth/register — create account and issue a bearer token.
 - POST /auth/login — authenticate and issue a bearer token.
 - POST /webhooks/paypal — public PayPal webhook receiver; every event is verified with PayPal before processing.
@@ -18,7 +19,7 @@ Base path: /api/v1
 - GET /procurement-requests/{id} — retrieve an owned request.
 - POST /procurement-requests/{id}/discover — retrieve and rank Channel3 products.
 - POST /procurement-requests/{id}/discover?next_page=true — load the next saved Channel3 page token.
-- POST /procurement-requests/{id}/analyze — run the ADK research agent.
+- POST /procurement-requests/{id}/analyze — run bounded, tool-free ADK evidence assessment using saved Channel3 results (or perform discovery first).
 - POST /procurement-requests/{id}/purchase-orders — create a draft PO from a product ID and exact offer URL in the saved discovery snapshot. The server derives price, currency, and quantity.
 - GET /purchase-orders — list the current user's POs, payment summaries, approvals, and audit events.
 - GET /purchase-orders/{id} — retrieve an owned PO.

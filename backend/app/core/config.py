@@ -1,4 +1,5 @@
 from functools import lru_cache
+from urllib.parse import urlsplit
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -27,8 +28,26 @@ class Settings(BaseSettings):
 
     @model_validator(mode='after')
     def validate_production_secrets(self):
-        if self.app_env.lower()=='production' and (len(self.jwt_secret_key)<32 or self.jwt_secret_key in ('development-only-change-this-secret','replace-with-a-long-random-secret') or len(set(self.jwt_secret_key))<12):
-            raise ValueError('Production requires a unique JWT_SECRET_KEY of at least 32 characters')
+        environment = self.app_env.strip().lower()
+        if environment not in ('development','test','testing','staging','production'):
+            raise ValueError('APP_ENV must be development, test, testing, staging, or production')
+        self.app_env = environment
+        if environment in ('staging','production'):
+            if (len(self.jwt_secret_key)<32 or self.jwt_secret_key in
+                    ('development-only-change-this-secret','replace-with-a-long-random-secret')
+                    or len(set(self.jwt_secret_key))<12):
+                raise ValueError('Production requires a unique JWT_SECRET_KEY of at least 32 characters')
+            if self.database_url == 'postgresql+psycopg://postgres:postgres@localhost:5432/procurepilot':
+                raise ValueError('Public environments must replace the example PostgreSQL credentials')
+            if not self.database_url.startswith('postgresql+psycopg://'):
+                raise ValueError('Production DATABASE_URL must use postgresql+psycopg:// and a persistent PostgreSQL database')
+            url = urlsplit(self.frontend_url)
+            if (url.scheme != 'https' or not url.hostname
+                    or url.hostname in ('localhost', '127.0.0.1', '::1')
+                    or url.username or url.password or url.query or url.fragment
+                    or url.path not in ('', '/')):
+                raise ValueError('Production FRONTEND_URL must be a public HTTPS origin without path or query')
+            self.frontend_url = self.frontend_url.rstrip('/')
         return self
 
 @lru_cache

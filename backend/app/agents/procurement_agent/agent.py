@@ -8,6 +8,14 @@ from app.procurement.schemas import ProcurementRequirements
 from app.procurement.scoring import rank_products
 
 settings=get_settings()
+
+def _generation_config(model: str):
+    """Use stable Gemini 3.x thinking controls; avoid deprecated sampling knobs."""
+    options = {'max_output_tokens': settings.ai_max_output_tokens}
+    if model.startswith('gemini-3.'):
+        options['thinking_config'] = types.ThinkingConfig(thinking_level='low')
+    return types.GenerateContentConfig(**options)
+
 if settings.google_api_key:
     os.environ.setdefault('GOOGLE_API_KEY',settings.google_api_key)
 
@@ -46,7 +54,7 @@ async def discover_and_rank_products(query: str, quantity: int = 1, budget: str 
         return {'status':'error','message':'The procurement search could not be completed. Check the request and integration configuration.','results':[]}
 
 root_agent=Agent(
-    model=settings.ai_model or 'gemini-flash-latest',
+    model=settings.ai_model or 'gemini-3.8-flash',
     name='procurepilot_agent',
     description='An evidence-grounded AI assistant for business procurement research and product comparison.',
     instruction=(
@@ -60,14 +68,14 @@ root_agent=Agent(
         'purchase, and payment actions are controlled by the backend outside this agent.'
     ),
     tools=[discover_and_rank_products],
-    generate_content_config=types.GenerateContentConfig(temperature=0.2, max_output_tokens=settings.ai_max_output_tokens),
+    generate_content_config=_generation_config(settings.ai_model or 'gemini-3.8-flash'),
 )
 
 
 # The normal /analyze flow uses one bounded, evidence-only model call instead of
 # asking Gemini to search Channel3 a second time or perform an open-ended tool loop.
 analysis_agent = Agent(
-    model=settings.ai_model or 'gemini-flash-latest',
+    model=settings.ai_model or 'gemini-3.8-flash',
     name='procurepilot_evidence_analyst',
     description='Compact evidence-grounded purchasing assessment with no action tools.',
     instruction=(
@@ -84,8 +92,5 @@ analysis_agent = Agent(
         'Do not include raw JSON in the answer. Be precise and brief.'
     ),
     tools=[],
-    generate_content_config=types.GenerateContentConfig(
-        temperature=0.15,
-        max_output_tokens=settings.ai_max_output_tokens,
-    ),
+    generate_content_config=_generation_config(settings.ai_model or 'gemini-3.8-flash'),
 )

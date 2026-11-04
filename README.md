@@ -245,3 +245,7 @@ This is not a PCI-certified payment processor. The app does not capture card num
 **Workflow:** Implement changes on `perez`, document meaningful commits, open a PR, merge into `main` and synchronize both branches. No GitHub Actions workflows.
 
 **Copyright and license:** © 2026 PerezChris99. **All rights reserved. Authorized use only.** See [LICENSE](LICENSE), which grants narrowly scoped hackathon evaluator access but no general right to reuse, modify, sell or redistribute the project. **This is a proprietary license, not an OSI-approved open-source license.** If the hackathon requires an open-source license, the owner must resolve that conflict before submission.
+
+### Public frontend deployment
+
+The standard npm run build is a localhost-compatible Windows development check. For a real public deployment, set VITE_API_BASE_URL to https://YOUR-HTTPS-API-HOST/api/v1 or to /api/v1 behind a same-origin HTTPS reverse proxy. Then run npm run build:deploy from frontend/. That build gate refuses localhost/HTTP/malformed endpoints before generating public assets. Hosting services must explicitly choose build:deploy; normal npm run build remains a local check. The browser API layer also reports a clear misconfiguration instead of attempting to send a visitor's browser to localhost.

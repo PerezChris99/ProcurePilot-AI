@@ -55,6 +55,14 @@ if errorlevel 1 (
     exit /b 1
 )
 echo.
+echo [4/5] Frontend deployment URL regression tests
+call npm run test:deploy-config
+if errorlevel 1 (
+    popd
+    echo [FAILED] Frontend deployment URL tests
+    exit /b 1
+)
+echo.
 echo [5/5] Frontend production build
 call npm run build
 if errorlevel 1 (

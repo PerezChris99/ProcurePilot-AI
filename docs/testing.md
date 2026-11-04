@@ -17,7 +17,7 @@ The verifier runs:
 1. Python compileall across backend application and tests.
 2. Backend Pytest.
 3. Frontend ESLint.
-4. Frontend Vitest/React Testing Library.
+4. Frontend Vitest/React Testing Library and Node deployment URL regression tests.
 5. Frontend Vite production build.
 
 It stops at the first failure. No GitHub Actions workflows are configured.

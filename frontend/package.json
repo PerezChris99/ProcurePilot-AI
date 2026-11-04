@@ -11,7 +11,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "build:deploy": "node scripts/validate-deploy.mjs && vite build",
+    "test:deploy-config": "node --test scripts/validate-deploy.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -41,5 +43,8 @@
     "tailwindcss": "^4.1.13",
     "vite": "^7.1.7",
     "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20.19.0 <21 || >=22.12.0"
   }
 }
