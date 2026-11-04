@@ -1,5 +1,5 @@
 import {beforeEach,describe,expect,it,vi} from 'vitest';
-import {render,screen,fireEvent} from '@testing-library/react';
+import {render,screen,fireEvent,within} from '@testing-library/react';
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {MemoryRouter} from 'react-router-dom';
 import DiscoveryPage from './DiscoveryPage.jsx';
@@ -19,8 +19,9 @@ describe('DiscoveryPage',()=>{
       {id:'r-2',request_text:'Office laptop stands',status:'draft',currency:'USD',quantity:4,created_at:'2026-11-04T12:00:00Z'},
     ]);
     renderPage();
-    expect(await screen.findByRole('heading',{name:'27 inch IPS monitors'})).toBeInTheDocument();
-    expect(screen.getByRole('link',{name:/open product discovery/i})).toHaveAttribute('href','/requests/r-1');
+    const heading=await screen.findByRole('heading',{name:'27 inch IPS monitors'});
+    expect(within(heading.closest('article')).getByRole('link',{name:/open product discovery/i}))
+      .toHaveAttribute('href','/requests/r-1');
     fireEvent.change(screen.getByRole('searchbox',{name:'Filter saved procurement requests'}),{target:{value:'monitors'}});
     expect(screen.getByRole('heading',{name:'27 inch IPS monitors'})).toBeInTheDocument();
     expect(screen.queryByRole('heading',{name:'Office laptop stands'})).not.toBeInTheDocument();

@@ -144,6 +144,7 @@ body{min-width:0;overflow-x:clip}
 }
 .status-refresh svg{width:14px;height:14px}
 .status-summary{font-size:11px;color:#61748c;margin:8px 0 0;line-height:1.55}
+.service-state.configured{color:#176e9e}
 .status-unknown{color:#8c617a}
 .request-summary,.discovery-heading,.request-detail-heading{min-width:0}
 .request-summary{flex-wrap:wrap}
