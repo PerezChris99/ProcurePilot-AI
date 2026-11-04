@@ -25,7 +25,7 @@
    .\start.bat
    ```
 
-The bootstrap creates `backend\.venv` when needed, installs `backend/requirements.txt`, creates local environment files from the examples only when they do not already exist, and installs frontend dependencies. It then opens the VS Code task picker. Select **ProcurePilot: Build then Start (VS Code Terminals)**.
+The bootstrap creates `backend\.venv` when needed, installs `backend/requirements.txt`, creates local environment files from the examples only when they do not already exist, and installs frontend dependencies. It attempts `npm ci` when a lockfile exists; if npm rejects a stale or inconsistent lockfile, it falls back to `npm install` to reconcile the lockfile with `package.json`. If that recovery also fails, the bootstrap stops and displays the npm error. It then opens the VS Code task picker. Select **ProcurePilot: Build then Start (VS Code Terminals)**.
 
 The task sequence is deliberately gated:
 
