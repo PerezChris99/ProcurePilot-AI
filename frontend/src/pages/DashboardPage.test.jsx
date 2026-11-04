@@ -1,5 +1,5 @@
 import {describe,expect,it,vi} from 'vitest';
-import {render,screen} from '@testing-library/react';
+import {render,screen,within} from '@testing-library/react';
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {MemoryRouter} from 'react-router-dom';
 import DashboardPage from './DashboardPage.jsx';
@@ -34,9 +34,12 @@ describe('DashboardPage',()=>{
 describe('Live overview',()=>{
  it('renders real overview counts and recent activity',async()=>{
   renderPage();
-  expect(await screen.findByText('2')).toBeInTheDocument();
-  expect(screen.getByText('3')).toBeInTheDocument();
-  expect(screen.getByText('4')).toBeInTheDocument();
+  const completed=await screen.findByText('Completed purchases');
+  const active=screen.getByText('Active purchase orders');
+  const requests=screen.getByText('Requests with results');
+  expect(within(completed.closest('article')).getByText('2')).toBeInTheDocument();
+  expect(within(active.closest('article')).getByText('3')).toBeInTheDocument();
+  expect(within(requests.closest('article')).getByText('4')).toBeInTheDocument();
   expect(await screen.findByText('purchase order · created')).toBeInTheDocument();
  });
 });
