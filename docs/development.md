@@ -104,3 +104,11 @@ pytest --cov=app --cov-report=term-missing
 ## Single-command code checks
 
 From the repository root on Windows, run `verify.bat` after `start.bat` has created the environments. It executes backend pytest, frontend ESLint, Vitest and the Vite production build in sequence. It stops on the first failure; it does **not** claim live Gemini/Channel3/PayPal calls, webhook delivery or deployed infrastructure readiness. The checked-in npm manifest presently does not have a tracked package lock, so dependency resolution can vary between installs. Record a validated lockfile before calling production builds reproducible.
+
+## Judge-route notes and model budget
+
+The authenticated /approvals route now has a dedicated page for pending submitted purchase orders. The /analyze endpoint automatically discovers from Channel3 once when no saved search exists; it uses saved results after that and returns cached responses for repeat clicks. The normal Google ADK analyst performs at most one model call and is limited by UTC database-backed user/global quotas in migration 0004_ai_budget.
+
+New backend-only settings are AI_MAX_OUTPUT_TOKENS, AI_TIMEOUT_SECONDS, AI_DAILY_USER_RUNS, AI_DAILY_GLOBAL_RUNS and AI_EVIDENCE_CANDIDATES. Defaults are in the root .env.example. They do not belong in frontend/.env. See docs/agent.md and docs/testing.md for details.
+
+Before each startup, stop existing VS Code backend/frontend terminal tasks or free ports 8000/5173; VS Code may require workspace trust and explicit permission before automatically running folder-open tasks. Database startup and third-party credential creation cannot be automated by the repository.
