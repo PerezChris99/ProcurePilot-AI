@@ -11,5 +11,6 @@ import './styles/responsive.css';
 import './styles/public.css';
 import './styles/clock.css';
 import './styles/fintech-polish.css';
+import './styles/accessibility-brand.css';
 const queryClient=new QueryClient({defaultOptions:{queries:{retry:1,refetchOnWindowFocus:false,staleTime:30000}}});
 ReactDOM.createRoot(document.getElementById('root')).render(<React.StrictMode><QueryClientProvider client={queryClient}><BrowserRouter><AuthProvider><App/></AuthProvider></BrowserRouter></QueryClientProvider></React.StrictMode>);

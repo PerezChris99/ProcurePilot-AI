@@ -96,3 +96,12 @@ Execute `.\\start.bat` then `.\\verify.bat` on Windows; on macOS/Linux use `./st
 - At widths 961px and above, the bottom dock must be hidden: the public site uses its header links and the workspace uses its desktop sidebar.
 - Exercise the hero carousel manually (next/previous/dots/pause), keyboard-only and with `prefers-reduced-motion: reduce`; images must not hide readable captions or controls as they load. No external provider configuration is required to render the public landing page.
 - Run the complete five-stage local verifier, including ESLint, Vitest, Node-native configuration tests and Vite production build, after pulling; also inspect the real app in a phone browser. A GitHub merge is not a substitute for local runtime verification.
+
+## Accessibility / legibility acceptance
+
+- Verify with real browsers on Windows and iPhone/Android: 320px, 375px, 390px, 430px, 768px, 960px and desktop widths, plus **200% text/page zoom** and **400% zoom** with common user flows. Text, controls and the six destinations must remain usable without horizontal scrolling or overlap.
+- Check long metadata values in Orders, Discovery, approvals and the System Status panel at these widths. At 320px the public header hides the duplicate Sign in link; Account remains available in the bottom dock.
+- Verify keyboard-only paths and visible focus on public links, CTA buttons, forms, FAQ expanders and carousel controls. With `prefers-reduced-motion:reduce`, hero entry animations and carousel auto-rotation should stop.
+- Confirm warm yellow is used on surfaces, underlines and indicators with **dark ink**, not small yellow text on white. Test the browser's forced-colors/high-contrast modes, since visual color accents are never a substitute for textual status.
+- Run `npm run test:deploy-config` to check actual configured CSS token pairs using the WCAG contrast formula; the checked pairs exceed 7:1 where possible, with ordinary blue-on-white links tested against 4.5:1. This is a **source-level check**, not a complete WCAG conformance audit.
+- Validate with screen readers (NVDA or VoiceOver), actual pointer targets and localization/long names before any claim of broad accessibility compliance.
