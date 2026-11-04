@@ -2,7 +2,7 @@ import {ArrowDownRight,ArrowRight,ArrowUpRight,Clock3,PackageSearch,Plus,Receipt
 import {Link} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {getHealth,getIntegrationStatus,getDashboardSummary} from '../services/api.js';
-import {useAuth} from '../context/AuthContext.jsx';
+import {useAuth} from '../context/useAuth.js';
 const today=new Intl.DateTimeFormat('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}).format(new Date()).toUpperCase();
 function serviceState(isLoading,isError,isReady,readyLabel='Connected',missingLabel='Needs configuration'){if(isLoading)return {label:'Checking',className:'checking'};if(isError)return {label:'Unavailable',className:'offline'};return isReady?{label:readyLabel,className:'online'}:{label:missingLabel,className:'checking'}}
 export default function DashboardPage(){
