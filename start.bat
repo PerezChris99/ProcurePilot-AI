@@ -40,10 +40,10 @@ if errorlevel 1 (
 )
 
 set "PYTHON_LAUNCHER=python"
-python -c "import sys; raise SystemExit(0 if sys.version_info >= (3,12) else 1)" >nul 2>nul
+python "%PROJECT_ROOT%\backend\scripts\check_python_version.py" >nul 2>nul
 if errorlevel 1 (
     set "PYTHON_LAUNCHER=py -3"
-    py -3 -c "import sys; raise SystemExit(0 if sys.version_info >= (3,12) else 1)" >nul 2>nul
+    py -3 "%PROJECT_ROOT%\backend\scripts\check_python_version.py" >nul 2>nul
     if errorlevel 1 (
         echo [ERROR] Python 3.12 or newer could not be found.
         echo Run "python --version" and "py -0p" to inspect installed versions.
