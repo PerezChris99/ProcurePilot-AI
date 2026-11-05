@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.integrations.paypal.client import PayPalClient,PayPalConfigurationError,PayPalUnavailable
 from app.integrations.channel3.schemas import Channel3Product,Channel3Offer
+from app.integrations.channel3.client import Channel3Client,Channel3ConfigurationError,Channel3Unavailable
 from app.procurement.policy import evaluate_offer, policy_expired, snapshot_recent
 from app.procurement.passport import build_passport,snapshot_for_order
 from app.procurement.passport_pdf import passport_pdf_bytes
@@ -37,7 +38,7 @@ def _serialize(order,db):
     approvals=db.scalars(select(Approval).where(Approval.purchase_order_id==order.id).order_by(Approval.created_at)).all()
     payment=db.scalar(select(Payment).where(Payment.purchase_order_id==order.id))
     events=db.scalars(select(AuditEvent).where(AuditEvent.purchase_order_id==order.id).order_by(AuditEvent.created_at)).all()
-    return {'id':order.id,'po_number':order.po_number,'request_id':order.request_id,'status':order.status,'currency':order.currency,'subtotal':order.subtotal,'total_amount':order.total_amount,'submitted_at':order.submitted_at,'approved_by':order.approved_by,'approved_at':order.approved_at,'rejection_reason':order.rejection_reason,'created_at':order.created_at,'updated_at':order.updated_at,'items':items,'approvals':approvals,'payment':_payment_data(payment),'audit_events':events}
+    return {'id':order.id,'po_number':order.po_number,'request_id':order.request_id,'status':order.status,'currency':order.currency,'subtotal':order.subtotal,'total_amount':order.total_amount,'submitted_at':order.submitted_at,'approved_by':order.approved_by,'approved_at':order.approved_at,'rejection_reason':order.rejection_reason,'created_at':order.created_at,'updated_at':order.updated_at,'items':items,'approvals':approvals,'payment':_payment_data(payment),'audit_events':events,'offer_verification':order.offer_verification_json or None}
 
 def _serialize_many(orders, db):
     """Load all order details in four bounded queries, not four per order."""
@@ -82,6 +83,7 @@ def _serialize_many(orders, db):
             'created_at': order.created_at, 'updated_at': order.updated_at,
             'items': item_map[order.id], 'approvals': approval_map[order.id],
             'payment': _payment_data(payments.get(order.id)),
+            'offer_verification': order.offer_verification_json or None,
             'audit_events': event_map[order.id],
         }
         for order in orders
@@ -200,6 +202,9 @@ def reject_purchase_order(order_id:str,payload:ApprovalAction,db:Session=Depends
 async def create_paypal_order(order_id:str,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
     order=_owned_order(order_id,user,db)
     if order.status not in ('approved','payment_pending'): raise HTTPException(status_code=409,detail='A human-approved purchase order is required before starting PayPal checkout.')
+    verification=order.offer_verification_json or {}
+    if verification.get('status') in ('changed','unavailable'):
+        raise HTTPException(status_code=409,detail='Channel3 recheck found a changed or missing retailer offer. Refresh discovery and create a new order.')
     request=db.get(ProcurementRequest,order.request_id)
     if order.status=='approved' and request and policy_expired(request):
         raise HTTPException(status_code=409,detail='Buyer mandate expired before checkout.')
@@ -314,3 +319,58 @@ def download_decision_passport(
             'X-Content-Type-Options':'nosniff',
         },
     )
+
+
+@router.post('/purchase-orders/{order_id}/verify-offer')
+async def verify_retailer_offer(
+    order_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Recheck one exact saved Channel3 offer without changing the approved price."""
+    order=_owned_order(order_id,user,db)
+    if order.status not in ('draft','pending_approval','approved'):
+        raise HTTPException(status_code=409,detail='Only unpaid, not-yet-checkout purchase orders can be rechecked.')
+    item=db.scalar(select(PurchaseOrderItem).where(PurchaseOrderItem.purchase_order_id==order.id))
+    if item is None:
+        raise HTTPException(status_code=409,detail='Purchase order has no saved offer')
+    previous=order.offer_verification_json or {}
+    if previous.get('checked_at'):
+        try:
+            previous_time=datetime.fromisoformat(previous['checked_at'])
+            if previous_time.tzinfo and (datetime.now(timezone.utc)-previous_time).total_seconds()<30:
+                return previous
+        except (ValueError,TypeError):
+            pass
+    try:
+        product=await Channel3Client().get_product(item.product_id,user_id=user.id)
+    except Channel3ConfigurationError as exc:
+        raise HTTPException(status_code=503,detail='Channel3 verification is not configured') from exc
+    except Channel3Unavailable as exc:
+        raise HTTPException(status_code=502,detail='Channel3 verification is temporarily unavailable') from exc
+
+    offer=next((offer for offer in product.offers if str(offer.url)==item.offer_url),None)
+    request=db.get(ProcurementRequest,order.request_id)
+    if offer is None:
+        result={'status':'unavailable','reason':'The original retailer offer was not found on the refreshed product.',
+                'checked_at':datetime.now(timezone.utc).isoformat(),'source':'Channel3 product lookup'}
+    else:
+        reasons=evaluate_offer(request,product,offer) if request else ['Original request not found']
+        provider_price=Decimal(str(offer.price.amount))
+        if provider_price!=item.unit_price or offer.price.currency!=item.currency:
+            reasons.append('Quoted price or currency differs from the frozen purchase order')
+        result={
+            'status':'changed' if reasons else 'unchanged',
+            'reason':'; '.join(reasons[:5]) if reasons else 'Exact original offer still matches the frozen amount and mandate',
+            'checked_at':datetime.now(timezone.utc).isoformat(),
+            'source':'Channel3 product lookup',
+            'previous_unit_price':str(item.unit_price),
+            'latest_unit_price':str(provider_price),
+            'currency':offer.price.currency,
+            'availability':offer.availability,
+        }
+    order.offer_verification_json=result
+    _audit(db,user.id,'purchase_order.offer_rechecked',order_id=order.id,request_id=order.request_id,
+           details={'status':result['status'],'source':'Channel3'})
+    db.commit()
+    return result

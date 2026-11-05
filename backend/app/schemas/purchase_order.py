@@ -71,3 +71,4 @@ class PurchaseOrderResponse(BaseModel):
     approvals: list[ApprovalResponse]
     payment: PaymentResponse|None
     audit_events: list[AuditEventResponse]
+    offer_verification: dict | None = None
