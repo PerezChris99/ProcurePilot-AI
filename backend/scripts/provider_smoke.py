@@ -35,6 +35,8 @@ async def check_channel3():
 
 async def check_paypal():
     client=PayPalClient()
+    if client.base_url != 'https://api-m.sandbox.paypal.com':
+        raise RuntimeError('Refusing live PayPal credentials or a non-Sandbox API endpoint')
     client.ensure_configured()
     token=await client._access_token()
     if not token:

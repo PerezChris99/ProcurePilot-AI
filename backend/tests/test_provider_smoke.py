@@ -27,3 +27,16 @@ def test_provider_smoke_returns_failure_when_any_provider_raises(monkeypatch):
     only_channel=asyncio.run(provider_smoke.run_checks('channel3'))
     assert only_channel['status']=='pass'
     assert list(only_channel['checks'])==['channel3']
+
+
+def test_paypal_smoke_refuses_live_endpoint_before_authentication(monkeypatch):
+    class FakeLivePayPal:
+        base_url='https://api-m.paypal.com'
+        def ensure_configured(self):
+            raise AssertionError('Must reject live PayPal before credential checking')
+        async def _access_token(self):
+            raise AssertionError('Must never request a live PayPal token')
+    monkeypatch.setattr(provider_smoke,'PayPalClient',FakeLivePayPal)
+    result=asyncio.run(provider_smoke.run_checks('paypal'))
+    assert result['status']=='fail'
+    assert result['checks']['paypal']['error_type']=='RuntimeError'
