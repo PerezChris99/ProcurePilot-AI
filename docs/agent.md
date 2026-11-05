@@ -50,7 +50,7 @@ flowchart LR
 | GOOGLE_API_KEY | Empty | Required for real Gemini analysis |
 | AI_MODEL | gemini-3.8-flash in .env.example | Model choice, backend only |
 | AI_MAX_OUTPUT_TOKENS | 900 | Validated 256 to 2048 |
-| AI_TIMEOUT_SECONDS | 35 | Validated 10 to 90 |
+| AI_TIMEOUT_SECONDS | 60 | Validated 10 to 90; bounded wall clock, not extra Gemini tokens |
 | AI_DAILY_USER_RUNS | 12 | Calls per user per UTC day |
 | AI_DAILY_GLOBAL_RUNS | 100 | Calls across users per UTC day |
 | AI_EVIDENCE_CANDIDATES | 4 | Validated 1 to 8; fewer may be selected when the prompt is near its character ceiling |
@@ -107,3 +107,32 @@ quotas. No fixed monetary budget can be guaranteed without observing actual
 provider pricing and billing. A local 9-gate QA pass before this change does
 not certify the updated code; rerun `test-all.bat`.
 
+
+## Gemini timeout diagnosis (ADK-only, no API bypass)
+
+The first three-service live run of 2026-11-05 passed Channel3 and PayPal
+Sandbox OAuth, but Gemini returned `AgentExecutionError(category=timeout)`.
+The previous 35-second deadline may have expired, but that generic category
+alone did not identify a provider timeout versus our local asyncio deadline.
+
+Changes: the configured default is now **60 seconds**, still bounded to the
+10–90 second window. The actual Google ADK Runner and one-call limit are
+unchanged; no automatic retries are introduced. Timeout failures contain
+safe `origin` (`local_deadline`, `adk_error_event`, or
+`provider_exception`) and `elapsed_seconds`. Only local deadline errors
+include the configured `timeout_seconds`. A real model PASS includes
+provider-reported token counts (if present) and timing.
+
+```powershell
+.\smoke-providers.bat all
+# Optional one-run diagnostic: increase Gemini wall time to 75 seconds only.
+.\smoke-providers.bat all 75
+```
+
+The repository-root command runs Python from `backend/` so the root .env
+loads. An explicit `AI_TIMEOUT_SECONDS` in the user's private .env or a
+process environment variable overrides the default. Do not change provider
+keys or model names solely because a request timed out. A persistent remote
+`provider_exception` or `adk_error_event` timeout requires provider/network
+inspection; a persistent `local_deadline` means the ADK call exceeded our
+bounded wall time. No live Gemini pass is claimed by this code change.

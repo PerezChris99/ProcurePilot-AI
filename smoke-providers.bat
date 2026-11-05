@@ -15,7 +15,13 @@ if not exist "%PYTHON%" (
 
 pushd "%PROJECT_ROOT%backend" || exit /b 2
 echo Checking %PROVIDER% using ProcurePilot ADK and provider clients...
-"%PYTHON%" scripts\provider_smoke.py --provider "%PROVIDER%"
+REM Optional second argument: Gemini-only diagnostic timeout (10 to 90 seconds).
+REM Python argparse validates the bound. All paths still use the real ADK agent.
+if "%~2"=="" (
+  "%PYTHON%" scripts\provider_smoke.py --provider "%PROVIDER%"
+) else (
+  "%PYTHON%" scripts\provider_smoke.py --provider "%PROVIDER%" --gemini-timeout-seconds "%~2"
+)
 set "STATUS=%ERRORLEVEL%"
 popd
 

@@ -124,3 +124,17 @@ fixes alone.
 - Confirm the offline sample has conspicuous labels and cannot generate a payable order or pretend to have executed Gemini/PayPal.
 - Validate PDF pages visually for legibility, overflow, labels, and representation of uncertainty. Use honest non-marketing copy and disclose that a snapshot hash does not externally notarize third-party evidence.
 - Confirm PayPal live API base URL is rejected even when nonempty live credentials are supplied, before OAuth/network.
+
+## 2026-11-05 Gemini timeout follow-up
+
+Local user-supplied live evidence shows Channel3 PASS (3 products, 6 priced
+offers), PayPal Sandbox OAuth PASS, Gemini FAIL with `category=timeout`.
+This does **not** establish a bad model ID or invalid key. The previous
+35-second app limit and provider-originated timeout had indistinguishable
+output. The ADK runtime now reports a safe timeout origin, seconds elapsed,
+and the local ceiling when it expired; the default ceiling is 60 seconds,
+without extra model calls or loosening token quotas. Run
+`smoke-providers.bat all` from the repo root after the merge; optionally use
+`smoke-providers.bat all 75` to isolate a slow provider response from
+local deadline. The user's actual credential-bearing execution is required
+to confirm if Gemini is operational. A merged PR cannot establish a live pass.

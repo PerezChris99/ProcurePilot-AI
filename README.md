@@ -222,7 +222,7 @@ flowchart TD
 | --- | --- |
 | ADK calls per normal assessment | **1 maximum** |
 | Model output cap | **900 tokens** |
-| Assessment timeout | **35 seconds** |
+| Assessment timeout | **60 seconds** (validated range 10–90) |
 | Evidence shortlist | **Up to 4 products**, reduced to fit the input limit |
 | Daily calls per user | **12** |
 | Daily calls across the app | **100** |
