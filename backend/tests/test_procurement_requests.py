@@ -130,7 +130,13 @@ def test_per_user_ai_daily_limit_prevents_extra_model_calls(client,monkeypatch):
     headers=auth_headers(client,'quota-owner@example.com')
     calls={'ai':0}
     async def search(self,query,*,limit=20,filters=None,user_id=None,page_token=None):
-        return Channel3SearchResponse(products=[Channel3Product(id='monitor-1',title='Monitor')])
+        return Channel3SearchResponse(products=[Channel3Product(
+            id='monitor-1',title='Monitor',
+            offers=[Channel3Offer(
+                url='https://shop.example/monitor',domain='shop.example',
+                availability='InStock',price=Channel3Price(amount='100.00',currency='USD'),
+            )],
+        )])
     async def analyze(user_id,prompt):
         calls['ai']+=1
         return {'text':'No in-stock offer has been verified.',
@@ -150,3 +156,75 @@ def test_per_user_ai_daily_limit_prevents_extra_model_calls(client,monkeypatch):
     assert second.status_code==429
     assert second.headers.get('Retry-After')
     assert calls['ai']==1
+
+
+def test_all_policy_blocked_offers_skip_gemini_and_save_zero_token_answer(client,monkeypatch):
+    headers=auth_headers(client,'no-eligible@example.com')
+    created=client.post('/api/v1/procurement-requests',headers=headers,json={
+        'request_text':'Find two office monitors under policy',
+        'quantity':2,'currency':'USD','budget':'30.00',
+    })
+    request_id=created.json()['id']
+
+    async def search(self,query,*,limit=20,filters=None,user_id=None,page_token=None):
+        return Channel3SearchResponse(products=[
+            Channel3Product(id='unaffordable-1',title='Monitor',
+                offers=[Channel3Offer(
+                    url='https://seller.example/monitor',
+                    domain='seller.example',availability='InStock',
+                    price=Channel3Price(amount='120.00',currency='USD'),
+                )]),
+        ])
+    async def forbidden(user_id,prompt):
+        raise AssertionError('No Gemini model request is allowed for blocked offers')
+
+    monkeypatch.setattr(Channel3Client,'search_products',search)
+    monkeypatch.setattr(runtime,'run_evidence_analysis',forbidden)
+    monkeypatch.setattr(procurement_api,'get_settings',lambda:_fake_settings(per_user=1,global_runs=1))
+
+    first=client.post(f'/api/v1/procurement-requests/{request_id}/analyze',headers=headers)
+    assert first.status_code==200
+    assert first.json()['source']=='catalogue_only'
+    assert first.json()['usage'] is None
+    assert 'No eligible' in first.json()['explanation']
+    assert first.json()['cached'] is False
+    second=client.post(f'/api/v1/procurement-requests/{request_id}/analyze',headers=headers)
+    assert second.status_code==200
+    assert second.json()['cached'] is True
+    saved=client.get(f'/api/v1/procurement-requests/{request_id}',headers=headers).json()
+    assert saved['analysis_json']['results'][0]['policy']['eligible_offer_urls']==[]
+
+
+def test_prompt_has_strict_char_budget_before_reserving_ai_call(client,monkeypatch):
+    headers=auth_headers(client,'short-prompt@example.com')
+    created=client.post('/api/v1/procurement-requests',headers=headers,json={
+        'request_text':'Need two office monitors with evidence constraints',
+        'quantity':2,'currency':'USD',
+    })
+    request_id=created.json()['id']
+
+    async def search(self,query,*,limit=20,filters=None,user_id=None,page_token=None):
+        return Channel3SearchResponse(products=[
+            Channel3Product(id='p'+str(index),title='Long office monitor '*15,
+                offers=[Channel3Offer(
+                    url='https://seller.example/monitor'+str(index),
+                    domain='seller.example',availability='InStock',
+                    price=Channel3Price(amount='150.00',currency='USD'),
+                )]) for index in range(10)
+        ])
+    calls=[]
+    async def analyze(user_id,prompt):
+        calls.append(prompt)
+        return {'text':'The saved eligible offers are suitable for review.',
+                'model':'mock-gemini','usage':{'input_tokens':222,'output_tokens':17}}
+    monkeypatch.setattr(Channel3Client,'search_products',search)
+    monkeypatch.setattr(runtime,'run_evidence_analysis',analyze)
+    def compact_settings():
+        return SimpleNamespace(**{**vars(_fake_settings()),'ai_max_prompt_chars':1600,
+                                  'ai_evidence_candidates':8})
+    monkeypatch.setattr(procurement_api,'get_settings',compact_settings)
+    response=client.post(f'/api/v1/procurement-requests/{request_id}/analyze',headers=headers)
+    assert response.status_code==200
+    assert len(calls)==1 and len(calls[0])<=1600
+    saved=client.get(f'/api/v1/procurement-requests/{request_id}',headers=headers).json()
+    assert saved['analysis_json']['ai_prompt_characters']==len(calls[0])
