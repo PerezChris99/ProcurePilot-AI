@@ -105,6 +105,9 @@ def main(argv=None):
     REPORTS.mkdir(parents=True, exist_ok=True)
     if sys.version_info < (3, 12) or not PYTHON.is_file():
         print("[ERROR] Python 3.12+ and backend/.venv required. Run qa/setup.bat.")
+        summary([{"name":"Python prerequisite","status":"FAIL","exit_code":2,
+                  "seconds":0,"log":"Python 3.12+ or virtualenv missing"}],
+                datetime.now(timezone.utc).isoformat(timespec="seconds"), args.only)
         return 2
     frontend_needed = args.only in ("all", "frontend")
     node, npm = shutil.which("node"), shutil.which("npm")
