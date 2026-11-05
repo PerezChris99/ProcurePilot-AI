@@ -208,9 +208,9 @@ flowchart TD
     D -->|No| E["One product search + deterministic ranking"]
     D -->|Yes| F["Reuse saved evidence"]
     E --> F
-    F --> G{"Any catalogue products?"}
-    G -->|No| H["Honest catalogue-only result · 0 calls"]
-    G -->|Yes| I["Allowlist up to 4 candidate summaries"]
+    F --> G{"Any policy-eligible in-stock offer?"}
+    G -->|No| H["Honest catalogue-only result · 0 model calls"]
+    G -->|Yes| I["Policy-allowed candidate summaries, ≤3600 chars"]
     I --> J{"Daily global and user budgets available?"}
     J -->|No| K["429 · preserve catalogue results"]
     J -->|Yes| L["Reserve call atomically in PostgreSQL"]
@@ -223,16 +223,18 @@ flowchart TD
 | ADK calls per normal assessment | **1 maximum** |
 | Model output cap | **900 tokens** |
 | Assessment timeout | **35 seconds** |
-| Evidence shortlist | **4 products** |
+| Evidence shortlist | **Up to 4 products**, reduced to fit the input limit |
 | Daily calls per user | **12** |
 | Daily calls across the app | **100** |
 | Repeat unchanged assessment | **Cached: no model call** |
-| Empty verified catalogue | **No Gemini call** |
+| Empty or policy-blocked catalogue | **No Gemini call** |
 | Model tools able to approve/pay | **None** |
+| Normal evidence prompt ceiling | **3,600 characters** (not tokens) |
+| Target explanation length | **130 words** |
 
 Daily allowances use atomic UTC-date reservations in the database. Limits bound **call count**, not a guaranteed monetary bill; token prices vary, and metadata may be unavailable. The model sees a short JSON evidence packet without raw seller descriptions, tracking URLs or the complete catalogue. Product data remain untrusted; backend offer/price validation and human approvals remain separate from AI.
 
-See [AI engineering and safeguards](docs/agent.md).
+See [AI engineering and safeguards](docs/agent.md) and run the credential-free audit from the project root with `backend\.venv\Scripts\python.exe backend\scripts\agent_economy_audit.py`. Actual provider input/output/thinking/cached token counts are saved only after a successful real ADK call.
 
 ## Environment configuration
 
