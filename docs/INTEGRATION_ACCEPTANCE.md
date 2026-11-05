@@ -47,7 +47,7 @@ authorized credentials.
 
 ### Known blockers / risk inventory
 
-1. **Open-source eligibility**: current LICENSE is explicitly proprietary. PayPal Devpost requires a visible open-source license. This needs a deliberate owner/license decision and change before the deadline; see [HACKATHON_TOP3_STRATEGY.md](HACKATHON_TOP3_STRATEGY.md). Do not treat test coverage as a workaround.
+1. **Open-source eligibility (source corrected, platform detection pending):** `LICENSE` now contains MIT terms and `NOTICE` preserves ownership and third-party attribution. Confirm GitHub detects MIT on the public repository after merge; the source license alone does not prove the submitted entry meets all rules.
 2. **Real service credentials and hosted HTTPS API**: absent from the GitHub connection; cannot be fabricated. The user must provision or connect these in the target runtime.
 3. **No installed frontend dependency lockfile**: reproducibility on the judges' machine cannot yet be assumed, even if `npm install` passes once. A lockfile is a sensible separately authorized build change.
 4. **Payment reconciliation after uncertain network failures and concurrent captures** needs real provider/race validation. Do not claim exactly-once remote settlement based on idempotency alone.
@@ -62,3 +62,14 @@ authorized credentials.
 - PayPal Sandbox guide: https://developer.paypal.com/sandbox-testing/overview/
 - PayPal Orders API: https://developer.paypal.com/api/rest/integration/orders-api
 - PayPal webhook verification: https://developer.paypal.com/api/rest/webhooks
+
+
+### Accountable decision system acceptance
+
+- Validate Alembic revisions **0006–0009** on a clean PostgreSQL database and a pre-existing migrated database, then inspect downgrade behavior on a disposable test DB.
+- Confirm an owner can define a deterministic mandate, see failed and eligible alternatives, freeze an exact offer into an order and read/download their **own** Decision Passport; another user must receive 404.
+- Confirm a distinct registered delegated approver can decide an assigned PO but cannot initiate or capture the owner's payment.
+- Confirm checked offers that change price/stock block checkout and require refreshed evidence; ensure an unverified check never silently rewrites the original approved amount.
+- Confirm the offline sample has conspicuous labels and cannot generate a payable order or pretend to have executed Gemini/PayPal.
+- Validate PDF pages visually for legibility, overflow, labels, and representation of uncertainty. Use honest non-marketing copy and disclose that a snapshot hash does not externally notarize third-party evidence.
+- Confirm PayPal live API base URL is rejected even when nonempty live credentials are supplied, before OAuth/network.

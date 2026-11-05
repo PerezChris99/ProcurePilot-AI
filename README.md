@@ -274,7 +274,7 @@ For a real end-to-end demonstration, additionally exercise registration, product
 
 **Implemented:** Argon2id password hashing, short-lived JWT access tokens, user-owned record filters, strict approval status checks, server-derived PO prices/totals, product/offer snapshots, constrained model tool access, atomic daily AI-call quotas, bounded provider requests, PayPal order-and-capture verification, signed webhooks and duplicate-event handling, and user-visible audit records.
 
-**Not production-certified:** true multi-person independent approval, durable distributed rate limits for API routes beyond authentication, password reset/email verification, device/session revocation, concurrency-safe distributed payment reconciliation, browser E2E coverage, production monitoring/backup testing or live merchant receiving eligibility. The personal-workspace prototype allows self-approval. See [security posture and threat model](docs/security.md) for precise residual risks.
+**Not production-certified:** organization-level independent approval administration (a designated, distinct registered reviewer is supported), durable distributed rate limits for API routes beyond authentication, password reset/email verification, device/session revocation, concurrency-safe distributed payment reconciliation, browser E2E coverage, production monitoring/backup testing or live merchant receiving eligibility. The personal-workspace default allows self-approval unless a distinct reviewer is explicitly assigned. See [security posture and threat model](docs/security.md) for precise residual risks.
 
 This is not a PCI-certified payment processor. The app does not capture card numbers, and it cannot represent PayPal Sandbox captures as real retailer payouts.
 
@@ -296,8 +296,21 @@ This is not a PCI-certified payment processor. The app does not capture card num
 | `docs/development.md` | Local startup and troubleshooting |
 | `docs/release-verification.md` | Outstanding acceptance gates |
 | `docs/INTEGRATION_ACCEPTANCE.md` | Six gate Gemini, Channel3, PayPal, webhook and local-build acceptance; read-only provider smoke instructions |
-| `docs/HACKATHON_TOP3_STRATEGY.md` | Researched official criteria, hard license blocker and ranked top-three feature proposals (deferred until 'suggest execute') |
+| `docs/HACKATHON_TOP3_STRATEGY.md` | Official judging research, accountable purchasing differentiator and updated delivery scorecard |
 | `docs/scaling.md` | Capacity planning, database operations, load testing, incident recovery and security boundaries |
+
+## Accountable purchasing decision system
+
+The main workflow is deliberately **evidence → deterministic buyer policy → human approval → PayPal Sandbox confirmation**, not autonomous shopping or retailer settlement.
+
+- **Buyer mandate:** optional required and preferred specifications, approved merchant domains, maximum unit price, expiry and an explicitly assigned registered approver. The server checks hard policy before an order is created.
+- **Channel3 decision evidence:** prices, currency, stock, alternative rejection reasons and historical discovery timestamps are shown honestly. Optional quote rechecks compare the frozen order to the refreshed original offer without silently changing approved amounts.
+- **Decision Passport:** owner-only read-only purchase evidence and audit timeline, a snapshot checksum, price comparison based only on eligible same-currency offers, AI assessment provenance, buyer decision and PayPal Sandbox evidence. Export as authenticated JSON or PDF. This does not promise genuine realized savings or independent notarization.
+- **Human authorization:** self-approval is available in the default personal workspace. If a separate approver is assigned, only that registered approver can decide; the reviewer is not authorized to initiate or capture payment.
+- **PayPal:** the project deliberately refuses the Live API host. The Sandbox uses idempotent order requests, verified amounts/currency, payer approval, capture and signed webhook verification. No real funds or retailer settlement are represented.
+- **Judge preview:** an optional, clearly marked offline fixture demonstrates the decision controls without pretending to use live Channel3, Gemini or PayPal. It **cannot create a payable order** until replaced by real provider evidence.
+
+See [provider integration acceptance](docs/INTEGRATION_ACCEPTANCE.md) for the unverified live third-party and device test gates. The source code and API tests cannot certify a working live Sandbox capture or production readiness.
 
 ## Technology, licensing and disclosure
 

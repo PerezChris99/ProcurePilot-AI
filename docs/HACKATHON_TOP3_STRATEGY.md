@@ -1,6 +1,6 @@
-# ProcurePilot AI — Top-Three Hackathon Strategy (proposed, not implemented)
+# ProcurePilot AI — Top-Three Hackathon Strategy and Delivery Status
 
-Research date: **2026-11-05**. Competition: **PayPal AI Hackathon / “Build What's Next with PayPal and AI”**. Objective: a credible shot at the **top three overall**, plus the most relevant sponsor category. Project: **ProcurePilot AI**. The phrases **"suggest execute"** or an explicit later instruction authorize consideration of these feature proposals. **Do not treat the recommendations below as completed work.**
+Research date: **2026-11-05**. Competition: **PayPal AI Hackathon / “Build What's Next with PayPal and AI”**. Objective: a credible shot at the **top three overall**, plus the most relevant sponsor category. Project: **ProcurePilot AI**. The owner subsequently authorized implementation. The source now includes substantial P1–P3 work; the separate external-provider, browser, operational and submission gates remain unverified. This document distinguishes implemented source from unfinished proof.
 
 ## 1. Competition ground truth
 
@@ -32,7 +32,7 @@ Primary sources:
 
 **Where to differentiate:** Other publicly discoverable hackathon entries already demonstrate Channel3+PayPal shopping, split payments, mandates, policy guards or settlement ledgers. For examples, see https://devpost.com/software/cartsplit-ai-paypal-ai-hackathon-2026-demo and https://devpost.com/software/mandate-o2psny . These are public claims by entrants, not independently benchmarked judging outcomes. A budget guard **alone** is not enough novelty. The moat should be *auditable, explainable trade-offs in organizational procurement*, supported by an excellent end-to-end demo.
 
-## 3. Proposed competitive work (DO NOT IMPLEMENT UNTIL REQUESTED)
+## 3. Competitive work and actual status (source vs. acceptance)
 
 | Rank | Proposed change | Value to judges | Implementation risk | Priority |
 | --- | --- | --- | --- | --- |
@@ -104,7 +104,7 @@ Use five separate 0–5 ratings with recorded evidence for each. Don't give a cr
 - Rehearse actual buyer approval/capture through the UI and signed HTTPS webhook. Check idempotency and negative cases; preserve redacted evidence.
 - Make no real-money requests and never disclose provider secrets.
 
-### Nov 7–8: competitive features — DEFERRED until “suggest execute”
+### Nov 7–8: competitive features — source already implemented; verification still required
 - Implement **one** signature feature well: Decision Passport and its evidence-backed explanation.
 - Tighten the PayPal proof chain, then truthful eligible-offer comparisons. Avoid multi-feature sprawl.
 
@@ -134,8 +134,19 @@ Use five separate 0–5 ratings with recorded evidence for each. Don't give a cr
 
 ## 8. Explicit boundary
 
-This is **research and an implementation proposal**. Not implemented: Decision Passport, policy mandate extensions, saved comparisons, new PayPal workflow, new AG Grid feature, judge-mode data or supplier settlement. These require **“suggest execute”** or a comparable explicit instruction.
+This is **research plus an implementation and acceptance record**. Decision Passport, optional buyer mandates, eligible-offer comparison, delegated approval, quote recheck, authenticated PDF/JSON export, and clearly labeled offline judge preview are now in source on `perez` pending integration verification and merge. **Not implemented:** AG Grid integration, real merchant settlement, production-grade multi-tenant governance, independent third-party evaluation, and a guaranteed top-three result. External Sandbox, Gemini and Channel3 tests are not yet certified.
 
 Authorized now: inspect, test, add test coverage and safe provider smoke checks, repair concrete integration defects, document observed passing/failing evidence, and keep existing `perez` → PR → `main` workflow. No new branches; no GitHub Actions.
 
 The team's goal is to improve the *credible odds* of a top-three result. Neither strategy nor participant counts can guarantee a prize.
+
+
+## Implemented source milestone and acceptance limitations — November 5, 2026
+
+- MIT open-source source license and third-party NOTICE now replace the proprietary restriction; GitHub detection after merge still needs checking.
+- Buyer mandate fields, eligibility decisions, approved domains, price caps and expiry checks are enforced by server-side policy, not by an LLM.
+- A frozen historical Decision Passport and authenticated JSON/PDF views expose source evidence, acceptable alternatives, the decision, approvals, payment IDs and any correlated signed webhook.
+- Signed-in users can assign a distinct registered reviewer; the reviewer cannot capture payments. Default personal-workspace self-approval remains honestly labeled.
+- Optional Channel3 product recheck flags changed/missing offers; a clearly labeled offline sample has checkout disabled.
+- The PayPal client now fails closed if accidentally configured for the Live API host, preventing real-money operations during hackathon demonstrations.
+- **Not yet 100% validated:** installed Python and npm test runs, migrations against a fresh PostgreSQL database, real Channel3 responses, actual Gemini invocation, Sandbox buyer authorization and capture, external signed webhook delivery, browser/mobile E2E, hosted demo access, public video upload and Devpost submission. Judge outcome is outside anyone's control.

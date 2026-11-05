@@ -16,7 +16,7 @@
 - Evidence-first AI orchestration: one deterministic Channel3 discovery if needed, compact top-four packet, a single bounded ADK Gemini call, repeat-response caching, honest empty catalogue and token metadata.
 - Atomic per-user and global UTC-day call budgets in new migration 0004_ai_budget.
 - Current Channel3 attribute-array compatibility and in-stock-only price ranking. Optional ADK research tool outputs are restricted to five compact scored candidates.
-- Authorized-use-only MIT license with narrow hackathon evaluator permission.
+- MIT open-source license with standard notice preservation; separate NOTICE explains third-party asset boundaries.
 - Rewritten README with multiple workflow diagrams, and updated security, architecture and AI engineering documents.
 - Updated PayPal merchant-vs-buyer setup guide, with an explicit Merchant REST-app selection and Sandbox Business linkage.
 
@@ -35,7 +35,7 @@ Run start.bat, verify.bat, and the manual walkthrough in docs/testing.md. Record
 - No frontend package-lock.json currently tracked; dependency resolution may vary across installations.
 - No Playwright E2E suite, backup restore drill, host-level security headers, observability/alerts or verified deployment.
 - No actual supplier settlement through Channel3; PayPal remains a separate Sandbox demonstration.
-- Proprietary LICENSE may conflict with hackathon requirements for an OSI open-source project.
+- MIT licensing is now implemented in source; GitHub MIT detection and all third-party attribution remain a submission gate.
 - The repository was publicly visible when last checked; keep credentials strictly out of Git.
 
 ## Acceptance status

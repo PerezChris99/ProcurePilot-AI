@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | Passwords | Argon2id hashing, generic login failure and shared Redis throttling for public login/registration | Redis/edge deployment, reset, email verification and MFA remain external/additional |
 | JWT access tokens | Signature, audience, issuer, exp/nbf/iat, UUID subject, bounded lifetime and active-user lookup | Frontend sessionStorage XSS exposure; no revocation/refresh rotation |
-| Procurement resources | Authenticated owner SQL filters, restricted approval states | Personal single-user demo; no organization RBAC or independent approvals |
+| Procurement resources | Authenticated owner SQL filters, restricted approval states | Owner-scoped workspace with optional assigned independent reviewer; no organization-wide RBAC |
 | Catalogue offers | Pydantic parsing, matching currency, explicit stock, HTTPS URLs, server-frozen prices | Supplier claims can be stale or misleading; shipping not verified |
 | AI inputs/outputs | Small allowlisted evidence packet, one capped ADK call, no action tools, atomic call quotas | LLMs can hallucinate or misinterpret untrusted supplier titles |
 | PayPal Orders v2 | Backend OAuth, idempotency keys, remote ID/custom ID/amount/currency and capture verification | Not proven safe under all races or network-unknown outcomes |
@@ -20,7 +20,7 @@
 
 - Argon2id hashes passwords. The FastAPI dependency verifies JWT signature and expiration, looks up the authenticated user and rejects inactive accounts.
 - Procurement requests, orders and the pending-approval queue are scoped to the owner in SQL.
-- The Approvals page now exists and records user decisions. **The signed-in requester may approve their own purchase in this personal-workspace prototype**. This is not true separation of duties and should not be advertised as independent maker-checker approval.
+- The Approvals page records human decisions. The personal workspace permits self-approval by default; an explicitly assigned **distinct registered reviewer** may approve or reject only that assigned order and cannot operate the owner's payment flow. This is not organization-level independent role governance.
 - Audience-scoped short-lived bearer tokens live in sessionStorage. Explicit logout removes the browser token, but it does not revoke a previously issued JWT server-side. Password recovery, email verification and multi-device sessions are not implemented.
 
 ## Procurement/payment correctness
@@ -78,3 +78,8 @@ Production/staging APP_ENV is now normalized to lower case; unsupported values s
 - **Untrusted input/AI/payment:** Channel3 upstream responses are capped at 2 MiB, saved discovery to 120 products/request, finite money and numeric database range checks, and PayPal webhook event ID/type validation. The existing ADK one-call quota and absence of payment/approval tools remain intact.
 
 All these are source changes with source-authored regression tests; **do not claim they passed on every platform or resisted a professional red-team exercise until actually executed**. Real checkout/webhook concurrency and reconciliation, organizations with separate approvers, high-load qualification, recovery and incident response are still outstanding. See [scaling and operations](scaling.md).
+
+
+### Hackathon PayPal Sandbox-only safety
+
+The PayPal client rejects the Live API host during credential checks and before any OAuth/order/capture call. A wrong live endpoint cannot make real payments while the UI declares Sandbox-only operation. This does not replace actual buyer-approval, amount-mismatch, concurrent capture or webhook validation tests.
