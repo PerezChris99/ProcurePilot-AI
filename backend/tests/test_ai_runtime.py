@@ -171,3 +171,72 @@ def test_adk_incremental_metrics_do_not_clobber_earlier_nonnull_usage(monkeypatc
     assert result['text']=='Verified offer.'
     assert result['usage']['thinking_tokens']==12
     assert result['usage']['total_tokens']==242
+
+
+def test_adk_runtime_distinguishes_provider_timeout_from_own_deadline(monkeypatch):
+    class Session:
+        async def create_session(self, **kwargs):
+            return SimpleNamespace(id='timeout-test')
+    class RunnerStub:
+        def __init__(self, **kwargs):
+            pass
+        async def run_async(self, **kwargs):
+            assert kwargs['run_config'].max_llm_calls == 1
+            raise TimeoutError('provider request timed out; private transport details')
+            yield None
+
+    monkeypatch.setattr(runtime, 'InMemorySessionService', Session)
+    monkeypatch.setattr(runtime, 'Runner', RunnerStub)
+    monkeypatch.setattr(runtime, 'get_settings', lambda: SimpleNamespace(
+        google_api_key='test-key', ai_timeout_seconds=60, ai_model='gemini-3.8-flash',
+    ))
+    with pytest.raises(runtime.AgentExecutionError) as raised:
+        asyncio.run(runtime.run_evidence_analysis('owner', 'Saved short evidence'))
+    assert raised.value.category == 'timeout'
+    assert raised.value.origin == 'provider_exception'
+    assert raised.value.timeout_seconds is None
+    assert raised.value.elapsed_seconds >= 0
+    assert 'private transport details' not in str(raised.value)
+
+
+def test_adk_runtime_reports_local_timeout_and_never_retries(monkeypatch):
+    class Session:
+        async def create_session(self, **kwargs):
+            return SimpleNamespace(id='timeout-test')
+    calls=[]
+    class SlowRunner:
+        def __init__(self, **kwargs):
+            pass
+        async def run_async(self, **kwargs):
+            calls.append(kwargs['run_config'].max_llm_calls)
+            await asyncio.sleep(0.1)
+            if False:
+                yield None
+
+    monkeypatch.setattr(runtime, 'InMemorySessionService', Session)
+    monkeypatch.setattr(runtime, 'Runner', SlowRunner)
+    monkeypatch.setattr(runtime, 'get_settings', lambda: SimpleNamespace(
+        google_api_key='test-key', ai_timeout_seconds=60, ai_model='gemini-3.8-flash',
+    ))
+    original_timeout=asyncio.timeout
+    monkeypatch.setattr(runtime.asyncio, 'timeout',
+                        lambda seconds: original_timeout(0.01))
+    with pytest.raises(runtime.AgentExecutionError) as raised:
+        asyncio.run(runtime.run_evidence_analysis(
+            'owner','Saved short evidence',timeout_seconds=75,
+        ))
+    assert raised.value.category=='timeout'
+    assert raised.value.origin=='local_deadline'
+    assert raised.value.timeout_seconds==75
+    assert calls==[1]
+
+
+@pytest.mark.parametrize('bad_limit',[0,9,91,300,True,60.5,'60'])
+def test_adk_smoke_timeout_override_is_strictly_bounded(monkeypatch,bad_limit):
+    monkeypatch.setattr(runtime,'get_settings',lambda:SimpleNamespace(
+        google_api_key='test-key',ai_timeout_seconds=60,ai_model='gemini-3.8-flash'
+    ))
+    with pytest.raises(runtime.AgentConfigurationError):
+        asyncio.run(runtime.run_evidence_analysis(
+            'owner','Saved short evidence',timeout_seconds=bad_limit,
+        ))
