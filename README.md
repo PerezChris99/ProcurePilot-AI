@@ -1,8 +1,8 @@
 # ProcurePilot AI
 
-**From a purchasing request to an informed, approved purchase.**
+**Accountable purchasing decisions, backed by evidence.**
 
-ProcurePilot AI is an evidence-first procurement application that combines real catalogue discovery, deterministic product/price checks, a carefully bounded Gemini analyst, human-controlled approvals, and a PayPal Sandbox payment demonstration.
+ProcurePilot AI is an accountable purchasing decision system: real Channel3 catalogue evidence, deterministic buyer mandates, bounded Gemini analysis, human approval, frozen Decision Passports and a separately verifiable PayPal Sandbox payment demonstration.
 
 **Project status:** Functional prototype under active hardening. The Sandbox does not pay retailers, and a passing local build is not evidence of production readiness, unrestricted provider access, or high-load capacity.
 

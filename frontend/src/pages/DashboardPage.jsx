@@ -34,6 +34,7 @@ export default function DashboardPage(){
     <header className="welcome-row">
       <div>
         <h1>{greeting}, {name}.</h1>
+        <p className="dashboard-intro">Every purchasing decision has a record.</p>
       </div>
       <Link to="/procurement" className="button button-primary">
         <Plus size={17} aria-hidden="true"/> New procurement

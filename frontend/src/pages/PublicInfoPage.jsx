@@ -7,7 +7,7 @@ const PAGES={
     intro:'ProcurePilot AI turns an informal purchasing need into a documented, evidence-based decision—without giving an AI system the authority to spend money.',
     accent:'Clarity first. Human control always.',
     sections:[
-      {title:'Why it exists',copy:'Purchasing teams lose time switching between product listings, spreadsheets, messaging threads and approval chains. Important context gets lost before the order is even placed.'},
+      {title:'Why it exists',copy:'Purchasing teams need accountable decisions, not just product links. Evidence, policy checks, sign-off and payment proof often live in disconnected systems. Important context gets lost before the order is even placed.'},
       {title:'What we built',copy:'A connected workflow for describing requirements, searching real catalogue offers, comparing the evidence, drafting purchase orders and recording decisions.'},
       {title:'How the intelligence works',copy:'Deterministic backend rules check the actual offer. Google Gemini, orchestrated by ADK, supplies a concise evidence-grounded explanation—not invented stock, prices or purchases.'},
       {title:'Where we are today',copy:'This is a working hackathon prototype with a PayPal Sandbox demonstration. It is not a live retailer checkout or an independently certified enterprise procurement product.'},

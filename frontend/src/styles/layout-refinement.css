@@ -414,3 +414,115 @@ html{scroll-behavior:smooth}
 @media(max-width:380px){
   .mobile-dock-link svg.ios-dock-icon{width:20px;height:20px}
 }
+
+/* Accountable purchasing — quiet form, comparison and receipt surfaces. */
+.mandate-options{
+  margin-top:21px;
+  padding:0;
+  border-top:1px solid #dfe5e9;
+  background:transparent;
+}
+.mandate-options summary{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  padding:16px 0;
+  cursor:pointer;
+  color:#2b4357;
+  font-size:1rem;
+  font-weight:580;
+}
+.mandate-options summary>span{
+  margin-left:auto;
+  color:#657589;
+  font-size:.81rem;
+  font-weight:450;
+}
+.mandate-options summary svg{color:#486e88;flex:none}
+.mandate-help{color:#526477;line-height:1.65;margin:0 0 16px;font-size:.9rem}
+.mandate-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px 20px;padding-bottom:21px}
+.mandate-grid>div{min-width:0}
+.mandate-grid textarea,.mandate-grid input{
+  width:100%;
+  max-width:100%;
+  border:1px solid #d8e0e7;
+  border-radius:5px;
+  padding:11px 12px;
+  background:#fff;
+  color:#273d51;
+  font:inherit;
+  font-size:.9375rem;
+}
+.mandate-grid small{display:block;margin-top:7px;color:#647486;line-height:1.5;font-size:.8125rem}
+.mandate-summary{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:9px 18px;
+  margin:13px 0 17px;
+  padding:13px 15px;
+  border:1px solid #dce4e9;
+  background:#fafbfb;
+  color:#546778;
+  font-size:.875rem;
+}
+.mandate-summary strong{color:#304c61;font-weight:590}
+.catalogue-snapshot-note{color:#627587;font-size:.8125rem;margin:6px 0 15px}
+.offer-blocker{display:block;margin-top:4px;color:#825e31;font-size:.8125rem}
+.evidence-compare,.passport-paper{
+  padding:22px 24px;
+  border:1px solid #e0e6e9;
+  border-radius:4px;
+  background:#fff;
+  box-shadow:none;
+}
+.evidence-compare{margin:16px 0}
+.evidence-compare-head{display:flex;align-items:baseline;justify-content:space-between;gap:15px}
+.evidence-compare h2{margin:0;font-size:1.0625rem;font-weight:580;color:#2d4558}
+.evidence-compare-head span{color:#596e81;font-size:.875rem}
+.evidence-intro,.evidence-footnote,.passport-help{color:#5f7182;font-size:.875rem;line-height:1.7}
+.evidence-table-scroll{width:100%;max-width:100%;overflow-x:auto}
+.evidence-table{width:100%;border-collapse:collapse;text-align:left;font-size:.875rem;color:#3a5064}
+.evidence-table th{
+  font-weight:570;color:#64778a;
+  padding:11px 12px;border-bottom:1px solid #dde5ea;
+  white-space:nowrap;background:#fbfcfc;
+}
+.evidence-table td{padding:12px;border-bottom:1px solid #eef1f2;vertical-align:top}
+.evidence-table td small{display:block;color:#637587;padding-top:4px;font-size:.8125rem}
+.evidence-table tr:last-child td{border-bottom:0}
+.passport-section{margin-top:18px;border-top:1px solid #e6eaed;padding-top:13px}
+.passport-toggle{
+  display:inline-flex;align-items:center;gap:9px;
+  background:transparent;color:#315b77;border:0;
+  padding:7px 0;font:inherit;font-size:.925rem;font-weight:570;cursor:pointer;
+}
+.passport-toggle:hover{text-decoration:underline}
+.passport-paper{margin-top:13px;padding:23px 24px}
+.passport-head{display:flex;justify-content:space-between;align-items:start;gap:12px}
+.passport-head h3{margin:5px 0 0;font-size:1.3rem;font-weight:600;color:#283e52}
+.passport-status{display:flex;align-items:center;gap:7px;color:#567284;font-size:.875rem}
+.passport-paper h4{font-size:1rem;font-weight:590;color:#2c4458;margin:25px 0 11px}
+.passport-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin:17px 0;border-top:1px solid #e1e8eb}
+.passport-facts>div{padding:15px 12px;border-bottom:1px solid #e1e8eb;min-width:0}
+.passport-facts dt{color:#6b7989;font-size:.8125rem}
+.passport-facts dd{margin:6px 0 0;color:#30475a;font-weight:560;font-size:.96rem;overflow-wrap:anywhere}
+.passport-analysis{padding:2px 0}
+.passport-analysis p{color:#4b6072;line-height:1.72;font-size:.9375rem;white-space:pre-wrap}
+.passport-timeline{list-style:none;padding:0;margin:0}
+.passport-timeline li{display:flex;justify-content:space-between;gap:15px;padding:11px 0;border-bottom:1px solid #edf0f2;color:#455c6c;font-size:.875rem}
+.passport-timeline time{color:#718291;white-space:nowrap}
+.passport-downloads{display:flex;flex-wrap:wrap;gap:10px;margin-top:15px}
+@media(max-width:760px){
+  .mandate-grid{grid-template-columns:minmax(0,1fr)}
+  .passport-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .passport-timeline li{flex-direction:column;gap:3px}
+  .passport-paper,.evidence-compare{padding:17px}
+}
+@media(max-width:400px){
+  .mandate-options summary{flex-wrap:wrap}
+  .mandate-options summary>span{width:100%;margin:0}
+  .passport-facts{grid-template-columns:minmax(0,1fr)}
+}
+
+.dashboard-refined .dashboard-intro{margin:7px 0 0;font-size:.925rem;line-height:1.5;color:#67798b;font-weight:430}
