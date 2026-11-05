@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 import re
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class ProcurementPolicy(BaseModel):
@@ -13,6 +13,7 @@ class ProcurementPolicy(BaseModel):
     allowed_merchants: list[str] = Field(default_factory=list, max_length=12)
     max_unit_price: Decimal | None = Field(default=None, gt=0, max_digits=14, decimal_places=2)
     expires_at: datetime | None = None
+    approver_email: EmailStr | None = None
 
     @field_validator('mandatory_attributes', 'preferred_attributes')
     @classmethod
@@ -42,6 +43,11 @@ class ProcurementPolicy(BaseModel):
             if domain not in clean:
                 clean.append(domain)
         return clean
+
+    @field_validator('approver_email')
+    @classmethod
+    def valid_approver(cls,value):
+        return str(value).strip().lower() if value else None
 
     @field_validator('expires_at')
     @classmethod
