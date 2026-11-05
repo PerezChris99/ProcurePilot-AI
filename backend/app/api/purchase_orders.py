@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.integrations.paypal.client import PayPalClient,PayPalConfigurationError,PayPalUnavailable
+from app.integrations.channel3.schemas import Channel3Product,Channel3Offer
+from app.procurement.policy import evaluate_offer, policy_expired
 from app.models import Approval,AuditEvent,Payment,ProcurementRequest,PurchaseOrder,PurchaseOrderItem,User
 from app.schemas.purchase_order import ApprovalAction,PayPalCheckoutResponse,PurchaseOrderCreate,PurchaseOrderResponse
 from app.security.tokens import get_current_user
@@ -104,6 +106,9 @@ def create_purchase_order(request_id:str,payload:PurchaseOrderCreate,db:Session=
     if ranking.get('unmet_requirements'): raise HTTPException(status_code=422,detail='This product does not evidence all mandatory requirements and cannot be ordered.')
     offer=next((entry for entry in product.get('offers',[]) if entry.get('url')==payload.offer_url),None)
     if not offer: raise HTTPException(status_code=409,detail='The selected retailer offer is not in the saved product snapshot.')
+    reasons=evaluate_offer(request,Channel3Product.model_validate(product),Channel3Offer.model_validate(offer))
+    if reasons:
+        raise HTTPException(status_code=422,detail='Offer blocked by purchasing policy: '+ '; '.join(reasons[:4]))
     price=offer.get('price') or {}
     if price.get('currency')!=request.currency: raise HTTPException(status_code=422,detail='The selected offer currency does not match the procurement request.')
     if not payload.offer_url.startswith('https://'): raise HTTPException(status_code=422,detail='Retailer offer links must use HTTPS.')
@@ -166,6 +171,9 @@ def submit_purchase_order(order_id:str,db:Session=Depends(get_db),user:User=Depe
 def approve_purchase_order(order_id:str,payload:ApprovalAction,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
     order=_owned_order(order_id,user,db)
     if order.status!='pending_approval': raise HTTPException(status_code=409,detail='Only purchase orders awaiting approval can be approved.')
+    request=db.get(ProcurementRequest,order.request_id)
+    if request and policy_expired(request):
+        raise HTTPException(status_code=409,detail='Buyer mandate expired; create a new procurement request.')
     now=datetime.now(timezone.utc); order.status='approved'; order.approved_by=user.id; order.approved_at=now
     db.add(Approval(purchase_order_id=order.id,actor_user_id=user.id,decision='approved',comment=payload.comment))
     _audit(db,user.id,'purchase_order.approved',order_id=order.id,request_id=order.request_id,details={'amount':str(order.total_amount),'currency':order.currency})
@@ -186,6 +194,9 @@ def reject_purchase_order(order_id:str,payload:ApprovalAction,db:Session=Depends
 async def create_paypal_order(order_id:str,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
     order=_owned_order(order_id,user,db)
     if order.status not in ('approved','payment_pending'): raise HTTPException(status_code=409,detail='A human-approved purchase order is required before starting PayPal checkout.')
+    request=db.get(ProcurementRequest,order.request_id)
+    if order.status=='approved' and request and policy_expired(request):
+        raise HTTPException(status_code=409,detail='Buyer mandate expired before checkout.')
     try:
         client=PayPalClient()
         client.ensure_configured()

@@ -19,6 +19,7 @@ from app.models.procurement_request import ProcurementRequest
 from app.models.user import User
 from app.procurement.schemas import ProcurementRequirements
 from app.procurement.scoring import rank_products
+from app.procurement.policy import evaluate_offer, requirements_for_request, source_timestamp
 from app.schemas.procurement_request import ProcurementRequestCreate, ProcurementRequestResponse
 from app.security.tokens import get_current_user
 
@@ -47,6 +48,7 @@ def create_request(
         quantity=payload.quantity,
         budget=payload.budget,
         currency=payload.currency,
+        policy_json=payload.policy_json.model_dump(mode='json',exclude_none=True),
     )
     db.add(request)
     db.commit()
@@ -73,7 +75,7 @@ def list_requests(
     columns=(
         ProcurementRequest.id,ProcurementRequest.request_text,
         ProcurementRequest.quantity,ProcurementRequest.budget,
-        ProcurementRequest.currency,ProcurementRequest.status,
+        ProcurementRequest.currency,ProcurementRequest.status,ProcurementRequest.policy_json,
         ProcurementRequest.created_at,ProcurementRequest.updated_at,
     )
     query=(select(ProcurementRequest) if include_analysis else select(*columns)).where(
@@ -102,12 +104,7 @@ def get_request(
 
 async def _catalogue_snapshot(request: ProcurementRequest, user_id: str, *, current=None, page_token=None):
     """Exactly one Channel3 call; deterministic ranking, no model tokens consumed."""
-    requirements = ProcurementRequirements(
-        query=request.request_text,
-        quantity=request.quantity,
-        budget=request.budget,
-        currency=request.currency,
-    )
+    requirements = requirements_for_request(request)
     try:
         page = await Channel3Client().search_products(
             requirements.query, limit=20, user_id=user_id, page_token=page_token
@@ -129,10 +126,21 @@ async def _catalogue_snapshot(request: ProcurementRequest, user_id: str, *, curr
     by_id = {product.id: product for product in products}
     return {
         'source': 'Channel3',
+        'discovered_at': source_timestamp(),
         'results': [
             {
                 'ranking': item.model_dump(mode='json'),
                 'product': by_id[item.product_id].model_dump(mode='json'),
+                'policy': {
+                    'eligible_offer_urls': [
+                        str(offer.url) for offer in by_id[item.product_id].offers
+                        if not evaluate_offer(request,by_id[item.product_id],offer)
+                    ],
+                    'offer_reasons': {
+                        str(offer.url):evaluate_offer(request,by_id[item.product_id],offer)
+                        for offer in by_id[item.product_id].offers[:30]
+                    },
+                },
             }
             for item in rankings
         ],
