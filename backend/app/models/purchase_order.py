@@ -19,6 +19,7 @@ class PurchaseOrder(Base):
     currency: Mapped[str]=mapped_column(String(3),nullable=False)
     subtotal: Mapped[Decimal]=mapped_column(Numeric(14,2),nullable=False)
     total_amount: Mapped[Decimal]=mapped_column(Numeric(14,2),nullable=False)
+    evidence_json: Mapped[dict]=mapped_column(JSON,default=dict,nullable=False)
     submitted_at: Mapped[datetime|None]=mapped_column(DateTime(timezone=True),nullable=True)
     approved_by: Mapped[str|None]=mapped_column(ForeignKey('users.id',ondelete='SET NULL'),nullable=True)
     approved_at: Mapped[datetime|None]=mapped_column(DateTime(timezone=True),nullable=True)
