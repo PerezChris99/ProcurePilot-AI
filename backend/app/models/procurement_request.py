@@ -19,5 +19,6 @@ class ProcurementRequest(Base):
     currency: Mapped[str]=mapped_column(String(3),default='USD',nullable=False)
     status: Mapped[str]=mapped_column(String(32),default='draft',nullable=False,index=True)
     analysis_json: Mapped[dict | None]=mapped_column(JSON,nullable=True)
+    policy_json: Mapped[dict]=mapped_column(JSON,default=dict,nullable=False)
     created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True),default=lambda:datetime.now(timezone.utc),nullable=False)
     updated_at: Mapped[datetime]=mapped_column(DateTime(timezone=True),default=lambda:datetime.now(timezone.utc),onupdate=lambda:datetime.now(timezone.utc),nullable=False)
