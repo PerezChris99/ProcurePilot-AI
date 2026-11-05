@@ -117,3 +117,57 @@ def test_nested_runtime_transport_error_is_classified_without_raw_message():
             category,status=runtime._exception_details(wrapped)
     assert category=='transport'
     assert status is None
+
+
+def test_provider_token_usage_includes_thinking_and_caching_without_estimates():
+    metric=SimpleNamespace(
+        prompt_token_count=300,candidates_token_count=41,
+        total_token_count=389,cached_content_token_count=12,
+        thoughts_token_count=48,
+    )
+    event=SimpleNamespace(usage_metadata=metric)
+    usage=runtime._usage_from_event(event)
+    assert usage=={
+        'input_tokens':300,'output_tokens':41,'total_tokens':389,
+        'cached_input_tokens':12,'thinking_tokens':48,
+    }
+
+
+def test_adk_incremental_metrics_do_not_clobber_earlier_nonnull_usage(monkeypatch):
+    class FakeService:
+        async def create_session(self,**kwargs):
+            return SimpleNamespace(id='session-1')
+    class FakeRunner:
+        def __init__(self,**kwargs): pass
+        async def run_async(self,**kwargs):
+            assert kwargs['run_config'].max_llm_calls==1
+            first=SimpleNamespace(
+                usage_metadata=SimpleNamespace(
+                    prompt_token_count=200,candidates_token_count=30,
+                    total_token_count=242,cached_content_token_count=0,
+                    thoughts_token_count=12,
+                ),
+                error_code=None,content=None,
+                is_final_response=lambda:False,
+            )
+            last=SimpleNamespace(
+                usage_metadata=SimpleNamespace(
+                    prompt_token_count=None,candidates_token_count=None,
+                    total_token_count=None,cached_content_token_count=None,
+                    thoughts_token_count=None,
+                ),
+                error_code=None,
+                content=SimpleNamespace(parts=[SimpleNamespace(text='Verified offer. ',thought=False)]),
+                is_final_response=lambda:True,
+            )
+            yield first
+            yield last
+    monkeypatch.setattr(runtime,'InMemorySessionService',FakeService)
+    monkeypatch.setattr(runtime,'Runner',FakeRunner)
+    monkeypatch.setattr(runtime,'get_settings',lambda:SimpleNamespace(
+        google_api_key='test-key',ai_timeout_seconds=30,ai_model='gemini-3.8-flash'
+    ))
+    result=asyncio.run(runtime.run_evidence_analysis('owner','Saved short evidence'))
+    assert result['text']=='Verified offer.'
+    assert result['usage']['thinking_tokens']==12
+    assert result['usage']['total_tokens']==242

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.agents import runtime
 from app.agents.budget import AiQuotaExceeded, reserve_ai_call
-from app.agents.evidence import evidence_prompt
+from app.agents.evidence import bounded_evidence_prompt, has_eligible_offer
 from app.agents.runtime import AgentConfigurationError, AgentExecutionError
 from app.core.config import get_settings
 from app.core.database import get_db
@@ -102,6 +102,23 @@ def get_request(
     return _owned_request(request_id, user, db)
 
 
+def _snapshot_product_entry(item, request, by_id):
+    """Evaluate each offer exactly once; reuse verdict for URL and UI reasons."""
+    product = by_id[item.product_id]
+    checks = [
+        (str(offer.url), evaluate_offer(request, product, offer))
+        for offer in product.offers
+    ]
+    return {
+        'ranking': item.model_dump(mode='json'),
+        'product': product.model_dump(mode='json'),
+        'policy': {
+            'eligible_offer_urls': [url for url, reasons in checks if not reasons],
+            'offer_reasons': dict(checks[:30]),
+        },
+    }
+
+
 async def _catalogue_snapshot(request: ProcurementRequest, user_id: str, *, current=None, page_token=None):
     """Exactly one Channel3 call; deterministic ranking, no model tokens consumed."""
     requirements = requirements_for_request(request)
@@ -128,20 +145,7 @@ async def _catalogue_snapshot(request: ProcurementRequest, user_id: str, *, curr
         'source': 'Channel3',
         'discovered_at': source_timestamp(),
         'results': [
-            {
-                'ranking': item.model_dump(mode='json'),
-                'product': by_id[item.product_id].model_dump(mode='json'),
-                'policy': {
-                    'eligible_offer_urls': [
-                        str(offer.url) for offer in by_id[item.product_id].offers
-                        if not evaluate_offer(request,by_id[item.product_id],offer)
-                    ],
-                    'offer_reasons': {
-                        str(offer.url):evaluate_offer(request,by_id[item.product_id],offer)
-                        for offer in by_id[item.product_id].offers[:30]
-                    },
-                },
-            }
+            _snapshot_product_entry(item, request, by_id)
             for item in rankings
         ],
         'next_page_available': page.next_page_token is not None and len(limited)<120,
@@ -206,12 +210,24 @@ async def analyze_request(
         db.commit()
         db.refresh(request)
 
-    if not current.get('results'):
-        explanation = (
-            'Channel3 returned no catalogue products for this request. '
-            'Try more specific product requirements or a different search. '
-            'No product prices, inventory or delivery claims have been invented.'
-        )
+    # A ranked product without any approved, confirmed in-stock offer is not
+    # a payable recommendation. Deterministic policy explains this for zero
+    # Gemini tokens, without hiding the catalogue's rejection evidence.
+    if not current.get('results') or not has_eligible_offer(
+        current['results'], request.currency,
+    ):
+        if not current.get('results'):
+            explanation = (
+                'Channel3 returned no catalogue products for this request. '
+                'Try more specific product requirements or a different search. '
+                'No product prices, inventory or delivery claims have been invented.'
+            )
+        else:
+            explanation = (
+                'No eligible, verified in-stock offer meets the current purchasing '
+                'rules. Review the saved rejection reasons or refine the search. '
+                'No purchase or payment is authorized by this assessment.'
+            )
         request.analysis_json = {
             **current, 'ai_explanation': explanation,
             'ai_source': 'catalogue_only', 'ai_usage': None,
@@ -227,9 +243,14 @@ async def analyze_request(
     if not settings.google_api_key:
         raise HTTPException(status_code=503, detail='Gemini is not configured. Catalogue results remain available.')
 
-    prompt = evidence_prompt(
-        request, current['results'], max_candidates=settings.ai_evidence_candidates,
-    )
+    try:
+        prompt = bounded_evidence_prompt(
+            request, current['results'],
+            max_candidates=settings.ai_evidence_candidates,
+            max_chars=getattr(settings, 'ai_max_prompt_chars', 3600),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail='The request evidence is too large to analyze') from exc
     try:
         reserve_ai_call(db, user.id, settings=settings)
     except AiQuotaExceeded as exc:
@@ -250,7 +271,7 @@ async def analyze_request(
     request.analysis_json = {
         **current, 'ai_explanation': result['text'],
         'ai_source': 'gemini', 'ai_model': result['model'],
-        'ai_usage': result['usage'],
+        'ai_usage': result['usage'], 'ai_prompt_characters': len(prompt),
     }
     db.add(request)
     db.commit()

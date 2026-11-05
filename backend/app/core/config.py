@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     ai_daily_user_runs: int = Field(default=12, ge=1, le=500)
     ai_daily_global_runs: int = Field(default=100, ge=1, le=5000)
     ai_evidence_candidates: int = Field(default=4, ge=1, le=8)
+    ai_max_prompt_chars: int = Field(default=3600, ge=1500, le=8000)
     channel3_api_key: str | None = None
     channel3_base_url: str | None = None
     paypal_client_id: str | None = None

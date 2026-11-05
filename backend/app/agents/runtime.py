@@ -81,6 +81,7 @@ def _usage_from_event(event):
         ('output_tokens', 'candidates_token_count'),
         ('total_tokens', 'total_token_count'),
         ('cached_input_tokens', 'cached_content_token_count'),
+        ('thinking_tokens', 'thoughts_token_count'),
     )
     return {name: getattr(metadata, attribute, None) for name, attribute in keys}
 
@@ -118,7 +119,7 @@ async def _run(user_id: str, prompt: str, *, agent, max_calls: int):
                     )
                 metrics = _usage_from_event(event)
                 if metrics:
-                    usage = metrics
+                    usage = {**(usage or {}), **{key: value for key, value in metrics.items() if value is not None}}
                 if event.is_final_response() and event.content and event.content.parts:
                     final_text = ''.join(
                         part.text or '' for part in event.content.parts
