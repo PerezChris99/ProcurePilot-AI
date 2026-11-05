@@ -8,7 +8,7 @@ ProcurePilot AI is an accountable purchasing decision system: real Channel3 cata
 
 ## Installation and local development
 
-**Automated offline acceptance:** After installing dependencies, run `\.\test-all.bat` in your VS Code terminal (first-time preparation: `\.\qa\setup.bat`). It runs the Python/frontend tests, SQLite migration checks and strict production build, and writes results to `qa/reports/summary.md`. It does not contact live providers or migrate your configured database. See [QA guide](qa/README.md).
+**Automated offline acceptance:** After installing dependencies, run `.\test-all.bat` in your VS Code terminal (first-time preparation: `.\qa\setup.bat`). It runs the Python/frontend tests, SQLite migration checks and strict production build, and writes results to `qa/reports/summary.md`. It does not contact live providers or migrate your configured database. See [QA guide](qa/README.md).
 
 **Local development requires Python 3.12+, Node.js 22.12+ (or 20.19+), npm and Git.** Mac/Linux first-run mode uses a local SQLite file so a PostgreSQL service is **not required just to open the app**. A real Channel3 search, Gemini analysis or PayPal Sandbox checkout requires the corresponding private provider credentials in the root `.env`; the app never invents provider results.
 
