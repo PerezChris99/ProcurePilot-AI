@@ -14,7 +14,7 @@ ProcurePilot AI is an accountable purchasing decision system: real Channel3 cata
 
 | Platform | Start | Verify |
 | --- | --- | --- |
-| Windows / VS Code | `.\\start.bat` | `.\\verify.bat` |
+| Windows / VS Code | `.\\start.bat` | `.\\test-all.bat` (full QA); `.\\verify.bat` (legacy) |
 | macOS / Linux | `./start.sh` | `./verify.sh` |
 
 ### macOS

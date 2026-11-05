@@ -34,6 +34,18 @@ qa/reports is gitignored. Do not commit reports or share them without checking f
 
 Any failing test/build returns a nonzero batch exit code. The production dist directory is deleted before building to avoid false positives from stale files.
 
+## Separate deploy-targeted production build
+
+For the later hosting phase, configure VITE_API_BASE_URL as an actual public
+HTTPS backend URL ending /api/v1, or /api/v1 behind a working same-origin
+HTTPS reverse proxy. Then run:
+
+    .\qa\build-production.bat
+
+This strict build refuses localhost or insecure endpoints. Unlike the offline
+QA build, it uses your deployment configuration. It produces frontend/dist
+but does not deploy or exercise paid or third-party integrations.
+
 ## Run selected gates
 
     .\test-all.bat --only backend
