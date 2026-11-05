@@ -295,6 +295,8 @@ This is not a PCI-certified payment processor. The app does not capture card num
 | `docs/provider-setup.md` | Gemini, Channel3, PayPal Sandbox credentials |
 | `docs/development.md` | Local startup and troubleshooting |
 | `docs/release-verification.md` | Outstanding acceptance gates |
+| `docs/INTEGRATION_ACCEPTANCE.md` | Six gate Gemini, Channel3, PayPal, webhook and local-build acceptance; read-only provider smoke instructions |
+| `docs/HACKATHON_TOP3_STRATEGY.md` | Researched official criteria, hard license blocker and ranked top-three feature proposals (deferred until 'suggest execute') |
 | `docs/scaling.md` | Capacity planning, database operations, load testing, incident recovery and security boundaries |
 
 ## Technology, licensing and disclosure
@@ -302,6 +304,8 @@ This is not a PCI-certified payment processor. The app does not capture card num
 **AI:** Gemini via Google ADK; catalogue discovery uses Channel3, and purchases/payments use deterministic FastAPI workflow controls and PayPal Orders v2 Sandbox. The recommendation is LLM-assisted; product prices, scores, stock evidence, payments and approvals are not fabricated by an LLM. Model costs are bounded but not guaranteed to be zero.
 
 **Workflow:** Implement changes on `perez`, document meaningful commits, open a PR, merge into `main` and synchronize both branches. No GitHub Actions workflows.
+
+**Critical eligibility warning:** The PayPal AI Hackathon official rules require a discoverable open-source repository license; the current license is proprietary and does not meet that requirement. Review [the proposed strategy](docs/HACKATHON_TOP3_STRATEGY.md) and make an explicit owner-approved license decision before submitting. Do not publish provider secrets.
 
 **Copyright and license:** © 2026 PerezChris99. **All rights reserved. Authorized use only.** See [LICENSE](LICENSE), which grants narrowly scoped project review access but no general right to reuse, modify, sell or redistribute the code. **This is a proprietary license, not an OSI-approved open-source license.** If the hackathon requires an open-source license, the owner must resolve that conflict before submission.
 

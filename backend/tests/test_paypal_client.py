@@ -135,3 +135,58 @@ def test_approval_url_only_allows_paypal_checkout_hosts():
     assert not PayPalClient.is_approval_url(
         "https://www.sandbox.paypal.com:8443/checkoutnow"
     )
+
+
+def test_sandbox_oauth_rejects_expired_credentials_without_disclosing_tokens():
+    from app.integrations.paypal.client import PayPalUnavailable
+    requests=[]
+    def handler(request):
+        requests.append(request)
+        assert request.url.host=='api-m.sandbox.paypal.com'
+        assert request.url.path=='/v1/oauth2/token'
+        return httpx.Response(401,json={'error':'invalid_client'})
+    client=PayPalClient(transport=httpx.MockTransport(handler))
+    client.client_id='invalid-id'
+    client.client_secret='invalid-secret'
+    with pytest.raises(PayPalUnavailable,match='PayPal authentication failed') as result:
+        asyncio.run(client._access_token())
+    assert len(requests)==1
+    assert 'invalid-secret' not in str(result.value)
+
+
+def test_create_order_sends_exact_approved_amount_and_sandbox_return_urls():
+    import json
+    payloads=[]
+    def handler(request):
+        if request.url.path.endswith('/v1/oauth2/token'):
+            return httpx.Response(200,json={'access_token':'test-sandbox-token'})
+        payloads.append(json.loads(request.read()))
+        assert request.url.host=='api-m.sandbox.paypal.com'
+        assert request.url.path=='/v2/checkout/orders'
+        assert request.headers['PayPal-Request-Id']=='po-unique-key'
+        return httpx.Response(201,json={'id':'ORDER-123','status':'CREATED'})
+    client=PayPalClient(transport=httpx.MockTransport(handler))
+    client.client_id='sandbox-merchant'
+    client.client_secret='sandbox-secret'
+    result=asyncio.run(client.create_order(
+        po_id='purchase-order-123',
+        po_number='PP-123',
+        amount='240.00',
+        currency='USD',
+        description='27 inch office monitor',
+        quantity=2,
+        unit_price='120.00',
+        idempotency_key='po-unique-key',
+        return_url='http://localhost:5173/orders?paypal=return',
+        cancel_url='http://localhost:5173/orders?paypal=cancel',
+    ))
+    assert result['id']=='ORDER-123'
+    p=payloads[0]
+    assert p['intent']=='CAPTURE'
+    assert p['purchase_units'][0]['amount']['value']=='240.00'
+    assert p['purchase_units'][0]['amount']['currency_code']=='USD'
+    assert p['purchase_units'][0]['custom_id']=='purchase-order-123'
+    assert p['purchase_units'][0]['items'][0]['quantity']=='2'
+    assert p['purchase_units'][0]['items'][0]['unit_amount']['value']=='120.00'
+    assert p['payment_source']['paypal']['experience_context']['shipping_preference']=='NO_SHIPPING'
+    assert p['payment_source']['paypal']['experience_context']['return_url'].startswith('http://localhost:5173/')
