@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     google_api_key: str | None = None
     ai_model: str | None = None
     ai_max_output_tokens: int = Field(default=900, ge=256, le=2048)
-    ai_timeout_seconds: int = Field(default=35, ge=10, le=90)
+    ai_timeout_seconds: int = Field(default=60, ge=10, le=90)
     ai_daily_user_runs: int = Field(default=12, ge=1, le=500)
     ai_daily_global_runs: int = Field(default=100, ge=1, le=5000)
     ai_evidence_candidates: int = Field(default=4, ge=1, le=8)
