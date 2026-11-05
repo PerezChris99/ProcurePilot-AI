@@ -200,3 +200,111 @@ def test_approvals_query_only_returns_owners_pending_orders(client, monkeypatch)
     assert client.get('/api/v1/purchase-orders?status=unknown', headers=headers).status_code == 422
     assert client.post(f"/api/v1/purchase-orders/{order['id']}/approve", headers=headers, json={'comment':'Reviewed'}).status_code == 200
     assert client.get('/api/v1/purchase-orders?status=pending_approval', headers=headers).json() == []
+
+
+def test_passport_freezes_evidence_and_only_owner_can_export(client,monkeypatch):
+    owner,order=make_order(client,monkeypatch,email='passport-tested@example.com')
+    po=order['id']
+    payload=client.get(f'/api/v1/purchase-orders/{po}/passport',headers=owner)
+    assert payload.status_code==200
+    passport=payload.json()
+    assert passport['evidence']['source']=='Channel3'
+    assert passport['evidence']['selected']['product_id']=='monitor-real-1'
+    assert passport['comparison']['least_cost_eligible_total']=='240.00'
+    assert passport['comparison']['selected_total']=='240.00'
+    assert passport['payment_proof']['retailer_settlement'] is False
+    assert len(passport['snapshot_sha256'])==64
+    pdf=client.get(f'/api/v1/purchase-orders/{po}/passport.pdf',headers=owner)
+    assert pdf.status_code==200 and pdf.content.startswith(b'%PDF-')
+    other=register(client,'other-passport@example.com')
+    assert client.get(f'/api/v1/purchase-orders/{po}/passport',headers=other).status_code==404
+    assert client.get(f'/api/v1/purchase-orders/{po}/passport.pdf',headers=other).status_code==404
+
+
+def test_hard_merchant_and_specification_requirements_are_enforced(client,monkeypatch):
+    owner=register(client,'policy-tested@example.com')
+    req=client.post('/api/v1/procurement-requests',headers=owner,json={
+        'request_text':'Two 27-inch monitors for the office','quantity':2,
+        'currency':'USD','budget':'500.00',
+        'policy_json':{'mandatory_attributes':{'screen_size':'27 inch'},
+                       'allowed_merchants':['approved.example'],'max_unit_price':'135.00'},
+    })
+    assert req.status_code==201
+    rid=req.json()['id']
+    async def search(self,query,*,limit=20,filters=None,user_id=None,page_token=None):
+        return Channel3SearchResponse(products=[
+            Channel3Product(id='wrong-size',title='Wrong size',
+                structured_attributes={'screen_size':['24 inch']},
+                offers=[Channel3Offer(url='https://approved.example/wrong',
+                    domain='approved.example',price=Channel3Price(amount=Decimal('100.00'),currency='USD'),
+                    availability='InStock')]),
+            Channel3Product(id='valid',title='Valid monitor',
+                structured_attributes={'screen_size':['27 inch']},
+                offers=[
+                    Channel3Offer(url='https://wrong.example/other',
+                        domain='wrong.example',price=Channel3Price(amount=Decimal('110.00'),currency='USD'),
+                        availability='InStock'),
+                    Channel3Offer(url='https://approved.example/valid',
+                        domain='approved.example',price=Channel3Price(amount=Decimal('120.00'),currency='USD'),
+                        availability='InStock'),
+                ]),
+        ])
+    monkeypatch.setattr(Channel3Client,'search_products',search)
+    discovered=client.post(f'/api/v1/procurement-requests/{rid}/discover',headers=owner)
+    assert discovered.status_code==200
+    items={x['product']['id']:x for x in discovered.json()['results']}
+    assert items['wrong-size']['policy']['eligible_offer_urls']==[]
+    assert items['valid']['policy']['eligible_offer_urls']==['https://approved.example/valid']
+    for product_id,url in [('wrong-size','https://approved.example/wrong'),
+                           ('valid','https://wrong.example/other')]:
+        denied=client.post(f'/api/v1/procurement-requests/{rid}/purchase-orders',
+            headers=owner,json={'product_id':product_id,'offer_url':url})
+        assert denied.status_code==422
+    accepted=client.post(f'/api/v1/procurement-requests/{rid}/purchase-orders',
+        headers=owner,json={'product_id':'valid','offer_url':'https://approved.example/valid'})
+    assert accepted.status_code==201
+    assert accepted.json()['total_amount']=='240.00'
+
+
+def test_delegated_approver_can_only_decide_assigned_order_not_pay(client,monkeypatch):
+    owner=register(client,'delegator@example.com')
+    reviewer=register(client,'delegate@example.com')
+    outsider=register(client,'outsider@example.com')
+    req=client.post('/api/v1/procurement-requests',headers=owner,json={
+        'request_text':'Two office monitors for independent review',
+        'quantity':2,'currency':'USD',
+        'policy_json':{'approver_email':'delegate@example.com'},
+    })
+    assert req.status_code==201
+    rid=req.json()['id']
+    async def search(self,query,*,limit=20,filters=None,user_id=None,page_token=None):
+        return Channel3SearchResponse(products=[Channel3Product(id='delegate-product',
+            title='Office monitor',offers=[Channel3Offer(
+                url='https://retailer.example/monitor',domain='retailer.example',
+                price=Channel3Price(amount=Decimal('120.00'),currency='USD'),
+                availability='InStock')])])
+    monkeypatch.setattr(Channel3Client,'search_products',search)
+    assert client.post(f'/api/v1/procurement-requests/{rid}/discover',headers=owner).status_code==200
+    result=client.post(f'/api/v1/procurement-requests/{rid}/purchase-orders',headers=owner,json={
+        'product_id':'delegate-product','offer_url':'https://retailer.example/monitor',
+    })
+    assert result.status_code==201
+    order=result.json()
+    assert order['assigned_approver_id'] is not None
+    po=order['id']
+    assert client.post(f'/api/v1/purchase-orders/{po}/submit',headers=owner).status_code==200
+    owner_pending=client.get('/api/v1/purchase-orders?status=pending_approval',headers=owner).json()
+    reviewer_pending=client.get('/api/v1/purchase-orders?status=pending_approval',headers=reviewer).json()
+    assert owner_pending[0]['can_approve'] is False
+    assert reviewer_pending[0]['can_approve'] is True
+    assert client.get('/api/v1/purchase-orders',headers=reviewer).json()==[]
+    assert client.get(f'/api/v1/purchase-orders/{po}',headers=reviewer).status_code==404
+    for forbidden in (owner,outsider):
+        assert client.post(f'/api/v1/purchase-orders/{po}/approve',
+            headers=forbidden,json={}).status_code==404
+    approved=client.post(f'/api/v1/purchase-orders/{po}/approve',headers=reviewer,json={})
+    assert approved.status_code==200
+    assert approved.json()['approved_by']==order['assigned_approver_id']
+    assert client.post(f'/api/v1/purchase-orders/{po}/payments/paypal/create',
+        headers=reviewer).status_code==404
+    assert client.get('/api/v1/purchase-orders?status=pending_approval',headers=reviewer).json()==[]
