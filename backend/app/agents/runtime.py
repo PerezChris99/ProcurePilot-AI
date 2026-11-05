@@ -1,5 +1,6 @@
 """Bounded ADK execution for predictable token use and safe operation."""
 import asyncio
+import time
 
 from google.adk.agents.run_config import RunConfig
 from google.adk.runners import Runner
@@ -15,10 +16,15 @@ class AgentConfigurationError(RuntimeError):
 
 
 class AgentExecutionError(RuntimeError):
-    def __init__(self, message, *, category='provider_error', http_status=None):
+    def __init__(self, message, *, category='provider_error', http_status=None,
+                 origin=None, elapsed_seconds=None, timeout_seconds=None):
         super().__init__(message)
         self.category = category
         self.http_status = http_status
+        # Diagnostic metadata only; never pass raw provider exception messages.
+        self.origin = origin
+        self.elapsed_seconds = elapsed_seconds
+        self.timeout_seconds = timeout_seconds
 
 
 def _classify_provider_failure(code=None, message=None):
@@ -86,13 +92,21 @@ def _usage_from_event(event):
     return {name: getattr(metadata, attribute, None) for name, attribute in keys}
 
 
-async def _run(user_id: str, prompt: str, *, agent, max_calls: int):
+async def _run(user_id: str, prompt: str, *, agent, max_calls: int, timeout_seconds=None):
     settings = get_settings()
     if not settings.google_api_key:
         raise AgentConfigurationError('Gemini API credentials are not configured')
     if not prompt.strip() or len(prompt) > 10_000:
         raise AgentExecutionError('The evidence packet is invalid or exceeds the allowed size')
+    limit = settings.ai_timeout_seconds if timeout_seconds is None else timeout_seconds
+    # Accept a bounded diagnostic override, without ever disabling the wall clock limit.
+    if type(limit) is not int or not 10 <= limit <= 90:
+        raise AgentConfigurationError('AI timeout must be an integer between 10 and 90 seconds')
     session_service = InMemorySessionService()
+    started = time.monotonic()
+    # The expiry flag distinguishes our deadline from a provider TimeoutError.
+    # Both paths still use the genuine Google ADK Runner and the same call cap.
+    deadline = asyncio.timeout(limit)
     try:
         session = await session_service.create_session(
             app_name='procurepilot', user_id=user_id
@@ -101,7 +115,7 @@ async def _run(user_id: str, prompt: str, *, agent, max_calls: int):
         message = types.Content(role='user', parts=[types.Part(text=prompt)])
         final_text = None
         usage = None
-        async with asyncio.timeout(settings.ai_timeout_seconds):
+        async with deadline:
             async for event in runner.run_async(
                 user_id=user_id, session_id=session.id, new_message=message,
                 run_config=RunConfig(max_llm_calls=max_calls),
@@ -116,6 +130,9 @@ async def _run(user_id: str, prompt: str, *, agent, max_calls: int):
                     raise AgentExecutionError(
                         'Gemini ADK reported an unsuccessful model call',
                         category=category,
+                        origin='adk_error_event',
+                        elapsed_seconds=round(time.monotonic() - started, 2),
+                        timeout_seconds=limit if category == 'timeout' else None,
                     )
                 metrics = _usage_from_event(event)
                 if metrics:
@@ -135,20 +152,31 @@ async def _run(user_id: str, prompt: str, *, agent, max_calls: int):
     except (AgentConfigurationError, AgentExecutionError):
         raise
     except TimeoutError as exc:
+        # TimeoutError can originate in the provider client, *or* from our
+        # asyncio.timeout context. The old code collapsed them together.
         raise AgentExecutionError(
-            'The AI provider timed out; try again later', category='timeout'
+            'The AI provider timed out; try again later',
+            category='timeout',
+            origin='local_deadline' if deadline.expired() else 'provider_exception',
+            elapsed_seconds=round(time.monotonic() - started, 2),
+            timeout_seconds=limit if deadline.expired() else None,
         ) from exc
     except Exception as exc:
         category, status = _exception_details(exc)
         raise AgentExecutionError(
             'The AI provider could not complete this assessment',
             category=category, http_status=status,
+            origin='provider_exception',
+            elapsed_seconds=round(time.monotonic() - started, 2),
         ) from exc
 
 
-async def run_evidence_analysis(user_id: str, prompt: str) -> dict:
-    """The normal user workflow makes at most ONE LLM call, with zero tool calls."""
-    return await _run(user_id, prompt, agent=analysis_agent, max_calls=1)
+async def run_evidence_analysis(user_id: str, prompt: str, *, timeout_seconds=None) -> dict:
+    """One ADK model call, zero tools; optional bounded timeout for smoke probes."""
+    return await _run(
+        user_id, prompt, agent=analysis_agent, max_calls=1,
+        timeout_seconds=timeout_seconds,
+    )
 
 
 async def run_procurement_agent(user_id: str, prompt: str) -> str:
