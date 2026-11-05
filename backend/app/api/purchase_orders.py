@@ -4,7 +4,7 @@ from datetime import datetime,timezone
 from decimal import Decimal,InvalidOperation
 from fastapi import APIRouter,Depends,HTTPException,Query,status
 from fastapi.responses import Response
-from sqlalchemy import select,func
+from sqlalchemy import select,func,or_,and_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.core.config import get_settings
@@ -26,6 +26,21 @@ def _owned_order(order_id,user,db):
     if order is None: raise HTTPException(status_code=404,detail='Purchase order not found')
     return order
 
+def _approval_order(order_id,user,db):
+    """Only an explicitly appointed reviewer, or owner if unassigned, can decide."""
+    order=db.scalar(select(PurchaseOrder).where(
+        PurchaseOrder.id==order_id,
+        or_(
+            PurchaseOrder.assigned_approver_id==user.id,
+            and_(PurchaseOrder.assigned_approver_id.is_(None),
+                 PurchaseOrder.user_id==user.id),
+        ),
+    ))
+    if order is None:
+        raise HTTPException(status_code=404,detail='Assigned approval not found')
+    return order
+
+
 def _audit(db,user_id,action,*,order_id=None,request_id=None,details=None):
     db.add(AuditEvent(user_id=user_id,purchase_order_id=order_id,request_id=request_id,action=action,details=details or {}))
 
@@ -38,7 +53,7 @@ def _serialize(order,db):
     approvals=db.scalars(select(Approval).where(Approval.purchase_order_id==order.id).order_by(Approval.created_at)).all()
     payment=db.scalar(select(Payment).where(Payment.purchase_order_id==order.id))
     events=db.scalars(select(AuditEvent).where(AuditEvent.purchase_order_id==order.id).order_by(AuditEvent.created_at)).all()
-    return {'id':order.id,'po_number':order.po_number,'request_id':order.request_id,'status':order.status,'currency':order.currency,'subtotal':order.subtotal,'total_amount':order.total_amount,'submitted_at':order.submitted_at,'approved_by':order.approved_by,'approved_at':order.approved_at,'rejection_reason':order.rejection_reason,'created_at':order.created_at,'updated_at':order.updated_at,'items':items,'approvals':approvals,'payment':_payment_data(payment),'audit_events':events,'offer_verification':order.offer_verification_json or None}
+    return {'id':order.id,'po_number':order.po_number,'request_id':order.request_id,'assigned_approver_id':order.assigned_approver_id,'status':order.status,'currency':order.currency,'subtotal':order.subtotal,'total_amount':order.total_amount,'submitted_at':order.submitted_at,'approved_by':order.approved_by,'approved_at':order.approved_at,'rejection_reason':order.rejection_reason,'created_at':order.created_at,'updated_at':order.updated_at,'items':items,'approvals':approvals,'payment':_payment_data(payment),'audit_events':events,'offer_verification':order.offer_verification_json or None}
 
 def _serialize_many(orders, db):
     """Load all order details in four bounded queries, not four per order."""
@@ -76,6 +91,7 @@ def _serialize_many(orders, db):
     return [
         {
             'id': order.id, 'po_number': order.po_number, 'request_id': order.request_id,
+            'assigned_approver_id':order.assigned_approver_id,
             'status': order.status, 'currency': order.currency,
             'subtotal': order.subtotal, 'total_amount': order.total_amount,
             'submitted_at': order.submitted_at, 'approved_by': order.approved_by,
@@ -134,9 +150,18 @@ def create_purchase_order(request_id:str,payload:PurchaseOrderCreate,db:Session=
     if total>Decimal('999999999999.99'):
         raise HTTPException(status_code=422,detail='Order amount exceeds the supported currency range.')
     if request.budget is not None and total>request.budget: raise HTTPException(status_code=422,detail='The selected offer exceeds the procurement budget.')
+    approver_email=(request.policy_json or {}).get('approver_email')
+    approver_id=None
+    if approver_email:
+        approver=db.scalar(select(User).where(User.email==approver_email,User.is_active.is_(True)))
+        if approver is None:
+            raise HTTPException(status_code=422,detail='Independent approver must have a registered active account before ordering.')
+        if approver.id==user.id:
+            raise HTTPException(status_code=422,detail='For independent approval, select another registered account.')
+        approver_id=approver.id
     evidence_snapshot=snapshot_for_order(request,payload.product_id,payload.offer_url)
     po_id=str(uuid.uuid4()); now=datetime.now(timezone.utc)
-    order=PurchaseOrder(id=po_id,po_number='PP-'+now.strftime('%Y%m%d')+'-'+po_id[:8].upper(),user_id=user.id,request_id=request.id,status='draft',currency=request.currency,subtotal=total,total_amount=total,evidence_json=evidence_snapshot)
+    order=PurchaseOrder(id=po_id,po_number='PP-'+now.strftime('%Y%m%d')+'-'+po_id[:8].upper(),user_id=user.id,assigned_approver_id=approver_id,request_id=request.id,status='draft',currency=request.currency,subtotal=total,total_amount=total,evidence_json=evidence_snapshot)
     po_item=PurchaseOrderItem(purchase_order_id=po_id,product_id=product['id'],product_title=product.get('title') or 'Catalogue product',merchant=offer.get('domain') or 'Retailer not specified',offer_url=payload.offer_url,quantity=request.quantity,unit_price=unit_price,line_total=total,currency=request.currency,product_snapshot=product)
     db.add_all([order,po_item])
     _audit(db,user.id,'purchase_order.created',order_id=po_id,request_id=request.id,details={'po_number':order.po_number,'amount':str(total),'currency':request.currency,'channel3_product_id':product['id']})
@@ -154,13 +179,25 @@ def list_purchase_orders(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    query = select(PurchaseOrder).where(PurchaseOrder.user_id == user.id)
+    if status_filter=='pending_approval':
+        # Delegates can inspect only POs awaiting their own decision, not owner
+        # payments or unrelated history; owners still view their own orders.
+        owner_or_delegate=or_(
+            PurchaseOrder.user_id==user.id,
+            PurchaseOrder.assigned_approver_id==user.id,
+        )
+        query=select(PurchaseOrder).where(owner_or_delegate)
+    else:
+        query=select(PurchaseOrder).where(PurchaseOrder.user_id==user.id)
     if status_filter:
         query = query.where(PurchaseOrder.status == status_filter)
     orders = db.scalars(
         query.order_by(PurchaseOrder.created_at.desc()).limit(limit)
     ).all()
-    return _serialize_many(orders,db)
+    records=_serialize_many(orders,db)
+    for order,record in zip(orders,records):
+        record['can_approve']=(order.assigned_approver_id or order.user_id)==user.id
+    return records
 
 @router.get('/purchase-orders/{order_id}',response_model=PurchaseOrderResponse)
 def get_purchase_order(order_id:str,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
@@ -177,24 +214,24 @@ def submit_purchase_order(order_id:str,db:Session=Depends(get_db),user:User=Depe
 
 @router.post('/purchase-orders/{order_id}/approve',response_model=PurchaseOrderResponse)
 def approve_purchase_order(order_id:str,payload:ApprovalAction,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
-    order=_owned_order(order_id,user,db)
+    order=_approval_order(order_id,user,db)
     if order.status!='pending_approval': raise HTTPException(status_code=409,detail='Only purchase orders awaiting approval can be approved.')
     request=db.get(ProcurementRequest,order.request_id)
     if request and policy_expired(request):
         raise HTTPException(status_code=409,detail='Buyer mandate expired; create a new procurement request.')
     now=datetime.now(timezone.utc); order.status='approved'; order.approved_by=user.id; order.approved_at=now
     db.add(Approval(purchase_order_id=order.id,actor_user_id=user.id,decision='approved',comment=payload.comment))
-    _audit(db,user.id,'purchase_order.approved',order_id=order.id,request_id=order.request_id,details={'amount':str(order.total_amount),'currency':order.currency})
+    _audit(db,order.user_id,'purchase_order.approved',order_id=order.id,request_id=order.request_id,details={'amount':str(order.total_amount),'currency':order.currency,'actor_user_id':user.id})
     db.commit(); db.refresh(order)
     return _serialize(order,db)
 
 @router.post('/purchase-orders/{order_id}/reject',response_model=PurchaseOrderResponse)
 def reject_purchase_order(order_id:str,payload:ApprovalAction,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
-    order=_owned_order(order_id,user,db)
+    order=_approval_order(order_id,user,db)
     if order.status!='pending_approval': raise HTTPException(status_code=409,detail='Only purchase orders awaiting approval can be rejected.')
     now=datetime.now(timezone.utc); order.status='rejected'; order.rejected_by=user.id; order.rejected_at=now; order.rejection_reason=payload.comment or 'Rejected by approver'
     db.add(Approval(purchase_order_id=order.id,actor_user_id=user.id,decision='rejected',comment=payload.comment))
-    _audit(db,user.id,'purchase_order.rejected',order_id=order.id,request_id=order.request_id,details={'reason':order.rejection_reason})
+    _audit(db,order.user_id,'purchase_order.rejected',order_id=order.id,request_id=order.request_id,details={'reason':order.rejection_reason,'actor_user_id':user.id})
     db.commit(); db.refresh(order)
     return _serialize(order,db)
 
