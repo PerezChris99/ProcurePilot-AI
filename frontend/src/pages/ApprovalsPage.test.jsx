@@ -42,6 +42,16 @@ describe('ApprovalsPage',()=>{
   it('states the demo self-approval boundary explicitly',async()=>{
     apiRequest.mockResolvedValue([]);
     renderPage();
-    expect(await screen.findByText(/independent approver roles are not implemented/i)).toBeInTheDocument();
+    expect(await screen.findByText(/can assign another registered user/i)).toBeInTheDocument();
+  });
+});
+
+describe('Independent approver access',()=>{
+  beforeEach(()=>apiRequest.mockReset());
+  it('does not permit the requester to approve a delegated order',async()=>{
+    apiRequest.mockResolvedValue([{...order,assigned_approver_id:'other-account',can_approve:false}]);
+    renderPage();
+    expect(await screen.findByText('Awaiting the assigned independent reviewer.')).toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:/approve purchase/i})).not.toBeInTheDocument();
   });
 });

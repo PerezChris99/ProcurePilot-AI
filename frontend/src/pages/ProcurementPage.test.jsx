@@ -92,3 +92,30 @@ describe('Buyer mandate entry',()=>{
     expect(apiRequest).not.toHaveBeenCalled();
   });
 });
+
+describe('Approver assignment input',()=>{
+  beforeEach(()=>apiRequest.mockReset());
+  it('adds an independent reviewer email only when explicitly selected',async()=>{
+    apiRequest.mockResolvedValue({id:'with-reviewer'});
+    renderPage();
+    fireEvent.change(screen.getByLabelText(/what are you looking to purchase/i),{
+      target:{value:'Office monitors for our remote team'},
+    });
+    fireEvent.click(screen.getByText('Buyer mandate'));
+    fireEvent.change(screen.getByLabelText('Independent approver email'),{
+      target:{value:'Reviewer@Example.Com'},
+    });
+    fireEvent.click(screen.getByRole('button',{name:/save and discover products/i}));
+    await waitFor(()=>expect(apiRequest).toHaveBeenCalledWith('/procurement-requests',{
+      method:'POST',
+      body:JSON.stringify({
+        request_text:'Office monitors for our remote team',
+        quantity:1,budget:null,currency:'USD',
+        policy_json:{
+          mandatory_attributes:{},preferred_attributes:{},
+          allowed_merchants:[],approver_email:'reviewer@example.com',
+        },
+      }),
+    }));
+  });
+});

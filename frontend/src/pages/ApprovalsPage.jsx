@@ -36,7 +36,7 @@ export default function ApprovalsPage(){
     </div>
     <div className="inline-notice approval-notice" role="note">
       <ShieldCheck size={17}/>
-      <span><strong>Human-controlled approval.</strong> In this personal-workspace demo, the signed-in owner can approve their own order. Independent approver roles are not implemented.</span>
+      <span><strong>Human-controlled approval.</strong> A request can assign another registered user as its independent reviewer. Unassigned personal requests allow owner self-approval.</span>
     </div>
     {decide.isError&&<p className="form-error" role="alert">{decide.error.message}</p>}
     {decide.isSuccess&&<p className="inline-notice" role="status">Decision recorded and audit trail updated. <Link to="/orders" className="text-link">Continue to purchase orders</Link> to start Sandbox checkout after approval.</p>}
@@ -62,8 +62,9 @@ export default function ApprovalsPage(){
           {order.items?.[0]?.offer_url&&<a href={order.items[0].offer_url} target="_blank" rel="noopener noreferrer" className="text-link">Review retailer offer <ExternalLink size={14}/></a>}
         </div>
         <div className="order-actions">
+          {order.can_approve===false?<span className="discovery-disclaimer">Awaiting the assigned independent reviewer.</span>:<>
           <button className="button button-primary" type="button" disabled={decide.isPending} onClick={()=>decide.mutate({id:order.id,decision:'approve'})}><Check size={16}/> Approve purchase</button>
-          <button className="button button-danger" type="button" disabled={decide.isPending} onClick={()=>decide.mutate({id:order.id,decision:'reject'})}><X size={16}/> Reject</button>
+          <button className="button button-danger" type="button" disabled={decide.isPending} onClick={()=>decide.mutate({id:order.id,decision:'reject'})}><X size={16}/> Reject</button></>}
         </div>
       </article>)}</div>:
       <section className="panel orders-empty">

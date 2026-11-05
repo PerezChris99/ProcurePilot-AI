@@ -37,6 +37,7 @@ export default function ProcurementPage(){
   const [merchants,setMerchants]=useState('');
   const [unitPriceCap,setUnitPriceCap]=useState('');
   const [expiresAt,setExpiresAt]=useState('');
+  const [approverEmail,setApproverEmail]=useState('');
   const [validation,setValidation]=useState('');
 
   const createRequest=useMutation({
@@ -61,6 +62,7 @@ export default function ProcurementPage(){
         allowed_merchants:domains,
       };
       if(unitPriceCap)policy.max_unit_price=unitPriceCap;
+      if(approverEmail.trim())policy.approver_email=approverEmail.trim().toLowerCase();
       if(expiresAt){
         const expiry=new Date(expiresAt);
         if(Number.isNaN(expiry.getTime())||expiry<=new Date()){
@@ -142,6 +144,13 @@ export default function ProcurementPage(){
             <label className="field-label" htmlFor="unit-cap">Maximum price per item</label>
             <input id="unit-cap" type="number" min="0.01" step="0.01" value={unitPriceCap}
               onChange={event=>setUnitPriceCap(event.target.value)} placeholder="200"/>
+          </div>
+          <div>
+            <label className="field-label" htmlFor="approver-email">Independent approver email</label>
+            <input id="approver-email" type="email" value={approverEmail}
+              onChange={event=>setApproverEmail(event.target.value)}
+              placeholder="reviewer@yourcompany.com"/>
+            <small>Optional. This person must have an existing ProcurePilot account and cannot be the requester. Only they can approve this order.</small>
           </div>
           <div>
             <label className="field-label" htmlFor="expires">Mandate expires</label>
