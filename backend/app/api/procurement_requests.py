@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.agents import runtime
 from app.agents.budget import AiQuotaExceeded, reserve_ai_call
-from app.agents.evidence import evidence_prompt, has_eligible_offer
+from app.agents.evidence import bounded_evidence_prompt, has_eligible_offer
 from app.agents.runtime import AgentConfigurationError, AgentExecutionError
 from app.core.config import get_settings
 from app.core.database import get_db
@@ -239,9 +239,14 @@ async def analyze_request(
     if not settings.google_api_key:
         raise HTTPException(status_code=503, detail='Gemini is not configured. Catalogue results remain available.')
 
-    prompt = evidence_prompt(
-        request, current['results'], max_candidates=settings.ai_evidence_candidates,
-    )
+    try:
+        prompt = bounded_evidence_prompt(
+            request, current['results'],
+            max_candidates=settings.ai_evidence_candidates,
+            max_chars=getattr(settings, 'ai_max_prompt_chars', 3600),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail='The request evidence is too large to analyze') from exc
     try:
         reserve_ai_call(db, user.id, settings=settings)
     except AiQuotaExceeded as exc:
@@ -262,7 +267,7 @@ async def analyze_request(
     request.analysis_json = {
         **current, 'ai_explanation': result['text'],
         'ai_source': 'gemini', 'ai_model': result['model'],
-        'ai_usage': result['usage'],
+        'ai_usage': result['usage'], 'ai_prompt_characters': len(prompt),
     }
     db.add(request)
     db.commit()
