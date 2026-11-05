@@ -297,6 +297,7 @@ This is not a PCI-certified payment processor. The app does not capture card num
 | `docs/release-verification.md` | Outstanding acceptance gates |
 | `docs/INTEGRATION_ACCEPTANCE.md` | Six gate Gemini, Channel3, PayPal, webhook and local-build acceptance; read-only provider smoke instructions |
 | `docs/HACKATHON_TOP3_STRATEGY.md` | Official judging research, accountable purchasing differentiator and updated delivery scorecard |
+| `docs/HACKATHON_SUBMISSION_KIT.md` | Judge-facing project description, 2:40 video storyboard, scoring proof map and final submission checklist |
 | `docs/scaling.md` | Capacity planning, database operations, load testing, incident recovery and security boundaries |
 
 ## Accountable purchasing decision system
