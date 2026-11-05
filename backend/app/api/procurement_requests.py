@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.agents import runtime
 from app.agents.budget import AiQuotaExceeded, reserve_ai_call
-from app.agents.evidence import evidence_prompt
+from app.agents.evidence import evidence_prompt, has_eligible_offer
 from app.agents.runtime import AgentConfigurationError, AgentExecutionError
 from app.core.config import get_settings
 from app.core.database import get_db
@@ -206,12 +206,24 @@ async def analyze_request(
         db.commit()
         db.refresh(request)
 
-    if not current.get('results'):
-        explanation = (
-            'Channel3 returned no catalogue products for this request. '
-            'Try more specific product requirements or a different search. '
-            'No product prices, inventory or delivery claims have been invented.'
-        )
+    # A ranked product without any approved, confirmed in-stock offer is not
+    # a payable recommendation. Deterministic policy explains this for zero
+    # Gemini tokens, without hiding the catalogue's rejection evidence.
+    if not current.get('results') or not has_eligible_offer(
+        current['results'], request.currency,
+    ):
+        if not current.get('results'):
+            explanation = (
+                'Channel3 returned no catalogue products for this request. '
+                'Try more specific product requirements or a different search. '
+                'No product prices, inventory or delivery claims have been invented.'
+            )
+        else:
+            explanation = (
+                'No eligible, verified in-stock offer meets the current purchasing '
+                'rules. Review the saved rejection reasons or refine the search. '
+                'No purchase or payment is authorized by this assessment.'
+            )
         request.analysis_json = {
             **current, 'ai_explanation': explanation,
             'ai_source': 'catalogue_only', 'ai_usage': None,
