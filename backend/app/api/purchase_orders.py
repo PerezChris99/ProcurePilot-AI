@@ -11,7 +11,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.integrations.paypal.client import PayPalClient,PayPalConfigurationError,PayPalUnavailable
 from app.integrations.channel3.schemas import Channel3Product,Channel3Offer
-from app.procurement.policy import evaluate_offer, policy_expired
+from app.procurement.policy import evaluate_offer, policy_expired, snapshot_recent
 from app.procurement.passport import build_passport,snapshot_for_order
 from app.procurement.passport_pdf import passport_pdf_bytes
 from app.models import Approval,AuditEvent,Payment,ProcurementRequest,PurchaseOrder,PurchaseOrderItem,User
@@ -103,6 +103,8 @@ def create_purchase_order(request_id:str,payload:PurchaseOrderCreate,db:Session=
     request=db.scalar(select(ProcurementRequest).where(ProcurementRequest.id==request_id,ProcurementRequest.user_id==user.id))
     if request is None: raise HTTPException(status_code=404,detail='Procurement request not found')
     snapshot=request.analysis_json or {}
+    if not snapshot_recent(snapshot):
+        raise HTTPException(status_code=409,detail='Channel3 evidence is missing or older than 24 hours. Refresh product discovery before creating a purchase order.')
     matches=[entry for entry in snapshot.get('results',[]) if entry.get('product',{}).get('id')==payload.product_id]
     if not matches: raise HTTPException(status_code=409,detail='Product is not in this request’s saved Channel3 results. Refresh discovery before creating an order.')
     result=matches[0]; ranking=result.get('ranking') or {}; product=result.get('product') or {}
