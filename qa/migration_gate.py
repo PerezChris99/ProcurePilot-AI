@@ -36,6 +36,14 @@ def verify(database):
             assert expected <= columns, "{} missing {}".format(table, expected - columns)
         indexes = connection.execute("PRAGMA index_list('purchase_orders')").fetchall()
         assert any(row[1] == "ix_purchase_orders_assigned_approver_id" for row in indexes)
+        constraints = connection.execute(
+            "PRAGMA foreign_key_list('purchase_orders')"
+        ).fetchall()
+        assert any(
+            fk[2] == "users" and fk[3] == "assigned_approver_id"
+            and fk[4] == "id" and fk[6].upper() == "SET NULL"
+            for fk in constraints
+        ), "Delegated approver FK must reference users.id with SET NULL"
         assert not connection.execute("PRAGMA foreign_key_check").fetchall()
     print("[PASS] Version, tables, index and foreign keys", flush=True)
 

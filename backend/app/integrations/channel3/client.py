@@ -17,7 +17,13 @@ class Channel3Client:
     def __init__(self,api_key: str | None=None,base_url: str | None=None,transport=None):
         settings=get_settings()
         self.api_key=api_key if api_key is not None else settings.channel3_api_key
-        self.base_url=(base_url or settings.channel3_base_url or DEFAULT_CHANNEL3_BASE_URL).rstrip('/')+'/'
+        configured=(base_url or settings.channel3_base_url or DEFAULT_CHANNEL3_BASE_URL).rstrip('/')
+        # Support both the documented API root and the full search endpoint.
+        # Some .env files set .../v1/search; appending 'search' a second time
+        # otherwise produces .../v1/search/search, breaking real discovery.
+        if configured.endswith('/v1/search'):
+            configured=configured[:-len('/search')]
+        self.base_url=configured.rstrip('/')+'/'
         self.transport=transport
 
     async def search_products(self,query: str,*,limit: int=20,filters: dict | None=None,user_id: str | None=None,page_token: str | None=None) -> Channel3SearchResponse:

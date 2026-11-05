@@ -19,7 +19,7 @@ describe('Public landing and protected workspace routing',()=>{
 
   it('shows the landing page at / for unauthenticated judges',()=>{
     renderAt('/');
-    expect(screen.getByRole('heading',{level:1})).toHaveTextContent(/purchase with.*clarity/i);
+    expect(screen.getByRole('heading',{level:1})).toHaveTextContent(/every purchase, accountable/i);
     expect(screen.getByRole('link',{name:/get started/i})).toHaveAttribute('href','/register');
   });
 

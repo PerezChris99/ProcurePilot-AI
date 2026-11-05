@@ -20,7 +20,7 @@ def test_search_sends_pagination_token():
     def handler(request):
         assert request.read()==b'{"query":"monitor","limit":20,"page_token":"next-token"}'
         return httpx.Response(200,json={'products':[],'next_page_token':None})
-    client=Channel3Client(api_key='test-key',transport=httpx.MockTransport(handler))
+    client=Channel3Client(api_key='test-key',base_url='https://api.trychannel3.com/v1',transport=httpx.MockTransport(handler))
     asyncio.run(client.search_products('monitor',page_token='next-token'))
 
 def test_search_requires_api_key():
@@ -29,7 +29,7 @@ def test_search_requires_api_key():
 
 def test_search_rejects_invalid_response():
     transport=httpx.MockTransport(lambda request:httpx.Response(200,json={'products':[{'title':'missing id'}]}))
-    client=Channel3Client(api_key='test-key',transport=transport)
+    client=Channel3Client(api_key='test-key',base_url='https://api.trychannel3.com/v1',transport=transport)
     with pytest.raises(Channel3Unavailable): asyncio.run(client.search_products('monitor'))
 
 
@@ -40,7 +40,7 @@ def test_search_rejects_invalid_response():
 ])
 def test_search_accepts_current_and_legacy_paginated_product_envelopes(envelope):
     transport=httpx.MockTransport(lambda request:httpx.Response(200,json=envelope))
-    client=Channel3Client(api_key='test-key',transport=transport)
+    client=Channel3Client(api_key='test-key',base_url='https://api.trychannel3.com/v1',transport=transport)
     result=asyncio.run(client.search_products('monitor'))
     assert [product.id for product in result.products]==['real-1']
     assert result.next_page_token=='cursor-2'
@@ -53,7 +53,7 @@ def test_search_accepts_current_and_legacy_paginated_product_envelopes(envelope)
 ])
 def test_search_rejects_unknown_page_shape_instead_of_silently_reporting_no_products(payload):
     transport=httpx.MockTransport(lambda request:httpx.Response(200,json=payload))
-    client=Channel3Client(api_key='test-key',transport=transport)
+    client=Channel3Client(api_key='test-key',base_url='https://api.trychannel3.com/v1',transport=transport)
     with pytest.raises(Channel3Unavailable):
         asyncio.run(client.search_products('monitor'))
 
@@ -71,7 +71,7 @@ def test_search_parses_documented_array_valued_structured_attributes():
     transport=httpx.MockTransport(lambda request:httpx.Response(200,json={
       'data':[{'id':'desk-1','title':'Office chair', 'structured_attributes':{'color':['Navy','Blue'],'material':['Fabric']},'offers':[]}]
     }))
-    client=Channel3Client(api_key='test-key',transport=transport)
+    client=Channel3Client(api_key='test-key',base_url='https://api.trychannel3.com/v1',transport=transport)
     result=asyncio.run(client.search_products('desk chair'))
     assert result.products[0].structured_attributes['color']==['Navy','Blue']
 
@@ -79,7 +79,7 @@ def test_search_parses_documented_array_valued_structured_attributes():
 def test_documented_search_limit_maximum_is_30_and_rejects_excess_before_network():
     def handler(request):
         raise AssertionError('Search with invalid limit must not make an HTTP call')
-    client=Channel3Client(api_key='test-key',transport=httpx.MockTransport(handler))
+    client=Channel3Client(api_key='test-key',base_url='https://api.trychannel3.com/v1',transport=httpx.MockTransport(handler))
     with pytest.raises(ValueError,match='between 1 and 30'):
         asyncio.run(client.search_products('monitor',limit=31))
 
@@ -102,9 +102,37 @@ def test_search_normalizes_real_channel3_price_wire_field_and_page_token():
           }],
           'next_page_token':'c3-next-page',
         })
-    client=Channel3Client(api_key='test-key',transport=httpx.MockTransport(handler))
+    client=Channel3Client(api_key='test-key',base_url='https://api.trychannel3.com/v1',transport=httpx.MockTransport(handler))
     result=asyncio.run(client.search_products('27 inch monitor',limit=3))
     assert result.products[0].offers[0].price.amount==Decimal('219.99')
     assert result.products[0].offers[0].price.currency=='USD'
     assert result.products[0].offers[0].availability=='InStock'
     assert result.next_page_token=='c3-next-page'
+
+
+@pytest.mark.parametrize('configured_base', [
+    'https://api.trychannel3.com/v1',
+    'https://api.trychannel3.com/v1/',
+    'https://api.trychannel3.com/v1/search',
+    'https://api.trychannel3.com/v1/search/',
+])
+def test_search_and_product_lookup_normalize_api_root_and_endpoint(configured_base):
+    """An endpoint-style .env value must not duplicate /search or break /products."""
+    calls=[]
+    def handler(request):
+        calls.append((request.method,request.url.path))
+        if request.method=='POST':
+            assert request.url.path=='/v1/search'
+            return httpx.Response(200,json={'products':[]})
+        assert request.method=='GET'
+        assert request.url.path=='/v1/products/monitor-1'
+        return httpx.Response(200,json={'id':'monitor-1','title':'Business monitor'})
+    client=Channel3Client(
+        api_key='test-key',base_url=configured_base,
+        transport=httpx.MockTransport(handler),
+    )
+    result=asyncio.run(client.search_products('monitor',limit=3))
+    assert result.products==[]
+    product=asyncio.run(client.get_product('monitor-1'))
+    assert product.id=='monitor-1'
+    assert calls==[('POST','/v1/search'),('GET','/v1/products/monitor-1')]
