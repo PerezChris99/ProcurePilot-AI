@@ -5,7 +5,7 @@ import {MemoryRouter} from 'react-router-dom';
 import OrdersPage from './OrdersPage.jsx';
 import {apiRequest} from '../services/api.js';
 
-vi.mock('../services/api.js',()=>({apiRequest:vi.fn()}));
+vi.mock('../services/api.js',()=>({apiRequest:vi.fn(),downloadAuthorizedFile:vi.fn()}));
 
 const pendingOrder={
   id:'po-1',
@@ -69,5 +69,32 @@ describe('OrdersPage',()=>{
     const checkout=await screen.findByRole('link',{name:/continue to paypal/i});
     expect(checkout).toHaveAttribute('href','https://www.sandbox.paypal.com/checkout');
     expect(checkout).not.toHaveAttribute('target','_blank');
+  });
+});
+
+
+describe('Decision Passport disclosure',()=>{
+  beforeEach(()=>apiRequest.mockReset());
+  it('loads an owner-scoped immutable snapshot only when asked',async()=>{
+    apiRequest.mockImplementation(path=>{
+      if(path==='/purchase-orders')return Promise.resolve([pendingOrder]);
+      if(path==='/purchase-orders/po-1/passport')return Promise.resolve({
+        order_number:pendingOrder.po_number,status:'pending_approval',
+        evidence:{discovered_at:'2026-11-04T12:00:00Z',selected:{title:'Business monitor'},
+          request:{currency:'USD'},compared_offers:[{product_id:'product-a',title:'Monitor A',merchant:'store.example',currency:'USD',unit_price:'120.00',eligible:true}]},
+        comparison:{selected_total:'240.00',least_cost_eligible_total:'240.00',premium_vs_least_cost:'0.00'},
+        payment_proof:{status:'not_started',signed_webhook_correlated:false},
+        buyer_decision:{approved_at:null},audit_timeline:[],snapshot_sha256:'test-hash',
+      });
+      return Promise.resolve([]);
+    });
+    renderPage();
+    const toggle=await screen.findByRole('button',{name:'View Decision Passport'});
+    expect(apiRequest).not.toHaveBeenCalledWith('/purchase-orders/po-1/passport');
+    fireEvent.click(toggle);
+    expect(await screen.findByRole('heading',{name:'Decision Passport'})).toBeInTheDocument();
+    expect(screen.getByText('Monitor A')).toBeInTheDocument();
+    expect(screen.getByRole('button',{name:'Export PDF'})).toBeInTheDocument();
+    expect(apiRequest).toHaveBeenCalledWith('/purchase-orders/po-1/passport');
   });
 });
