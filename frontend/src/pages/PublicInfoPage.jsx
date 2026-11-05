@@ -64,7 +64,7 @@ const PAGES={
       {title:'Account and data controls',copy:'Passwords are hashed with Argon2id. Access uses short-lived JWT bearer tokens. Backend endpoints scope purchasing data to the authenticated user and avoid returning provider secrets.'},
       {title:'Buying safeguards',copy:'Product offers, amounts and currency are validated against saved catalogue evidence. Orders require recorded human approval before Sandbox checkout. AI cannot independently approve or pay.'},
       {title:'Provider and webhook checks',copy:'PayPal capture details are verified server-side; webhook events require PayPal verification and are deduplicated. The status panel shows configuration, not a passed live provider connectivity test.'},
-      {title:'Remaining hardening',copy:'The prototype does not yet claim independent enterprise approver roles, full distributed rate limiting, device-session revocation, complete payment race reconciliation or independently tested disaster recovery.'},
+      {title:'Remaining hardening',copy:'The prototype supports optionally assigned registered independent reviewers but does not claim full enterprise organization RBAC, full distributed rate limiting, device-session revocation, complete payment race reconciliation or independently tested disaster recovery.'},
       {title:'Security reports',copy:'Avoid publishing active exploit details in a public issue. Use GitHub repository owner contact or private vulnerability reporting if available; see the project security documentation for technical boundaries.'},
     ],
     action:{label:'Contact the project',to:'/contact'},
