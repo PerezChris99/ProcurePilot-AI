@@ -2,7 +2,7 @@ import json
 import httpx
 from pydantic import ValidationError
 from app.core.config import get_settings
-from app.integrations.channel3.schemas import Channel3SearchResponse
+from app.integrations.channel3.schemas import Channel3SearchResponse,Channel3Product
 
 DEFAULT_CHANNEL3_BASE_URL = 'https://api.trychannel3.com/v1'
 MAX_CHANNEL3_SEARCH_LIMIT = 30
@@ -43,3 +43,36 @@ class Channel3Client:
                     return Channel3SearchResponse.model_validate(json.loads(b''.join(chunks)))
         except (httpx.HTTPError,ValidationError,ValueError) as exc:
             raise Channel3Unavailable('Channel3 product search failed or returned an invalid response') from exc
+
+
+    async def get_product(self,product_id: str,*,user_id: str | None=None) -> Channel3Product:
+        """Fetch a single canonical product for explicit, on-demand quote checking."""
+        from urllib.parse import quote
+        if not self.api_key:
+            raise Channel3ConfigurationError('Channel3 API key is not configured')
+        if not isinstance(product_id,str) or not 1<=len(product_id)<=255:
+            raise ValueError('Invalid Channel3 product ID')
+        headers={'x-api-key':self.api_key,'Accept':'application/json'}
+        if user_id: headers['x-user-id']=user_id
+        try:
+            async with httpx.AsyncClient(
+                base_url=self.base_url,timeout=httpx.Timeout(12.0,connect=3.0),
+                transport=self.transport,
+            ) as transport:
+                async with transport.stream(
+                    'GET','products/'+quote(product_id,safe=''),headers=headers,
+                ) as response:
+                    response.raise_for_status()
+                    size=0
+                    chunks=[]
+                    async for chunk in response.aiter_bytes():
+                        size+=len(chunk)
+                        if size>2_097_152:
+                            raise Channel3Unavailable('Channel3 product details exceed the safe size limit')
+                        chunks.append(chunk)
+                    raw=json.loads(b''.join(chunks))
+                    if not isinstance(raw,dict):
+                        raise ValueError('Invalid Channel3 product object')
+                    return Channel3Product.model_validate(raw.get('product',raw))
+        except (httpx.HTTPError,ValidationError,ValueError) as exc:
+            raise Channel3Unavailable('Channel3 product verification failed') from exc
