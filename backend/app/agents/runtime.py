@@ -132,7 +132,6 @@ async def _run(user_id: str, prompt: str, *, agent, max_calls: int, timeout_seco
                         category=category,
                         origin='adk_error_event',
                         elapsed_seconds=round(time.monotonic() - started, 2),
-                        timeout_seconds=limit if category == 'timeout' else None,
                     )
                 metrics = _usage_from_event(event)
                 if metrics:
