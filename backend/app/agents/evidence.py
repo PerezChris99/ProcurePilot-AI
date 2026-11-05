@@ -38,14 +38,42 @@ def _best_in_stock_offer(product, currency, *, allowed_urls=None):
     return min(offers, key=lambda item: item[0])[1] if offers else None
 
 
+def _eligible_entry_offer(entry, currency):
+    if not isinstance(entry, dict):
+        return None
+    product = entry.get('product')
+    ranking = entry.get('ranking')
+    if not isinstance(product, dict) or not isinstance(ranking, dict):
+        return None
+    if not ranking.get('eligible'):
+        return None
+    policy = entry.get('policy')
+    allowed = (set(policy.get('eligible_offer_urls') or ())
+               if isinstance(policy, dict) else None)
+    return _best_in_stock_offer(product, currency, allowed_urls=allowed)
+
+
 def evidence_prompt(request, results, *, max_candidates=4):
     """Do not forward full descriptions, arbitrary attributes, tracking URLs or images.
 
     Ranks and prices come from the saved deterministic Channel3 snapshot. The
     model receives only short literal JSON evidence; no tool can place orders.
     """
+    # Ranking is primarily specification-based; buyer policy can reject top
+    # ranked products on price or merchant restrictions. Ensure an actually
+    # eligible offer is present even if it ranked below the first few entries.
+    selected = list(results[:max_candidates])
+    if selected and not any(
+        _eligible_entry_offer(entry, request.currency) is not None
+        for entry in selected
+    ):
+        for entry in results[max_candidates:]:
+            if _eligible_entry_offer(entry, request.currency) is not None:
+                selected[-1] = entry
+                break
+
     candidates = []
-    for entry in results[:max_candidates]:
+    for entry in selected:
         if not isinstance(entry, dict):
             continue
         product = entry.get('product') or {}
@@ -94,23 +122,19 @@ def evidence_prompt(request, results, *, max_candidates=4):
 
 
 def has_eligible_offer(results, currency):
-    """Zero-token gate: there is no purchase to recommend without an eligible offer.
+    """No model tokens are needed when there is no eligible, in-stock offer."""
+    return any(_eligible_entry_offer(entry, currency) is not None
+               for entry in results)
 
-    Use only saved server-calculated policy evidence. Old snapshots without the
-    per-offer policy structure require an explicitly eligible ranked product.
+
+def bounded_evidence_prompt(request, results, *, max_candidates=4, max_chars=3600):
+    """Produce valid compact JSON without truncating the evidence mid-field.
+
+    Input sizes are conservatively bounded by characters, not an invented
+    tokenizer count. The provider's reported usage remains the billing source.
     """
-    for entry in results:
-        if not isinstance(entry, dict):
-            continue
-        product = entry.get('product')
-        ranking = entry.get('ranking')
-        if not isinstance(product, dict) or not isinstance(ranking, dict):
-            continue
-        if not ranking.get('eligible'):
-            continue
-        policy = entry.get('policy')
-        allowed = (set(policy.get('eligible_offer_urls') or ())
-                   if isinstance(policy, dict) else None)
-        if _best_in_stock_offer(product, currency, allowed_urls=allowed) is not None:
-            return True
-    return False
+    for count in range(max_candidates, 0, -1):
+        prompt = evidence_prompt(request, results, max_candidates=count)
+        if len(prompt) <= max_chars:
+            return prompt
+    raise ValueError('Evidence cannot fit the configured AI prompt limit')
