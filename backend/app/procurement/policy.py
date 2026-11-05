@@ -70,3 +70,18 @@ def evaluate_offer(request,product,offer,*,now=None):
     except (InvalidOperation,ValueError,TypeError):
         reasons.append('Price is missing or invalid')
     return reasons
+
+
+def snapshot_recent(snapshot,*,now=None,max_age_hours=24):
+    """Do not create a new PO from an absent or stale source-evidence timestamp."""
+    if snapshot.get('source')!='Channel3' or not snapshot.get('discovered_at'):
+        return False
+    try:
+        captured=datetime.fromisoformat(snapshot['discovered_at'])
+        current=now or datetime.now(timezone.utc)
+        if captured.tzinfo is None:
+            return False
+        seconds=(current-captured).total_seconds()
+        return -120 <= seconds <= max_age_hours*3600
+    except (TypeError,ValueError):
+        return False
