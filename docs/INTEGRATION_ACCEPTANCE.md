@@ -36,6 +36,57 @@ authorized credentials.
 6. Register `https://YOUR_PUBLIC_API_HOST/api/v1/webhooks/paypal` as a Sandbox webhook (same REST app). Run through the valid event, duplicate/replay, forged/invalid-signature, amount mismatch, and unknown provider order scenarios. A localhost-only backend cannot receive direct PayPal webhooks; use a stable HTTPS deployment/tunnel.
 7. Test signed-out judge link/access on fresh Chrome and mobile Safari/Chrome. Check 320/375/768/961/1440px widths, keyboard operation, failed provider messages, retries and reduced-motion settings. **Do not** mark the project as finished until the functional demo works when judge credentials are used.
 
+### Gemini incident: ADK error transparency and credential routing (2026-11-05)
+
+**Current live evidence:** Channel3 and PayPal Sandbox merchant OAuth passed.
+Gemini returned AgentExecutionError; the original provider status was not included in
+previous smoke outputs. Therefore the exact external failure (auth, quota,
+service, model availability, or transport) remains **unverified** until the
+updated ADK smoke runner is executed against the user's environment.
+
+Fixes in the application (without bypassing ADK):
+
+- The real `Runner` now reads Google ADK `event.error_code` and
+  `event.error_message` as a failed model call, categorizing the response
+  without printing untrusted messages or private credentials.
+- Nested SDK/ADK exceptions are mapped to safe categories and, where
+  available, a numeric HTTP status.
+- The resolved root `.env` AI Studio key is passed to the ADK Gemini adapter;
+  inherited Enterprise/Vertex mode is disabled for this API-key application.
+- The root-level Windows `smoke-providers.bat` runs from the correct working
+  directory. `smoke-providers.bat gemini` runs the same real ADK analysis as
+  the application; it **does not** replace the agent with direct SDK output.
+- New mocked tests exercise auth, permissions, quota, missing model, timeouts,
+  transport closure and secret-safe smoke response behavior.
+
+**Previous standalone SDK test limitation:** Constructing a disposable
+`genai.Client(...).models.generate_content(...)` without keeping the client
+alive can trigger a premature underlying HTTPX client closure; the reported
+`RuntimeError` with no HTTP status alone cannot prove a Gemini auth failure.
+The production ProcurePilot AI path remains Google ADK, not this temporary
+SDK object.
+
+**Key compatibility:** New Google AI Studio `AQ.` authentication keys exist.
+Some projects report `401 ACCESS_TOKEN_TYPE_UNSUPPORTED` even with recent
+SDKs; this is a *possible* external blocker, **not yet established for this
+project**. If the new smoke category is `authentication`, inspect key
+status/project access in AI Studio, create a fresh project-bound key, and
+check provider guidance. Rotate previously disclosed credentials before
+publishing the app.
+
+**Run from project root in the same VS Code terminal:**
+
+```powershell
+.\smoke-providers.bat gemini
+.\smoke-providers.bat all
+```
+
+Run `test-all.bat` after pulling merged source changes, then use the actual
+categorized Gemini smoke result to resolve any remaining account/API issue.
+The available code connection cannot run a genuine request with the user's
+local credentials; no live Gemini PASS may be inferred from these source
+fixes alone.
+
 ### Automated coverage: what it proves
 
 - `backend/tests/test_provider_end_to_end.py` exercises one **mocked** API journey across authentication, request, Channel3 response, bounded Gemini assessment, PO creation, human approval, PayPal order/capture, repeat idempotency and webhook audit. All third-party calls and webhook verification are deliberately stubbed; it is a *code integration regression*, not a provider certification.

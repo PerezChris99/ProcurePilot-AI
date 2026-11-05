@@ -16,8 +16,18 @@ def _generation_config(model: str):
         options['thinking_config'] = types.ThinkingConfig(thinking_level='low')
     return types.GenerateContentConfig(**options)
 
-if settings.google_api_key:
-    os.environ.setdefault('GOOGLE_API_KEY',settings.google_api_key)
+def _configure_adk_gemini_api(key: str | None):
+    """Use the configured AI Studio key in ADK, never an inherited Cloud backend."""
+    if not key:
+        return
+    # Pydantic resolves root .env and process overrides before ADK starts.
+    # Pass that exact resolved value to ADK's Gemini model adapter.
+    os.environ['GOOGLE_API_KEY'] = key
+    os.environ['GOOGLE_GENAI_USE_ENTERPRISE'] = 'false'
+    os.environ['GOOGLE_GENAI_USE_VERTEXAI'] = 'false'
+
+
+_configure_adk_gemini_api(settings.google_api_key)
 
 async def discover_and_rank_products(query: str, quantity: int = 1, budget: str | None = None, currency: str = 'USD', mandatory_attributes: dict[str,str] | None = None, preferred_attributes: dict[str,str] | None = None) -> dict:
     """Search Channel3 and rank real catalogue products against explicit purchasing constraints.

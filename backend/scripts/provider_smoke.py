@@ -18,7 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 
-from app.agents.runtime import run_evidence_analysis
+from app.agents.runtime import run_evidence_analysis, AgentExecutionError, AgentConfigurationError
 from app.integrations.channel3.client import Channel3Client
 from app.integrations.paypal.client import PayPalClient
 
@@ -57,6 +57,18 @@ async def check_gemini():
     return {'answered':True,'model':result.get('model'),'character_count':len(result['text'])}
 
 
+# Whitelisted messages only: provider error payloads may include private data.
+GEMINI_ADK_HINTS = {
+    'authentication': 'Verify the Gemini AI Studio API key and its supported authentication-key type.',
+    'permission_denied': 'Check Gemini API access and project restrictions in Google AI Studio.',
+    'quota_or_rate_limit': 'Check Gemini API quota and billing; retry after limits reset.',
+    'model_access': 'Check AI_MODEL against models available to the API key.',
+    'transport': 'Check DNS, TLS, network/proxy settings and Google SDK transport.',
+    'timeout': 'The model request timed out; check provider connectivity or retry.',
+    'provider_unavailable': 'The model service is unavailable; retry after a short interval.',
+    'provider_error': 'Check Gemini API usage and Google ADK error logs for the failing request.',
+}
+
 CHECKS={'channel3':check_channel3,'paypal':check_paypal,'gemini':check_gemini}
 
 
@@ -68,8 +80,19 @@ async def run_checks(provider):
             details=await CHECKS[name]()
             results[name]={'status':'pass',**details}
         except Exception as exc:
-            # Never serialize exception payloads, which may contain HTTP metadata.
-            results[name]={'status':'fail','error_type':type(exc).__name__}
+            # Never serialize exception messages or HTTP payloads, which may
+            # contain credentials or product data from untrusted providers.
+            entry={'status':'fail','error_type':type(exc).__name__}
+            if name=='gemini' and isinstance(exc, AgentExecutionError):
+                category=exc.category if exc.category in GEMINI_ADK_HINTS else 'provider_error'
+                entry['category']=category
+                entry['hint']=GEMINI_ADK_HINTS[category]
+                if exc.http_status is not None:
+                    entry['http_status']=exc.http_status
+            elif name=='gemini' and isinstance(exc, AgentConfigurationError):
+                entry['category']='configuration'
+                entry['hint']='Check GOOGLE_API_KEY and AI_MODEL in the repository-root .env.'
+            results[name]=entry
     return {'status':'pass' if all(item['status']=='pass' for item in results.values())
             else 'fail','checks':results}
 

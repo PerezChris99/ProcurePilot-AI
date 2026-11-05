@@ -40,3 +40,31 @@ def test_paypal_smoke_refuses_live_endpoint_before_authentication(monkeypatch):
     result=asyncio.run(provider_smoke.run_checks('paypal'))
     assert result['status']=='fail'
     assert result['checks']['paypal']['error_type']=='RuntimeError'
+
+
+def test_gemini_adk_error_exposes_allowlisted_category_not_secret(monkeypatch):
+    from app.agents.runtime import AgentExecutionError
+    async def failing_gemini():
+        raise AgentExecutionError(
+            'private provider text token=never-print-this',
+            category='authentication',http_status=401,
+        )
+    monkeypatch.setattr(provider_smoke,'CHECKS',{'gemini':failing_gemini})
+    result=asyncio.run(provider_smoke.run_checks('gemini'))
+    assert result['status']=='fail'
+    entry=result['checks']['gemini']
+    assert entry['error_type']=='AgentExecutionError'
+    assert entry['category']=='authentication'
+    assert entry['http_status']==401
+    assert 'Verify the Gemini AI Studio API key' in entry['hint']
+    assert 'never-print-this' not in repr(result)
+
+
+def test_unknown_gemini_error_category_uses_generic_safe_hint(monkeypatch):
+    from app.agents.runtime import AgentExecutionError
+    async def failing_gemini():
+        raise AgentExecutionError('not for logs',category='unexpected-category')
+    monkeypatch.setattr(provider_smoke,'CHECKS',{'gemini':failing_gemini})
+    result=asyncio.run(provider_smoke.run_checks('gemini'))
+    assert result['checks']['gemini']['category']=='provider_error'
+    assert 'not for logs' not in repr(result)

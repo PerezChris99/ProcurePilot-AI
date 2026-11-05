@@ -15,7 +15,61 @@ class AgentConfigurationError(RuntimeError):
 
 
 class AgentExecutionError(RuntimeError):
-    pass
+    def __init__(self, message, *, category='provider_error', http_status=None):
+        super().__init__(message)
+        self.category = category
+        self.http_status = http_status
+
+
+def _classify_provider_failure(code=None, message=None):
+    """Return a safe category; never expose provider messages or credentials."""
+    content = (str(code or '') + ' ' + str(message or '')).lower()
+    if any(term in content for term in (
+        'access_token_type_unsupported', 'unauthenticated', 'invalid_api_key',
+        'api key not valid', 'api_key_invalid', '401',
+    )):
+        return 'authentication'
+    if 'permission_denied' in content or '403' in content:
+        return 'permission_denied'
+    if any(term in content for term in ('resource_exhausted', 'rate_limit', 'quota', '429')):
+        return 'quota_or_rate_limit'
+    if any(term in content for term in ('not_found', '404', 'model not found')):
+        return 'model_access'
+    if any(term in content for term in ('closed', 'connection', 'transport', 'ssl', 'certificate')):
+        return 'transport'
+    if any(term in content for term in ('deadline_exceeded', 'timed out', 'timeout')):
+        return 'timeout'
+    if any(term in content for term in ('internal', 'unavailable', '500', '502', '503')):
+        return 'provider_unavailable'
+    return 'provider_error'
+
+
+def _exception_details(exc):
+    """Inspect a bounded exception chain without leaking raw exception text."""
+    seen = set()
+    pending = [exc]
+    for _ in range(8):
+        if not pending:
+            break
+        current = pending.pop(0)
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        status = getattr(current, 'code', None)
+        if not isinstance(status, int) or not 400 <= status <= 599:
+            status = None
+        category = _classify_provider_failure(
+            getattr(current, 'status', None) or status or type(current).__name__,
+            str(current),
+        )
+        if category != 'provider_error':
+            return category, status
+        for linked in (getattr(current, '__cause__', None),
+                       getattr(current, '__context__', None),
+                       getattr(current, 'error', None)):
+            if isinstance(linked, BaseException) and id(linked) not in seen:
+                pending.append(linked)
+    return 'provider_error', None
 
 
 def _usage_from_event(event):
@@ -51,6 +105,17 @@ async def _run(user_id: str, prompt: str, *, agent, max_calls: int):
                 user_id=user_id, session_id=session.id, new_message=message,
                 run_config=RunConfig(max_llm_calls=max_calls),
             ):
+                # ADK 2.x may emit an error event without throwing the original
+                # provider exception. Do not silently turn it into "no final text".
+                event_error = getattr(event, 'error_code', None)
+                if event_error:
+                    category = _classify_provider_failure(
+                        event_error, getattr(event, 'error_message', None)
+                    )
+                    raise AgentExecutionError(
+                        'Gemini ADK reported an unsuccessful model call',
+                        category=category,
+                    )
                 metrics = _usage_from_event(event)
                 if metrics:
                     usage = metrics
@@ -69,9 +134,15 @@ async def _run(user_id: str, prompt: str, *, agent, max_calls: int):
     except (AgentConfigurationError, AgentExecutionError):
         raise
     except TimeoutError as exc:
-        raise AgentExecutionError('The AI provider timed out; try again later') from exc
+        raise AgentExecutionError(
+            'The AI provider timed out; try again later', category='timeout'
+        ) from exc
     except Exception as exc:
-        raise AgentExecutionError('The AI provider could not complete this assessment') from exc
+        category, status = _exception_details(exc)
+        raise AgentExecutionError(
+            'The AI provider could not complete this assessment',
+            category=category, http_status=status,
+        ) from exc
 
 
 async def run_evidence_analysis(user_id: str, prompt: str) -> dict:
