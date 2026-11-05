@@ -102,6 +102,23 @@ def get_request(
     return _owned_request(request_id, user, db)
 
 
+def _snapshot_product_entry(item, request, by_id):
+    """Evaluate each offer exactly once; reuse verdict for URL and UI reasons."""
+    product = by_id[item.product_id]
+    checks = [
+        (str(offer.url), evaluate_offer(request, product, offer))
+        for offer in product.offers
+    ]
+    return {
+        'ranking': item.model_dump(mode='json'),
+        'product': product.model_dump(mode='json'),
+        'policy': {
+            'eligible_offer_urls': [url for url, reasons in checks if not reasons],
+            'offer_reasons': dict(checks[:30]),
+        },
+    }
+
+
 async def _catalogue_snapshot(request: ProcurementRequest, user_id: str, *, current=None, page_token=None):
     """Exactly one Channel3 call; deterministic ranking, no model tokens consumed."""
     requirements = requirements_for_request(request)
@@ -128,20 +145,7 @@ async def _catalogue_snapshot(request: ProcurementRequest, user_id: str, *, curr
         'source': 'Channel3',
         'discovered_at': source_timestamp(),
         'results': [
-            {
-                'ranking': item.model_dump(mode='json'),
-                'product': by_id[item.product_id].model_dump(mode='json'),
-                'policy': {
-                    'eligible_offer_urls': [
-                        str(offer.url) for offer in by_id[item.product_id].offers
-                        if not evaluate_offer(request,by_id[item.product_id],offer)
-                    ],
-                    'offer_reasons': {
-                        str(offer.url):evaluate_offer(request,by_id[item.product_id],offer)
-                        for offer in by_id[item.product_id].offers[:30]
-                    },
-                },
-            }
+            _snapshot_product_entry(item, request, by_id)
             for item in rankings
         ],
         'next_page_available': page.next_page_token is not None and len(limited)<120,
