@@ -50,7 +50,10 @@ function renderRequest(){
   });
   return render(<QueryClientProvider client={client}>
     <MemoryRouter initialEntries={['/requests/req-qa']}>
-      <Routes><Route path="/requests/:requestId" element={<RequestDetailPage/>}/></Routes>
+      <Routes>
+        <Route path="/requests/:requestId" element={<RequestDetailPage/>}/>
+        <Route path="/orders" element={<h1>Purchase orders after creation</h1>}/>
+      </Routes>
     </MemoryRouter>
   </QueryClientProvider>);
 }
@@ -79,6 +82,8 @@ describe('RequestDetailPage - accountable product discovery',()=>{
         body:JSON.stringify({product_id:'monitor-qa',offer_url:offer.url}),
       },
     ));
+    expect(await screen.findByRole('heading',{name:'Purchase orders after creation'}))
+      .toBeInTheDocument();
   });
 
   it('never allows purchase of an ineligible real catalogue offer',async()=>{

@@ -15,7 +15,6 @@ const glyphs={
   approve:<><path d="M12 2.5 20 6v5.6c0 5.1-3 8.2-8 10-5-1.8-8-4.9-8-10V6z"/><path d="m8.4 12.2 2.5 2.5 4.9-5"/></>,
   activity:<><path d="M3 12h4.2l2.5-6 4.2 12 2.7-6H21"/></>,
 };
-export const iosDockIconNames=Object.freeze(Object.keys(glyphs));
 export default function IosDockIcon({name,active=false}){
   const glyph=glyphs[name];
   if(!glyph)return null;
