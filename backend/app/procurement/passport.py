@@ -145,6 +145,7 @@ def build_passport(order,items,approvals,payment,events):
         'evidence':evidence,
         'comparison':price_comparison,
         'payment_proof':payment_proof,
+        'offer_verification':order.offer_verification_json or None,
         'audit_timeline':timeline,
         'snapshot_sha256':hashlib.sha256(snapshot).hexdigest(),
         'integrity_note':'SHA-256 is an export checksum, not independent proof that database content is untampered.',

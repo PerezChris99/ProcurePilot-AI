@@ -526,3 +526,8 @@ html{scroll-behavior:smooth}
 }
 
 .dashboard-refined .dashboard-intro{margin:7px 0 0;font-size:.925rem;line-height:1.5;color:#67798b;font-weight:430}
+
+.offer-verification{display:grid;gap:6px;margin:15px 0 5px;padding:13px 15px;background:#fafbfb;border:1px solid #e2e7e9;color:#536679;font-size:.875rem;line-height:1.6}
+.offer-verification strong{color:#30485e;font-weight:560}
+.offer-verification small{color:#6b7d8d;font-size:.8125rem}
+.offer-verification .text-link{justify-self:start}

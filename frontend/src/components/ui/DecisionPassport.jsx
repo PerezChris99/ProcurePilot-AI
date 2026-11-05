@@ -34,6 +34,7 @@ export default function DecisionPassport({orderId}){
   const proof=data?.payment_proof||{};
   const decision=data?.buyer_decision||{};
   const comparison=data?.comparison||{};
+  const currentOffer=data?.offer_verification||{};
   return <section className="passport-section" aria-label="Procurement decision record">
     <button type="button" className="passport-toggle" aria-expanded={open}
       onClick={()=>setOpen(value=>!value)}>
@@ -59,6 +60,7 @@ export default function DecisionPassport({orderId}){
           <div><dt>Human approval</dt><dd>{decision.approved_at?'Recorded':'Pending'}</dd></div>
           <div><dt>Sandbox capture</dt><dd>{proof.capture_id||'Not captured'}</dd></div>
           <div><dt>Signed webhook</dt><dd>{proof.signed_webhook_correlated?'Correlated':'Not yet recorded'}</dd></div>
+          <div><dt>Latest quote check</dt><dd>{currentOffer.status||'Not requested'}</dd></div>
         </dl>
         <p className="passport-help">{comparison.note}</p>
         <h4>Why alternatives qualify or fail</h4>
