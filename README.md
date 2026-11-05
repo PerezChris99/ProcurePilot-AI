@@ -305,9 +305,9 @@ This is not a PCI-certified payment processor. The app does not capture card num
 
 **Workflow:** Implement changes on `perez`, document meaningful commits, open a PR, merge into `main` and synchronize both branches. No GitHub Actions workflows.
 
-**Critical eligibility warning:** The PayPal AI Hackathon official rules require a discoverable open-source repository license; the current license is proprietary and does not meet that requirement. Review [the proposed strategy](docs/HACKATHON_TOP3_STRATEGY.md) and make an explicit owner-approved license decision before submitting. Do not publish provider secrets.
+**Hackathon eligibility:** The public repository contains an OSI-approved [MIT License](LICENSE) (SPDX `MIT`). The original author retains copyright while allowing use, modification and redistribution under its standard notice condition. See [NOTICE](NOTICE) for attribution and third-party asset boundaries.
 
-**Copyright and license:** © 2026 PerezChris99. **All rights reserved. Authorized use only.** See [LICENSE](LICENSE), which grants narrowly scoped project review access but no general right to reuse, modify, sell or redistribute the code. **This is a proprietary license, not an OSI-approved open-source license.** If the hackathon requires an open-source license, the owner must resolve that conflict before submission.
+**Copyright and license:** © 2026 PerezChris99. Licensed under the [MIT License](LICENSE). Copyright is retained by the author; software reuse, redistribution and commercial use are permitted subject to MIT notice requirements. Product and third-party names do not confer trademark or endorsement rights.
 
 ## Public frontend deployment
 

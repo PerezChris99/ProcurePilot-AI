@@ -9,7 +9,7 @@ Research date: **2026-11-05**. Competition: **PayPal AI Hackathon / “Build Wha
 - **Mandatory:** meaningful PayPal developer-platform integration **and** meaningful AI; functional demo accessible to judges (public hosting or reproducible local build), a **public repo with a discoverable open-source license**, sufficient setup instructions, detailed explanation of AI tools, and a **public YouTube video under three minutes** showing real operation. Avoid unauthorized third-party trademarks/music.
 - **Prize routes:** 1st overall $12,000; 2nd $8,000; 3rd $5,000; $5,000 honorable mentions including Best Use of PayPal + AI, Best Use of Agentic Commerce, Most Impactful, Most Creative and Best Demo Delivery; Channel3 sponsor prize $1,500. Only one overall or one honorable mention, plus at most one sponsor prize, may be awarded to the same submission.
 - **Participant count:** 27,892 was reported by the entrant and the Devpost count changes over time. Participants are **not identical to eligible, completed submissions**, so do not calculate winning probability from registrations or assume a predictable cutoff.
-- **Critical license blocker:** The existing repo's LICENSE explicitly calls itself proprietary / non-OSI. The official rules require open source. **Owner must approve a standard OSI-approved project license** (for example MIT or Apache-2.0, after reviewing third-party compatibility). Do not silently relicense. Copyright attribution and brand protection can remain, but restricted source use is inconsistent with open-source eligibility.
+- **Open-source licensing (resolved in source):** The owner-authorized MIT LICENSE now meets the repository's open-source license format requirement; verify that GitHub detects `MIT` on the public repository page and that the entire submission and all third-party assets comply. Copyright remains with the licensor. This does not prove judge eligibility by itself.
 - **Judge access:** Make a working copy available without fees/restrictions through the judging period ending December 15. Prefer a hosted HTTPS demo plus exact fallback local instructions. Provide controlled demo credentials through the submission/testing instructions; never publish actual API secrets, Sandbox REST client secrets or personal test-buyer passwords in git.
 
 Primary sources:
@@ -36,7 +36,7 @@ Primary sources:
 
 | Rank | Proposed change | Value to judges | Implementation risk | Priority |
 | --- | --- | --- | --- | --- |
-| P0 | Resolve open-source license + demo availability + reproducible setup | Pass/fail eligibility and demo access | Low engineering, **high owner/legal importance** | Mandatory |
+| P0 | Verify MIT license detection + demo availability + reproducible setup | Pass/fail eligibility and demo access | Low engineering, **high owner/legal importance** | Mandatory |
 | P0 | Live integration acceptance of Gemini/ADK, Channel3 and PayPal Sandbox | Technical implementation and real demonstration | Depends on third-party keys, accounts and HTTPS | Mandatory |
 | P1 | **Procurement Decision Passport**: requirements, ranked offers and rejection reasons, approval, amounts, real Sandbox transaction/capture IDs and a downloadable human-readable evidence view | Distinct evidence-based procurement narrative; technological implementation + impact | Medium | Best signature feature |
 | P1 | **Counterfactual savings & risk evidence**: show rejected cheapest offer, price difference to cheapest *eligible* offer, verified policy failures and uncertainty; never invent a savings total | Credible buyer benefit; mathematical rigor | Medium | High |
@@ -111,7 +111,7 @@ Use five separate 0–5 ratings with recorded evidence for each. Don't give a cr
 ### Nov 9–10: show readiness
 - Fix verified usability and failure-mode issues; complete a compelling minimal demo route.
 - Prepare hosted judge access/clean demo account and documented offline fallback.
-- Review license decision and Devpost requirements, including public source, video and third-party media rights.
+- Confirm public GitHub MIT license detection and Devpost requirements, including public source, video and third-party media rights.
 
 ### Nov 11: freeze and submit
 - Run a full dry-run from fresh signup to signed webhook, 3 times.
@@ -121,7 +121,7 @@ Use five separate 0–5 ratings with recorded evidence for each. Don't give a cr
 
 ## 7. What can disqualify or severely weaken this entry
 
-1. Proprietary LICENSE conflicts with mandatory open-source rules. Must be resolved with owner permission **before entry**.
+1. The original proprietary license has been replaced by MIT; verify GitHub detects MIT and the judges can actually inspect and run the public project before entry.
 2. A static “demo” or screens with no real working integrations. Judges can decline to run local setup.
 3. PayPal Sandbox checkout that creates an order but cannot be captured successfully with a separate buyer.
 4. Missing public YouTube video under three minutes or inaccessible repository/demo.

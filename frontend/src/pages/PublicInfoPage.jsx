@@ -51,7 +51,7 @@ const PAGES={
       {title:'Your responsibilities',copy:'Use your own authorized account, protect login credentials, verify offers and make purchasing decisions independently. Do not submit unlawful requests, exploit the service, or attempt unauthorized access.'},
       {title:'AI and product information',copy:'AI assessments may be incomplete or incorrect. Catalogue information, stock, prices and merchant details may change. Do not treat model output as a promise of availability, delivery, quality or legal compliance.'},
       {title:'Payments and third parties',copy:'The included checkout uses PayPal Sandbox, not live merchant settlement. Any real retailer purchase is separate. Google, Channel3 and PayPal each have their own conditions and service availability.'},
-      {title:'Ownership and permissions',copy:'Source code and branding remain proprietary and subject to the repository LICENSE. Hackathon evaluator access does not grant a general right to reuse or redistribute the code.'},
+      {title:'Ownership and permissions',copy:'Original ProcurePilot source code is published under the MIT License, which permits use and redistribution with its copyright notice. Third-party trademarks, catalogue data and services retain their own terms; this project is not endorsed by PayPal, Google or Channel3.'},
       {title:'Availability and liability',copy:'This evaluation prototype is provided without a guaranteed uptime, support response time, or fitness for commercial procurement. Validate legal terms and liability limitations with qualified counsel before a public launch.'},
     ],
     action:{label:'Responsible use',to:'/responsible-use'},

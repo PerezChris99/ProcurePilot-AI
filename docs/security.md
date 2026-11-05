@@ -14,7 +14,7 @@
 | PayPal Orders v2 | Backend OAuth, idempotency keys, remote ID/custom ID/amount/currency and capture verification | Not proven safe under all races or network-unknown outcomes |
 | Webhooks | PayPal verification API, unique event IDs, capture comparison, reduced stored payload | Need actual HTTPS signature tests, out-of-order and concurrency coverage |
 | Hosting and persistence | .env ignored, bounded DB pools/timeouts, API defensive headers/HSTS in production, composite read indexes and migration 0005 UNIQUE provider IDs | No verified general edge rate limits, frontend CSP, backup-restore, WAF, monitoring or real load qualification |
-| Source repository | Copyright / authorized-use license | GitHub visibility was reported public; public visibility is not an open license |
+| Source repository | Copyright / MIT open-source license | Public reuse is permitted under standard MIT terms; third-party service and trademark rights are separate |
 
 ## Authentication and authorization
 
@@ -59,7 +59,7 @@
 7. Proven TLS termination and HSTS at the edge, verified frontend CSP hosting policy, WAF, secrets vault, encrypted backups, recovery drills, log retention and alerting.
 8. Browser E2E, mobile viewport and load/security testing.
 9. Confirm country-specific PayPal merchant receiving eligibility before any live money acceptance.
-10. Verify hackathon license rules: authorized-use LICENSE is proprietary, not OSI open source.
+10. Verify GitHub detects the MIT license and all external third-party image/brand permissions before hackathon submission.
 
 **Status boundary:** Source-written tests and a GitHub merge are not evidence that local Pytest, Vite, Windows startup, third-party credentials or PayPal Sandbox have passed. This is not PCI certification or a guarantee against vulnerabilities.
 

@@ -16,7 +16,7 @@
 - Evidence-first AI orchestration: one deterministic Channel3 discovery if needed, compact top-four packet, a single bounded ADK Gemini call, repeat-response caching, honest empty catalogue and token metadata.
 - Atomic per-user and global UTC-day call budgets in new migration 0004_ai_budget.
 - Current Channel3 attribute-array compatibility and in-stock-only price ranking. Optional ADK research tool outputs are restricted to five compact scored candidates.
-- Authorized-use-only proprietary license with narrow hackathon evaluator permission.
+- Authorized-use-only MIT license with narrow hackathon evaluator permission.
 - Rewritten README with multiple workflow diagrams, and updated security, architecture and AI engineering documents.
 - Updated PayPal merchant-vs-buyer setup guide, with an explicit Merchant REST-app selection and Sandbox Business linkage.
 
