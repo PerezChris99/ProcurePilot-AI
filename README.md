@@ -8,6 +8,8 @@ ProcurePilot AI is an accountable purchasing decision system: real Channel3 cata
 
 ## Installation and local development
 
+**Automated offline acceptance:** After installing dependencies, run `\.\test-all.bat` in your VS Code terminal (first-time preparation: `\.\qa\setup.bat`). It runs the Python/frontend tests, SQLite migration checks and strict production build, and writes results to `qa/reports/summary.md`. It does not contact live providers or migrate your configured database. See [QA guide](qa/README.md).
+
 **Local development requires Python 3.12+, Node.js 22.12+ (or 20.19+), npm and Git.** Mac/Linux first-run mode uses a local SQLite file so a PostgreSQL service is **not required just to open the app**. A real Channel3 search, Gemini analysis or PayPal Sandbox checkout requires the corresponding private provider credentials in the root `.env`; the app never invents provider results.
 
 | Platform | Start | Verify |
@@ -296,6 +298,7 @@ This is not a PCI-certified payment processor. The app does not capture card num
 | `docs/development.md` | Local startup and troubleshooting |
 | `docs/release-verification.md` | Outstanding acceptance gates |
 | `docs/INTEGRATION_ACCEPTANCE.md` | Six gate Gemini, Channel3, PayPal, webhook and local-build acceptance; read-only provider smoke instructions |
+| `qa/` and `test-all.bat` | One-command Windows offline Python/React tests, isolated Alembic migrations, strict production build, and local QA report |
 | `docs/HACKATHON_TOP3_STRATEGY.md` | Official judging research, accountable purchasing differentiator and updated delivery scorecard |
 | `docs/HACKATHON_SUBMISSION_KIT.md` | Judge-facing project description, 2:40 video storyboard, scoring proof map and final submission checklist |
 | `docs/scaling.md` | Capacity planning, database operations, load testing, incident recovery and security boundaries |
