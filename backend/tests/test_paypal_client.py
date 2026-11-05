@@ -190,3 +190,15 @@ def test_create_order_sends_exact_approved_amount_and_sandbox_return_urls():
     assert p['purchase_units'][0]['items'][0]['unit_amount']['value']=='120.00'
     assert p['payment_source']['paypal']['experience_context']['shipping_preference']=='NO_SHIPPING'
     assert p['payment_source']['paypal']['experience_context']['return_url'].startswith('http://localhost:5173/')
+
+
+def test_hackathon_checkout_refuses_live_paypal_credentials_before_network():
+    from app.integrations.paypal.client import PayPalConfigurationError
+    def forbidden(request):
+        raise AssertionError("Live PayPal must never be called by the hackathon build")
+    client=PayPalClient(transport=httpx.MockTransport(forbidden))
+    client.base_url="https://api-m.paypal.com"
+    client.client_id="live-client-id"
+    client.client_secret="live-client-secret"
+    with pytest.raises(PayPalConfigurationError,match="Sandbox transactions only"):
+        asyncio.run(client._access_token())

@@ -37,6 +37,6 @@ describe('Public legal pages',()=>{
   it('lists concrete implemented protections and candid limitations',()=>{
     renderPublic('/security');
     expect(screen.getByText(/Passwords are hashed with Argon2id/i)).toBeInTheDocument();
-    expect(screen.getByText(/does not yet claim independent enterprise approver roles/i)).toBeInTheDocument();
+    expect(screen.getByText(/does not claim full enterprise organization RBAC/i)).toBeInTheDocument();
   });
 });

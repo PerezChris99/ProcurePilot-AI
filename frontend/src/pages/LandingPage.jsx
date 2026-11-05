@@ -177,8 +177,8 @@ export default function LandingPage(){
     <section className="site-hero site-container" aria-labelledby="landing-headline">
       <div className="site-hero-text">
         <span className="site-kicker">A BETTER WAY TO BUY FOR WORK</span>
-        <h1 id="landing-headline">Purchase with <em>clarity.</em><br/>Not guesswork.</h1>
-        <p>Compare real offers, review AI insights, and approve orders in one place.</p>
+        <h1 id="landing-headline">Every purchase, <em>accountable.</em><br/>Every decision, clear.</h1>
+        <p>Compare real offers, enforce buying rules, and document human approvals before payment.</p>
         <div className="site-hero-actions">
           <Link className="site-button site-button-dark" to={user?'/dashboard':'/register'}>
             {user?'Go to workspace':'Explore ProcurePilot'} <ArrowRight size={18} aria-hidden="true"/>
@@ -212,7 +212,7 @@ export default function LandingPage(){
       </div>
       <div className="site-story-right">
         <span className="site-section-index">THE SOLUTION</span>
-        <h2>One clear buying workflow.</h2>
+        <h2>Decisions you can stand behind.</h2>
         <div className="site-benefit-list">
           <div><SearchCheck size={20}/><span><strong>Catalogue evidence.</strong> See offers and prices.</span></div>
           <div><Sparkles size={20}/><span><strong>Useful AI guidance.</strong> Compare the options.</span></div>
@@ -250,7 +250,7 @@ export default function LandingPage(){
 
     <section className="site-container site-final-cta" aria-label="Get started">
       <div><span className="site-section-index">GET STARTED</span>
-        <h2>Buy with clarity.</h2>
+        <h2>Make every purchase accountable.</h2>
       </div>
       <Link to={user?'/dashboard':'/register'} className="site-button site-button-light">
         {user?'Open your workspace':'Start your workspace'} <ArrowRight size={17} aria-hidden="true"/>

@@ -57,6 +57,8 @@ class PurchaseOrderResponse(BaseModel):
     id: str
     po_number: str
     request_id: str
+    assigned_approver_id: str | None = None
+    can_approve: bool | None = None
     status: str
     currency: str
     subtotal: Decimal
@@ -71,3 +73,4 @@ class PurchaseOrderResponse(BaseModel):
     approvals: list[ApprovalResponse]
     payment: PaymentResponse|None
     audit_events: list[AuditEventResponse]
+    offer_verification: dict | None = None

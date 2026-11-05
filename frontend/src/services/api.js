@@ -13,3 +13,24 @@ export async function apiRequest(path,options={}){checkRemoteApiConfiguration();
 export function getHealth(){return apiRequest('/health')}
 export function getIntegrationStatus(){return apiRequest('/integrations/status')}
 export function getDashboardSummary(){return apiRequest('/dashboard/summary')}
+
+/* Authenticated exports do not expose session tokens in query strings or URLs. */
+export async function downloadAuthorizedFile(path,filename){
+  checkRemoteApiConfiguration();
+  const response=await fetch(API_BASE_URL+path,{
+    headers:{Accept:'application/pdf, application/json',...(accessToken?{Authorization:'Bearer '+accessToken}:{})},
+  });
+  if(!response.ok)throw new Error('Could not download this decision record.');
+  const blob=await response.blob();
+  const objectUrl=URL.createObjectURL(blob);
+  try{
+    const anchor=document.createElement('a');
+    anchor.href=objectUrl;
+    anchor.download=filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  }finally{
+    URL.revokeObjectURL(objectUrl);
+  }
+}

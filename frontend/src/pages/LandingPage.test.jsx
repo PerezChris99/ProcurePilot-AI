@@ -10,7 +10,7 @@ function renderLanding(){return render(<MemoryRouter><LandingPage/></MemoryRoute
 describe('Public landing page',()=>{
   it('explains the product without invented customer proof or live payment claims',()=>{
     renderLanding();
-    expect(screen.getByRole('heading',{level:1})).toHaveTextContent(/purchase with.*clarity/i);
+    expect(screen.getByRole('heading',{level:1})).toHaveTextContent(/every purchase.*accountable/i);
     expect(screen.getByRole('link',{name:/explore procurepilot/i})).toHaveAttribute('href','/register');
     expect(screen.getByText('INTEGRATIONS')).toBeInTheDocument();
     expect(screen.getByText(/sandbox payments/i)).toBeInTheDocument();
@@ -21,7 +21,7 @@ describe('Public landing page',()=>{
   it('shows three real photo slides with meaningful manual controls and pause',()=>{
     renderLanding();
     const carousel=screen.getByRole('region',{name:'Procurement photography'});
-    const hero=screen.getByRole('region',{name:/purchase with.*clarity/i});
+    const hero=screen.getByRole('region',{name:/every purchase.*accountable/i});
     expect(hero).toContainElement(screen.getByRole('heading',{level:1}));
     expect(hero).toContainElement(carousel);
     expect(carousel).not.toContainElement(screen.getByRole('heading',{level:1}));

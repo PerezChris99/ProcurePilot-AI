@@ -61,6 +61,13 @@ class PayPalClient:
             return False
 
     def ensure_configured(self):
+        # Hackathon checkout is intentionally Sandbox-only. A mistaken live
+        # configuration must fail before OAuth, order creation, or capture.
+        # This is a deliberate safety boundary, not a claim of live settlement.
+        if self.base_url != "https://api-m.sandbox.paypal.com":
+            raise PayPalConfigurationError(
+                "ProcurePilot permits PayPal Sandbox transactions only"
+            )
         if not self.client_id or not self.client_secret:
             raise PayPalConfigurationError("PayPal API credentials are not configured")
 
