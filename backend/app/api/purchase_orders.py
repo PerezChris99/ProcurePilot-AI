@@ -3,6 +3,7 @@ import uuid,hashlib
 from datetime import datetime,timezone
 from decimal import Decimal,InvalidOperation
 from fastapi import APIRouter,Depends,HTTPException,Query,status
+from fastapi.responses import Response
 from sqlalchemy import select,func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -11,6 +12,8 @@ from app.core.database import get_db
 from app.integrations.paypal.client import PayPalClient,PayPalConfigurationError,PayPalUnavailable
 from app.integrations.channel3.schemas import Channel3Product,Channel3Offer
 from app.procurement.policy import evaluate_offer, policy_expired
+from app.procurement.passport import build_passport,snapshot_for_order
+from app.procurement.passport_pdf import passport_pdf_bytes
 from app.models import Approval,AuditEvent,Payment,ProcurementRequest,PurchaseOrder,PurchaseOrderItem,User
 from app.schemas.purchase_order import ApprovalAction,PayPalCheckoutResponse,PurchaseOrderCreate,PurchaseOrderResponse
 from app.security.tokens import get_current_user
@@ -127,8 +130,9 @@ def create_purchase_order(request_id:str,payload:PurchaseOrderCreate,db:Session=
     if total>Decimal('999999999999.99'):
         raise HTTPException(status_code=422,detail='Order amount exceeds the supported currency range.')
     if request.budget is not None and total>request.budget: raise HTTPException(status_code=422,detail='The selected offer exceeds the procurement budget.')
+    evidence_snapshot=snapshot_for_order(request,payload.product_id,payload.offer_url)
     po_id=str(uuid.uuid4()); now=datetime.now(timezone.utc)
-    order=PurchaseOrder(id=po_id,po_number='PP-'+now.strftime('%Y%m%d')+'-'+po_id[:8].upper(),user_id=user.id,request_id=request.id,status='draft',currency=request.currency,subtotal=total,total_amount=total)
+    order=PurchaseOrder(id=po_id,po_number='PP-'+now.strftime('%Y%m%d')+'-'+po_id[:8].upper(),user_id=user.id,request_id=request.id,status='draft',currency=request.currency,subtotal=total,total_amount=total,evidence_json=evidence_snapshot)
     po_item=PurchaseOrderItem(purchase_order_id=po_id,product_id=product['id'],product_title=product.get('title') or 'Catalogue product',merchant=offer.get('domain') or 'Retailer not specified',offer_url=payload.offer_url,quantity=request.quantity,unit_price=unit_price,line_total=total,currency=request.currency,product_snapshot=product)
     db.add_all([order,po_item])
     _audit(db,user.id,'purchase_order.created',order_id=po_id,request_id=request.id,details={'po_number':order.po_number,'amount':str(total),'currency':request.currency,'channel3_product_id':product['id']})
@@ -270,3 +274,41 @@ async def capture_paypal_order(order_id:str,db:Session=Depends(get_db),user:User
     _audit(db,user.id,'payment.paypal_capture_completed',order_id=order.id,request_id=order.request_id,details={'capture_id':capture['id'],'amount':str(order.total_amount),'currency':order.currency})
     db.commit(); db.refresh(order)
     return _serialize(order,db)
+
+
+def _owner_passport(order_id: str, db: Session, user: User):
+    order=_owned_order(order_id,user,db)
+    items=db.scalars(select(PurchaseOrderItem).where(PurchaseOrderItem.purchase_order_id==order.id)).all()
+    approvals=db.scalars(select(Approval).where(Approval.purchase_order_id==order.id).order_by(Approval.created_at)).all()
+    payment=db.scalar(select(Payment).where(Payment.purchase_order_id==order.id))
+    events=db.scalars(select(AuditEvent).where(AuditEvent.purchase_order_id==order.id).order_by(AuditEvent.created_at)).all()
+    return build_passport(order,items,approvals,payment,events)
+
+
+@router.get('/purchase-orders/{order_id}/passport')
+def get_decision_passport(
+    order_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Owner-only factual decision and Sandbox payment evidence; no credentials."""
+    return _owner_passport(order_id,db,user)
+
+
+@router.get('/purchase-orders/{order_id}/passport.pdf')
+def download_decision_passport(
+    order_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    report=_owner_passport(order_id,db,user)
+    pdf=passport_pdf_bytes(report)
+    return Response(
+        content=pdf,
+        media_type='application/pdf',
+        headers={
+            'Content-Disposition':'attachment; filename="ProcurePilot-Decision-Passport.pdf"',
+            'Cache-Control':'private, no-store',
+            'X-Content-Type-Options':'nosniff',
+        },
+    )
