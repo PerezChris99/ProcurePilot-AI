@@ -39,3 +39,23 @@ def test_legacy_gemini_models_do_not_receive_unsupported_3x_thinking_level():
     config = _generation_config('gemini-2.5-flash')
     assert config.temperature is None
     assert config.thinking_config is None
+
+
+def test_adk_uses_resolved_ai_studio_key_and_never_inherits_enterprise_mode(monkeypatch):
+    from app.agents.procurement_agent.agent import _configure_adk_gemini_api
+    monkeypatch.setenv('GOOGLE_API_KEY','stale-key')
+    monkeypatch.setenv('GOOGLE_GENAI_USE_ENTERPRISE','true')
+    monkeypatch.setenv('GOOGLE_GENAI_USE_VERTEXAI','true')
+    _configure_adk_gemini_api('settings-key')
+    assert __import__('os').environ['GOOGLE_API_KEY']=='settings-key'
+    assert __import__('os').environ['GOOGLE_GENAI_USE_ENTERPRISE']=='false'
+    assert __import__('os').environ['GOOGLE_GENAI_USE_VERTEXAI']=='false'
+
+
+def test_adk_does_not_create_credentials_when_no_key_is_configured(monkeypatch):
+    from app.agents.procurement_agent.agent import _configure_adk_gemini_api
+    monkeypatch.delenv('GOOGLE_API_KEY',raising=False)
+    monkeypatch.delenv('GOOGLE_GENAI_USE_ENTERPRISE',raising=False)
+    _configure_adk_gemini_api(None)
+    assert 'GOOGLE_API_KEY' not in __import__('os').environ
+    assert 'GOOGLE_GENAI_USE_ENTERPRISE' not in __import__('os').environ
