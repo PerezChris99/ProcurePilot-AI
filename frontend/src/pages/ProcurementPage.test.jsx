@@ -42,7 +42,53 @@ describe('ProcurementPage',()=>{
       body:JSON.stringify({
         request_text:'20 office monitors, 27 inch, IPS',
         quantity:20,budget:null,currency:'USD',
+        policy_json:{mandatory_attributes:{},preferred_attributes:{},allowed_merchants:[]},
       }),
     }));
+  });
+});
+
+
+describe('Buyer mandate entry',()=>{
+  beforeEach(()=>apiRequest.mockReset());
+  it('posts validated hard criteria with the request',async()=>{
+    apiRequest.mockResolvedValue({id:'request-mandate'});
+    renderPage();
+    fireEvent.change(screen.getByLabelText(/what are you looking to purchase/i),{
+      target:{value:'Office monitors for the accounting team'},
+    });
+    fireEvent.click(screen.getByText('Buyer mandate'));
+    fireEvent.change(screen.getByLabelText('Required specifications'),{
+      target:{value:'screen_size=27 inch'},
+    });
+    fireEvent.change(screen.getByLabelText('Approved merchant domains'),{
+      target:{value:'shop.example, Retailer.Example'},
+    });
+    fireEvent.click(screen.getByRole('button',{name:/save and discover products/i}));
+    await waitFor(()=>expect(apiRequest).toHaveBeenCalledWith('/procurement-requests',{
+      method:'POST',
+      body:JSON.stringify({
+        request_text:'Office monitors for the accounting team',
+        quantity:1,budget:null,currency:'USD',
+        policy_json:{
+          mandatory_attributes:{screen_size:'27 inch'},
+          preferred_attributes:{},
+          allowed_merchants:['shop.example','retailer.example'],
+        },
+      }),
+    }));
+  });
+  it('rejects malformed mandatory attribute entries before network',()=>{
+    renderPage();
+    fireEvent.change(screen.getByLabelText(/what are you looking to purchase/i),{
+      target:{value:'Office monitors for the accounting team'},
+    });
+    fireEvent.click(screen.getByText('Buyer mandate'));
+    fireEvent.change(screen.getByLabelText('Required specifications'),{
+      target:{value:'missing-equals-notation'},
+    });
+    fireEvent.click(screen.getByRole('button',{name:/save and discover products/i}));
+    expect(screen.getByRole('alert')).toHaveTextContent(/name=value/);
+    expect(apiRequest).not.toHaveBeenCalled();
   });
 });
