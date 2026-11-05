@@ -1,4 +1,5 @@
 import asyncio
+from decimal import Decimal
 import httpx
 import pytest
 from app.integrations.channel3.client import Channel3Client,Channel3ConfigurationError,Channel3Unavailable
@@ -103,7 +104,7 @@ def test_search_normalizes_real_channel3_price_wire_field_and_page_token():
         })
     client=Channel3Client(api_key='test-key',transport=httpx.MockTransport(handler))
     result=asyncio.run(client.search_products('27 inch monitor',limit=3))
-    assert result.products[0].offers[0].price.amount==219.99
+    assert result.products[0].offers[0].price.amount==Decimal('219.99')
     assert result.products[0].offers[0].price.currency=='USD'
     assert result.products[0].offers[0].availability=='InStock'
     assert result.next_page_token=='c3-next-page'
