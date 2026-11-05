@@ -73,3 +73,37 @@ def test_search_parses_documented_array_valued_structured_attributes():
     client=Channel3Client(api_key='test-key',transport=transport)
     result=asyncio.run(client.search_products('desk chair'))
     assert result.products[0].structured_attributes['color']==['Navy','Blue']
+
+
+def test_documented_search_limit_maximum_is_30_and_rejects_excess_before_network():
+    def handler(request):
+        raise AssertionError('Search with invalid limit must not make an HTTP call')
+    client=Channel3Client(api_key='test-key',transport=httpx.MockTransport(handler))
+    with pytest.raises(ValueError,match='between 1 and 30'):
+        asyncio.run(client.search_products('monitor',limit=31))
+
+
+def test_search_normalizes_real_channel3_price_wire_field_and_page_token():
+    def handler(request):
+        assert request.url.path=='/v1/search'
+        assert request.headers['x-api-key']=='test-key'
+        return httpx.Response(200,json={
+          'products':[{
+            'id':'c3-monitor-1',
+            'title':'Monitor, 27-inch',
+            'structured_attributes':{'color':['Black']},
+            'offers':[{
+              'url':'https://store.example/monitor',
+              'domain':'store.example',
+              'price':{'price':219.99,'currency':'USD'},
+              'availability':'InStock',
+            }],
+          }],
+          'next_page_token':'c3-next-page',
+        })
+    client=Channel3Client(api_key='test-key',transport=httpx.MockTransport(handler))
+    result=asyncio.run(client.search_products('27 inch monitor',limit=3))
+    assert result.products[0].offers[0].price.amount==219.99
+    assert result.products[0].offers[0].price.currency=='USD'
+    assert result.products[0].offers[0].availability=='InStock'
+    assert result.next_page_token=='c3-next-page'

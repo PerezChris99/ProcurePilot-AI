@@ -111,3 +111,31 @@ def test_configuration_helpers_reject_invalid_urls_and_template_credentials():
     assert integrations._paypal_mode("https://api-m.paypal.com") == "live"
     assert integrations._paypal_mode("https://unknown.example.com") == "unknown"
 
+
+
+def test_channel3_status_uses_same_documented_default_url_as_live_client(client,monkeypatch):
+    from app.integrations.channel3.client import Channel3Client, DEFAULT_CHANNEL3_BASE_URL
+
+    assert Channel3Client(api_key='test-key',base_url=DEFAULT_CHANNEL3_BASE_URL).base_url == DEFAULT_CHANNEL3_BASE_URL+'/'
+    monkeypatch.setattr(
+        integrations,
+        'get_settings',
+        lambda: SimpleNamespace(
+            app_env='development',
+            google_api_key=None,
+            ai_model='gemini-3.8-flash',
+            channel3_api_key='test-channel3-key',
+            channel3_base_url=None,
+            paypal_client_id=None,
+            paypal_client_secret=None,
+            paypal_webhook_id=None,
+            paypal_base_url='https://api-m.sandbox.paypal.com',
+        ),
+    )
+    response=client.get('/api/v1/integrations/status',headers=_register(client,email='channel-default@example.com'))
+    assert response.status_code==200
+    state=response.json()['channel3']
+    assert state['api_key_set'] is True
+    assert state['base_url_configured'] is True
+    assert state['configured'] is True
+    assert 'test-channel3-key' not in response.text

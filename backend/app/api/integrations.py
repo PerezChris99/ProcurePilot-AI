@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.integrations.channel3.client import DEFAULT_CHANNEL3_BASE_URL
 from app.models import AiDailyBudget, User
 from app.security.tokens import get_current_user
 
@@ -78,7 +79,7 @@ def integration_status(
 
     google_key_set = _set(settings.google_api_key)
     channel_key_set = _set(settings.channel3_api_key)
-    channel_url_set = _https_endpoint(settings.channel3_base_url)
+    channel_url_set = _https_endpoint(settings.channel3_base_url or DEFAULT_CHANNEL3_BASE_URL)
     paypal_id_set = _set(settings.paypal_client_id)
     paypal_secret_set = _set(settings.paypal_client_secret)
     paypal_webhook_set = _set(settings.paypal_webhook_id)
