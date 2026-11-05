@@ -68,3 +68,50 @@ def test_unknown_gemini_error_category_uses_generic_safe_hint(monkeypatch):
     result=asyncio.run(provider_smoke.run_checks('gemini'))
     assert result['checks']['gemini']['category']=='provider_error'
     assert 'not for logs' not in repr(result)
+
+
+def test_smoke_timeout_reports_origin_and_elapsed_without_raw_exception(monkeypatch):
+    from app.agents.runtime import AgentExecutionError
+
+    async def timed_out():
+        raise AgentExecutionError(
+            'secret internal exception', category='timeout',
+            origin='local_deadline', elapsed_seconds=60.01, timeout_seconds=60,
+        )
+
+    monkeypatch.setattr(provider_smoke, 'CHECKS', {'gemini':timed_out})
+    result=asyncio.run(provider_smoke.run_checks('gemini'))
+    entry=result['checks']['gemini']
+    assert entry['status']=='fail'
+    assert entry['category']=='timeout'
+    assert entry['origin']=='local_deadline'
+    assert entry['elapsed_seconds']==60.01
+    assert entry['timeout_seconds']==60
+    assert 'secret internal exception' not in repr(result)
+
+
+def test_smoke_single_gemini_call_accepts_bounded_override_and_counts_usage(monkeypatch):
+    calls=[]
+
+    async def mocked_adk(user_id,prompt,*,timeout_seconds=None):
+        calls.append(timeout_seconds)
+        assert 'payment_authorized' in prompt
+        return {
+            'text':'No verified purchases exist.',
+            'model':'gemini-3.8-flash',
+            'usage': {
+                'input_tokens':180,'output_tokens':22,
+                'total_tokens':202,'thinking_tokens':14,
+                'unknown_metadata':'never-display',
+            },
+        }
+    monkeypatch.setattr(provider_smoke,'run_evidence_analysis',mocked_adk)
+    result=asyncio.run(provider_smoke.run_checks(
+        'gemini',gemini_timeout_seconds=75,
+    ))
+    assert result['status']=='pass'
+    assert calls==[75]
+    entry=result['checks']['gemini']
+    assert entry['usage']['thinking_tokens']==14
+    assert 'unknown_metadata' not in repr(result)
+    assert entry['elapsed_seconds']>=0
