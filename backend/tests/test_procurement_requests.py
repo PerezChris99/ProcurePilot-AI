@@ -228,3 +228,30 @@ def test_prompt_has_strict_char_budget_before_reserving_ai_call(client,monkeypat
     assert len(calls)==1 and len(calls[0])<=1600
     saved=client.get(f'/api/v1/procurement-requests/{request_id}',headers=headers).json()
     assert saved['analysis_json']['ai_prompt_characters']==len(calls[0])
+
+
+def test_catalogue_snapshot_evaluates_policy_once_per_offer(monkeypatch):
+    product=Channel3Product(id='one-product',title='Monitor',
+        offers=[
+            Channel3Offer(url=f'https://shop.example/item{index}',
+                domain='shop.example',availability='InStock',
+                price=Channel3Price(amount='100.00',currency='USD'))
+            for index in range(3)
+        ],
+    )
+    item=SimpleNamespace(
+        product_id='one-product',
+        model_dump=lambda **kwargs:{'product_id':'one-product','eligible':True},
+    )
+    request=SimpleNamespace(
+        policy_json={},quantity=1,budget=None,currency='USD',
+    )
+    calls=[]
+    def policy(request, product, offer):
+        calls.append(str(offer.url))
+        return [] if offer.url.path.endswith('item0') else ['Restricted by policy']
+    monkeypatch.setattr(procurement_api,'evaluate_offer',policy)
+    snapshot=procurement_api._snapshot_product_entry(item,request,{'one-product':product})
+    assert len(calls)==3
+    assert snapshot['policy']['eligible_offer_urls']==['https://shop.example/item0']
+    assert len(snapshot['policy']['offer_reasons'])==3
