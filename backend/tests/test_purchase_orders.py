@@ -403,3 +403,47 @@ def test_plain_language_screen_size_blocks_wrong_display_and_accessories(client,
                               'offer_url':'https://retailer.example/correct'})
     assert created.status_code==201
     assert created.json()['total_amount']=='1600.00'
+
+
+def test_paypal_create_and_capture_release_read_transactions_before_network(client,monkeypatch):
+    """The 15-second PostgreSQL idle transaction deadline must not span PayPal I/O."""
+    headers,order=approved_order(client,monkeypatch,'paypal-transactions@example.com')
+    fake_paypal(monkeypatch,order['id'])
+    from app.core.database import get_db
+    from app.main import app
+    original_override=app.dependency_overrides[get_db]
+    sessions=[]
+
+    def tracked_db():
+        for db in original_override():
+            sessions.append(db)
+            yield db
+
+    app.dependency_overrides[get_db]=tracked_db
+    try:
+        original_create=PayPalClient.create_order
+        original_get=PayPalClient.get_order
+        original_capture=PayPalClient.capture_order
+
+        async def checked_create(self,**kwargs):
+            assert sessions[-1].in_transaction() is False
+            return await original_create(self,**kwargs)
+
+        async def checked_get(self,order_id):
+            assert sessions[-1].in_transaction() is False
+            return await original_get(self,order_id)
+
+        async def checked_capture(self,order_id,key):
+            assert sessions[-1].in_transaction() is False
+            return await original_capture(self,order_id,key)
+
+        monkeypatch.setattr(PayPalClient,'create_order',checked_create)
+        monkeypatch.setattr(PayPalClient,'get_order',checked_get)
+        monkeypatch.setattr(PayPalClient,'capture_order',checked_capture)
+        checkout=client.post(f"/api/v1/purchase-orders/{order['id']}/payments/paypal/create",headers=headers)
+        assert checkout.status_code==200
+        capture=client.post(f"/api/v1/purchase-orders/{order['id']}/payments/paypal/capture",headers=headers)
+        assert capture.status_code==200
+        assert capture.json()['status']=='paid'
+    finally:
+        app.dependency_overrides[get_db]=original_override
