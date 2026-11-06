@@ -23,6 +23,7 @@ describe('DashboardPage',()=>{
   expect(screen.queryByText(/let's buy smarter/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/YOUR AI PROCUREMENT COPILOT/i)).not.toBeInTheDocument();
   expect(screen.getByRole('link',{name:/new procurement/i})).toBeInTheDocument();
+  expect(screen.getByRole('link',{name:/open decision trust lab/i})).toHaveAttribute('href','/trust-lab');
  });
  it('shows live provider configuration rather than hard-coded not configured labels',async()=>{
   renderPage();

@@ -1,4 +1,4 @@
-import {ArrowRight,Plus} from 'lucide-react';
+import {ArrowRight,Plus,ShieldCheck} from 'lucide-react';
 import {Link} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {getHealth,getIntegrationStatus,getDashboardSummary} from '../services/api.js';
@@ -52,6 +52,15 @@ export default function DashboardPage(){
       </article>)}
     </section>
 
+    <section className="panel trust-lab-cta" aria-label="Policy verification" style={{marginTop:16}}>
+      <div className="panel-heading">
+        <div><h3>Test our purchasing safeguards</h3>
+          <p>Run ten transparent, read-only policy checks. No payments or real provider calls.</p>
+        </div>
+        <Link to="/trust-lab" className="text-link">Open Decision Trust Lab
+          <ShieldCheck size={15} aria-hidden="true"/></Link>
+      </div>
+    </section>
     <section className="dashboard-columns" aria-label="Activity and system status">
       <article className="panel activity-panel">
         <div className="panel-heading">

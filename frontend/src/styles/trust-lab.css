@@ -1,0 +1,16 @@
+/* Trust Lab: restrained responsive evidence surface, no gimmick metrics. */
+.trust-lab-page{max-width:1050px}
+.trust-lab-summary,.trust-lab-case-head{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.trust-lab-summary h2{font-size:21px;font-weight:600;margin:0 0 6px;color:#0b1b3d}
+.trust-lab-summary p,.trust-lab-case p{font-size:13px;line-height:1.6;color:#526477;margin:6px 0}
+.trust-lab-meta{margin:15px 0 0;padding:10px 0 0;border-top:1px solid #e6e9ec;display:flex;align-items:center;flex-wrap:wrap;gap:7px;font-size:12px;line-height:1.6}
+.trust-lab-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:15px}
+.trust-lab-case{min-width:0}
+.trust-lab-case h3{margin:3px 0 9px;color:#0b1b3d;font-weight:600;font-size:16px}
+.trust-lab-success,.trust-lab-failure{border:1px solid currentColor;border-radius:4px;padding:5px 8px;font-size:11px;white-space:nowrap}
+.trust-lab-success{color:#17664e}
+.trust-lab-failure{color:#9d3838}
+.trust-lab-case .trust-lab-intent{font-weight:550;color:#25364b}
+.trust-lab-violations{border-top:1px solid #e6e9ec;padding:9px 0 0 19px;margin:10px 0 0;font-size:12px;color:#88511b;line-height:1.7}
+.trust-lab-page .discovery-disclaimer{font-size:12px;line-height:1.7}
+@media(max-width:800px){.trust-lab-results{grid-template-columns:1fr}.trust-lab-summary{align-items:flex-start;flex-direction:column}.trust-lab-summary .button{width:100%}}
