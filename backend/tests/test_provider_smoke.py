@@ -203,3 +203,12 @@ def test_channel3_smoke_reports_invalid_response_without_dumping_catalogue(monke
     result = asyncio.run(provider_smoke.run_checks('channel3'))
     assert result['checks']['channel3']['category'] == 'invalid_response'
     assert 'secret untrusted seller payload' not in repr(result)
+
+
+def test_channel3_smoke_distinguishes_zero_priced_offers_from_http_outage(monkeypatch):
+    async def empty():
+        raise RuntimeError('No usable real catalogue offers returned')
+    monkeypatch.setattr(provider_smoke, 'CHECKS', {'channel3':empty})
+    result=asyncio.run(provider_smoke.run_checks('channel3'))
+    assert result['checks']['channel3']['category']=='no_priced_offers'
+    assert 'priced offers' in result['checks']['channel3']['hint']

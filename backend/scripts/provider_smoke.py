@@ -172,6 +172,11 @@ async def run_checks(provider, *, gemini_timeout_seconds=None, ai_route='auto'):
                 details=channel3_error_metadata(exc)
                 if details is not None:
                     entry.update(details)
+                elif type(exc) is RuntimeError and str(exc) == 'No usable real catalogue offers returned':
+                    entry.update({
+                        'category':'no_priced_offers',
+                        'hint':'Channel3 returned no usable priced offers for the read-only probe; try a different relevant query or check catalogue availability.',
+                    })
             if name=='gemini' and isinstance(exc, AgentExecutionError):
                 category=exc.category if exc.category in GEMINI_ADK_HINTS else 'provider_error'
                 entry['category']=category

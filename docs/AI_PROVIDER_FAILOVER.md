@@ -121,6 +121,52 @@ order and PayPal Sandbox merchant activity before taking another user action.
 This patch does not implement end-to-end exactly-once financial reconciliation.
 The existing Sandbox-only enforcement and signed webhook checks remain.
 
+## November 6 local test findings
+
+The entrant's latest local offline QA showed **8 of 9 gates green**:
+all **208 backend tests** (86% overall coverage), all **57 frontend tests**,
+ESLint, deploy contracts, production build, syntax and built-asset checks passed.
+Both SQLite migrations verified schema/revision correctly but Windows
+temporary-folder cleanup failed with `WinError 32` because the verifier used
+`with sqlite3.connect(...) as connection`, which is a transaction manager,
+**not** a connection closer. The verifier now wraps its connection in
+`contextlib.closing`. Two regression tests cover successful and failing
+verification cleanup. These changes require a local rerun before QA is green.
+
+The **OpenRouter** free Gemma route was accepted but returned HTTP **429 from
+an upstream shared Google AI Studio provider pool**. This is a shared-rate
+limit, not an invalid API key or missing model. Never silently substitute a
+paid model or hammer the shared pool. Native Gemini and Groq had already
+passed exact real-model smoke checks; automatic routing can use either. When
+free OpenRouter is saturated, wait for capacity to return or temporarily
+disable its private key until the free capacity is usable. An OpenRouter
+configuration badge indicates key presence only, not guaranteed service
+availability.
+
+A later combined provider check showed Channel3 unavailable while Gemini and
+PayPal Sandbox OAuth passed. The earlier Channel3 smoke response reported
+only `Channel3Unavailable`, hiding whether the cause was HTTP 429, 503,
+connection trouble or invalid catalogue JSON. The smoke runner now emits only
+safe `category`, allowlisted `http_status`, and fixed `hint` fields to help
+separate transient provider failure from configuration problems. It never
+includes raw response bodies or credentials and does not retry on HTTP 429.
+
+Local test sequence after syncing with `main`:
+
+```powershell
+git pull --ff-only origin main
+.\test-all.bat
+Get-Content .\qa\reports\summary.md
+.\smoke-providers.bat channel3
+.\smoke-providers.bat all 75
+```
+
+The final two commands make real provider requests; do not repeat them rapidly
+on free quotas. If migration cleanup still fails, inspect any remaining
+SQLite connection ownership or Windows antivirus/process file locks rather
+than weakening the migration assertions. Full PayPal buyer/capture/webhook
+tests remain separately required.
+
 ## Required acceptance before release
 
 1. Run `test-all.bat` (Python tests including ADK/LiteLLM construction, JS
