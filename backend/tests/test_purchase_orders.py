@@ -447,3 +447,35 @@ def test_paypal_create_and_capture_release_read_transactions_before_network(clie
         assert capture.json()['status']=='paid'
     finally:
         app.dependency_overrides[get_db]=original_override
+
+
+def test_channel3_recheck_releases_postgres_read_transaction(client,monkeypatch):
+    headers,order=make_order(client,monkeypatch,email='offer-recheck-window@example.com')
+    from app.main import app
+    from app.core.database import get_db
+    original_override=app.dependency_overrides[get_db]
+    seen=[]
+    def tracked_db():
+        for session in original_override():
+            seen.append(session)
+            yield session
+    app.dependency_overrides[get_db]=tracked_db
+    try:
+        async def get_product(self,product_id,*,user_id=None):
+            assert seen[-1].in_transaction() is False
+            return Channel3Product(
+                id=product_id,title='Business monitor 27 inch',
+                offers=[Channel3Offer(
+                    url='https://retailer.example/monitor',
+                    domain='retailer.example',
+                    price=Channel3Price(amount=Decimal('120.00'),currency='USD'),
+                    availability='InStock')],
+            )
+        monkeypatch.setattr(Channel3Client,'get_product',get_product)
+        response=client.post(
+            f"/api/v1/purchase-orders/{order['id']}/verify-offer",headers=headers,
+        )
+        assert response.status_code==200
+        assert response.json()['status']=='unchanged'
+    finally:
+        app.dependency_overrides[get_db]=original_override

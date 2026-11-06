@@ -425,14 +425,28 @@ async def verify_retailer_offer(
                 return previous
         except (ValueError,TypeError):
             pass
+    product_id=item.product_id
+    offer_url=item.offer_url
+    owner_id=user.id
+    # The configured 15s PostgreSQL idle-in-transaction limit must not include
+    # the Channel3 network call. No mutations have occurred yet.
+    db.rollback()
     try:
-        product=await Channel3Client().get_product(item.product_id,user_id=user.id)
+        product=await Channel3Client().get_product(product_id,user_id=owner_id)
     except Channel3ConfigurationError as exc:
         raise HTTPException(status_code=503,detail='Channel3 verification is not configured') from exc
     except Channel3Unavailable as exc:
         raise HTTPException(status_code=502,detail='Channel3 verification is temporarily unavailable') from exc
 
-    offer=next((offer for offer in product.offers if str(offer.url)==item.offer_url),None)
+    # Another request may have changed this PO while Channel3 responded.
+    # Reload the owner-scoped order and exact frozen line item before writing.
+    order=_owned_order(order_id,user,db)
+    if order.status not in ('draft','pending_approval','approved'):
+        raise HTTPException(status_code=409,detail='The purchase order changed while checking its retailer offer.')
+    item=db.scalar(select(PurchaseOrderItem).where(PurchaseOrderItem.purchase_order_id==order.id))
+    if item is None or item.product_id!=product_id or item.offer_url!=offer_url:
+        raise HTTPException(status_code=409,detail='The frozen offer changed while checking Channel3.')
+    offer=next((offer for offer in product.offers if str(offer.url)==offer_url),None)
     request=db.get(ProcurementRequest,order.request_id)
     if offer is None:
         result={'status':'unavailable','reason':'The original retailer offer was not found on the refreshed product.',
