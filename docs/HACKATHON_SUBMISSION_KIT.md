@@ -1,104 +1,218 @@
-# ProcurePilot AI — PayPal AI Hackathon submission kit
+# ProcurePilot AI — Devpost submission and demo production kit
 
-**Prepared:** 2026-11-05 · **Deadline:** 2026-11-12 12:00 PST / 23:00 EAT.
-**Status:** submission materials are drafts. Replace fields marked `[VERIFY]` only after checking them. The video, hosted URL, live Sandbox evidence and formal Devpost submission must be completed by the entrant.
+**Competition:** [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/) ·
+[Official rules](https://paypalaihackathon.devpost.com/rules) ·
+**Submission cutoff:** November 12, 2026, **12:00 PST / 23:00 EAT**.
 
-## Project name
-**ProcurePilot AI — Every Purchase Has a Reason**
+**Prepared:** November 6, 2026. **State:** copy-ready draft.
+The entrant must verify the hosted URL, live transaction evidence, video and
+submission before replacing any `[REQUIRES VERIFICATION]` field. Never
+invent a provider response, demonstration result, payment capture, sponsor use,
+user testimonial or savings percentage.
 
-## One-line pitch
-**Accountable AI-assisted purchasing:** real product evidence, deterministic buyer policies, human approvals, and traceable PayPal Sandbox outcomes in one decision record.
+## 1. Submission identity
 
-## Devpost project description — ready to adapt
+- **Project name:** ProcurePilot AI
+- **Tagline:** *Every Purchase Has a Reason.*
+- **Category:** Accountable AI-assisted purchasing; evidence-first agentic
+  commerce with mandatory human authorization.
+- **One-sentence pitch:** ProcurePilot turns a buyer's request into a
+  defensible purchasing decision by combining real Channel3 offer evidence,
+  policy-checked AI comparison, human approval and verified PayPal Sandbox
+  payment records in a single Decision Passport.
+- **Code:** https://github.com/PerezChris99/ProcurePilot-AI
+- **License:** https://github.com/PerezChris99/ProcurePilot-AI/blob/main/LICENSE
+  (GitHub detects MIT).
+- **Hosted application:** `[REQUIRES VERIFICATION — exact HTTPS URL]`
+- **Public YouTube demo:** `[REQUIRES VERIFICATION — actual public video URL]`
+- **Judge access:** `[REQUIRES VERIFICATION — clear signup/test account route]`
+- **Offline source walkthrough:** [Judges start here](JUDGES_START_HERE.md)
+- **Repository execution and QA:** [README](../README.md), [QA](../qa/README.md)
+
+## 2. Copy-ready Devpost description
 
 ### Inspiration
-A business purchase is rarely just a checkout. Someone must explain why the selected product satisfies the request, why other offers were rejected, whether the amount meets policy, who approved it, and what actually happened at payment. Email threads and shopping tabs do not produce that record.
+
+Teams often finish a purchase without a defensible record of **why** it was
+made. Buyers may compare prices across tabs, lose the original specification,
+approve something slightly wrong, or be unable to reconstruct who agreed to
+the cost. A purchasing assistant should help people make accountable choices
+instead of treating the first cheap result as the answer.
 
 ### What it does
-ProcurePilot AI turns a business purchasing request into an accountable decision trail. A buyer defines what they need and optional hard constraints. Channel3 supplies actual catalogue product and retailer offer data. ProcurePilot checks price, currency, stock, specification evidence and spending limits in deterministic Python. Gemini, running through Google ADK, explains the shortlist without being given approval or payment authority. A human then authorizes an eligible purchase order. PayPal Orders v2 Sandbox demonstrates the payer-approval and capture lifecycle.
 
-The **Decision Passport** ties the saved request, eligible and rejected offers, source timestamp, AI reasoning, signed-in human approval, PayPal Sandbox order/capture metadata and audit history into an inspectable JSON/PDF export. Comparisons are based on eligible offers in the same currency—not invented savings. External delivery, tax and supplier settlement remain explicitly unverified.
+ProcurePilot AI turns an ordinary purchasing request into a transparent,
+auditable decision. A buyer specifies the item, quantity, currency, budget and
+optional mandatory attributes or merchant restrictions. Channel3 supplies
+actual products and retailer offers. Deterministic Python policy checks
+availability, screen size where explicitly requested, supported attributes,
+source evidence, currency and spending limits.
+
+Google ADK passes only a small, bounded shortlist to Gemini for an
+evidence-grounded explanation. Optional Groq and OpenRouter fallbacks are
+used for transient provider errors; all model attempts respect shared daily
+quotas. If every route is unavailable, the app says clearly that it is
+showing **rule-based catalogue evidence**, not an AI-generated answer.
+
+The buyer chooses a qualified retailer offer. The backend freezes a purchase
+order's amount and the alternatives considered. An authorized human approves
+the decision. PayPal REST Orders v2 **Sandbox** then demonstrates checkout:
+the buyer approves using a separate Sandbox Personal account, and the server
+verifies the exact order and completed capture before marking the payment
+complete. Signed webhook handling and audit records provide independent
+payment-status evidence.
+
+The **Decision Passport** packages the evidence trail: request, product IDs,
+observed offer prices and timestamps, eligible/rejected alternatives, human
+decision, Sandbox payment IDs and a downloadable PDF.
 
 ### How we built it
-Frontend: React, Vite and accessible responsive UI. Backend: FastAPI, SQLAlchemy, Alembic and PostgreSQL/SQLite for local development. Integrations: Channel3 REST API for catalogue results, Gemini through Google ADK for bounded explanation, PayPal Orders v2 Sandbox for payment authorization/capture and authenticated signature-verified webhooks. Protection includes server-scoped records, deterministic buyer mandates, request quotas, password hashing, limited-source evidence packets, idempotent payment request identifiers, amount/currency verification and audit events.
 
-### Key implementation decisions
-- **The model explains; code decides.** Gemini cannot initiate, approve or capture payments.
-- **Policies are executable.** Mandatory attributes, merchant domains, amount/budget limits and expiry block noncompliant offers.
-- **A buyer actually approves.** An optional designated registered reviewer can separately approve/reject without payment privileges.
-- **The evidence is frozen.** A Decision Passport captures the original selected offer and comparisons; optional Channel3 quote rechecks do not silently rewrite an approved amount.
-- **PayPal is central.** The Sandbox workflow uses OAuth, server-side order creation, buyer approval, capture verification and audited webhook handling. The app refuses live PayPal API operations in the hackathon build.
-- **Demo honesty.** Clearly labeled offline samples cannot become payable orders; live Channel3, Gemini and Sandbox proof must be demonstrated separately.
+React 19, JavaScript/JSX, Vite and responsive component design form the
+frontend. FastAPI, SQLAlchemy, Alembic and PostgreSQL form the API and durable
+state; SQLite supports isolated local previews. Channel3 is the actual
+catalogue source. Gemini through **Google ADK** performs bounded explanation
+with a tool-free normal analyst. LiteLLM routes optional backup model calls.
+PayPal OAuth and Orders v2 Sandbox handle test order creation, buyer approval,
+explicit capture and signed webhook verification.
 
-### Challenges and lessons
-Combining untrusted catalogue listings, generative explanation and financial actions requires separating **suggestions** from **authority**. Missing stock, nonmatching merchant domains, stale quotes, invalid amounts and webhook retries should produce safe, understandable outcomes—not plausible-looking purchases. We designed the demo to retain meaningful evidence even when AI or catalogue calls fail.
+The separation is intentional: AI can summarize and explain, but cannot
+create a purchase order, authorize a payment, or alter a captured amount.
+Verified stock, price, currency, budget and merchant eligibility are
+determined by server rules, not a language model.
+
+### Challenges
+
+The hardest problem was not producing AI prose; it was keeping the evidence
+honest through unexpected failure. Real provider calls can return temporary
+503 or shared-pool 429 errors, catalogue results can omit critical
+specifications, and payment operations must never assume that a browser
+redirect proves a completed transaction.
+
+We responded with short, quota-accounted model attempts and transparent
+non-AI fallback; explicit rejection of wrong-sized and unverified products;
+server-frozen purchase totals; idempotent Sandbox request identifiers;
+verification of PayPal amounts and completed captures; and database
+transaction boundaries that do not remain idle during slow external I/O.
 
 ### Accomplishments
-The repository contains an end-to-end purchase workflow, owner-scoped requests/orders, human decision records, signed-webhook handling, source-grounded comparisons, a Decision Passport and exports. **Do not claim these passed live integration tests until the acceptance checklist is completed.**
 
-### What comes next
-Independent, organization-managed approvals and accounting integrations; continuous merchant price monitoring; improved exact-once reconciliation and reconciliation-after-timeout; verified supplier settlement through a separately authorized commerce provider; production operations and user research. These are roadmap items, not shipped features.
+The working source includes policy-checked catalogue discovery, a grounded
+ADK analyst with bounded fallback, authenticated buyer/approver workflows,
+Sandbox checkout/capture integrations, signed webhook handling, an auditable
+Decision Passport with PDF export and a nine-gate offline QA runner.
+The maintainer reported **all nine offline gates passing on November 6,
+2026**. Live hosted payments, public webhook delivery and judge access still
+require separate confirmation and should not be claimed as complete until
+actually recorded.
 
-### Intended users and impact
-Small purchasing teams, nonprofits and growing businesses that need to show **why** a purchase was approved. In the demonstration, two office monitors must satisfy an explicit specification, stock, price and budget. The cheapest product may be the wrong product. ProcurePilot explains that difference instead of merely displaying a shopping cart.
+### What we learned
 
-### Links
-- Source (MIT): https://github.com/PerezChris99/ProcurePilot-AI
-- Demo: **[VERIFY — provide live judge-accessible HTTPS URL or complete local setup steps]**
-- Public YouTube video (under 3 minutes): **[VERIFY — upload and link]**
-- Integrations: https://github.com/PerezChris99/ProcurePilot-AI/blob/main/docs/INTEGRATION_ACCEPTANCE.md
-- MIT notice: https://github.com/PerezChris99/ProcurePilot-AI/blob/main/LICENSE
+A trustworthy purchasing assistant must show not just its recommendation,
+but the evidence that supports and disqualifies alternatives. A useful AI
+failure mode is a clear, policy-derived explanation—not a fabricated source
+or payment success message. Putting human approval and remote transaction
+proof at separate boundaries makes the system accountable.
 
-## Three-minute video storyboard — target 2:40
+### What's next
 
-| Time | Screen/action | Suggested narration | Proof to capture |
-| --- | --- | --- | --- |
-| 00:00–00:14 | Paper-white landing / one clear problem statement | “Buying for a team is a decision, not just a payment. Can we prove why we chose an offer?” | Clean site and real workflow entry |
-| 00:14–00:32 | Create request: two 27-inch monitors, budget and required size | “We define the need and a machine-checkable mandate before looking at products.” | Exact specs, quantity, total budget |
-| 00:32–00:54 | Real Channel3 results and comparison | “Channel3 supplies offers. We reject the cheaper option when the required specification or availability is not evidenced.” | Real IDs and matching prices; eligibility reasons |
-| 00:54–01:15 | Actual Gemini/ADK analysis | “Gemini explains the evidence. It cannot approve an order or transfer money.” | Real response, transparent source, no invented status |
-| 01:15–01:39 | Create PO, review and human approval | “The selected offer and amount are frozen. A person explicitly approves the purchase.” | Exact price math, approval actor |
-| 01:39–02:08 | PayPal Sandbox checkout and verified capture | “PayPal handles payer approval and Sandbox capture. Our server validates the order and final amount.” | **Real separate Sandbox buyer**, returned capture ID |
-| 02:08–02:28 | Decision Passport / audit chain | “One passport connects requirement, alternatives, AI evidence, approval and the Sandbox payment proof.” | Exportable JSON/PDF and source timestamps |
-| 02:28–02:40 | Closing and honest disclosure | “ProcurePilot makes the purchase explainable. Sandbox payments do not settle the original retailer.” | Name, source/demo URL |
+After the prototype, the next work is organization-wide role governance,
+session revocation, stronger distributed payment reconciliation, retailer
+fulfillment integrations, tested disaster recovery, broader catalogue
+specification extraction, and observed production performance. These are
+not claims about the current hackathon build.
 
-**Rule:** The final recording must show the actual working browser, not wireframes or a mocked payment completion. Never display passwords, private API keys, a real buyer identity or a production PayPal transaction. Do not use another company's logos or copyrighted music in promotional materials without permission.
+## 3. Video: 2:45 evidence-first storyboard
 
-## The four memorable proof moments
+**Target runtime: 2:40–2:50. Hard requirement: less than 3 minutes.**
+YouTube video must be publicly accessible and show actual browser behavior.
+Film the strongest pre-rehearsed **real** Sandbox journey. Edit only to
+remove waiting time; do not fake a payment, AI response, user testimonial or
+source. No unlicensed music or unrelated copyrighted logos. Frame browser
+safely so passwords, tokens and account secrets are never visible.
 
-1. **Rejected cheaper option:** Use real Channel3 offers with a genuine reason for rejection (or clearly labeled offline examples only for the non-payable preview). Explain the blocked policy.
-2. **No AI payment authority:** Show the bounded Gemini assessment and the still-required human approval action.
-3. **Exact Sandbox transaction:** Show that the approved total, PayPal order amount and completed capture amount match, and repeated capture does not cause a second payment.
-4. **Decision Passport:** Show evidence timestamp, selected/alternate offer prices, who decided, payment status and audit event chain. Avoid saying that a SHA-256 checksum is independent notarization.
-
-## Final acceptance checklist — must be observed, not inferred
-
-- [ ] GitHub detects the repository's MIT license and source is publicly readable.
-- [ ] Frontend production build, Node tests/lint, Python tests, Alembic migration from scratch and upgrade from existing DB pass.
-- [ ] Channel3 API returns real current products and a valid comparable priced offer; invalid/empty states fail gracefully.
-- [ ] Gemini ADK returns genuine grounded analysis on the real saved offer list, and repeats are cached.
-- [ ] Assigned reviewer (if used) is distinct from requester; reviewer cannot create/capture payment.
-- [ ] User can generate an accurate JSON and readable PDF Decision Passport; another user cannot retrieve it.
-- [ ] PayPal Sandbox merchant OAuth, separate personal-buyer approval, server-verified capture and exact amount/currency all pass.
-- [ ] Valid signed HTTPS webhook, duplicate event, missing signature and amount mismatch are safely handled.
-- [ ] Real PayPal Live API host is refused by the hackathon backend.
-- [ ] At 320, 375, 768, 960, 1024 and 1440px layouts remain legible and all actions usable; 200% zoom and reduced-motion pass.
-- [ ] Judge can access a hosted HTTPS demo or reliably run documented steps; keep it accessible through Dec 15.
-- [ ] Public YouTube video is under 3 minutes, shows a real functional run and is linked from the Devpost entry.
-- [ ] Submission text lists actual AI tooling, real changes during the hackathon and truthful limitations.
-- [ ] Screenshots, offer data and imagery comply with third-party licensing and provider terms.
-- [ ] Devpost submission confirmed **before 23:00 EAT on Nov 12**.
-
-## Judges' five equal criteria — evidence map
-
-| Criterion | What to point judges to | Remaining proof |
+| Time | On screen | Narration intent / proof |
 | --- | --- | --- |
-| Technical implementation | FastAPI safeguards, real Channel3+ADK+PayPal code, idempotency, signature checks, migrations, tests | Live payment/webhook and full test logs |
-| Product design | Calm paper-like landing/dashboard, explainable offer cards, human decisions, mobile icons | Browser/phone walkthrough |
-| Impact | Specific small-team monitors scenario, eligibility reasons, audit trail | Credible buyer feedback, not invented ROI |
-| Innovation | Frozen Decision Passport integrating a source/decision/payment proof chain | Competitive differentiation in video |
-| Presentation | One coherent story with exact evidence and honest Sandbox caveat | Actual public 2:40 video and accessible demo |
+| 0:00–0:13 | Calm landing page and one purchasing pain statement | "Buying is easy. Proving why a business should buy is harder." |
+| 0:13–0:33 | Enter explicit item, quantity, currency and budget | Show a focused real buyer workflow |
+| 0:33–1:03 | Live Channel3 results; one eligible and one rejected offer | Show real product source, amount, missing size/stock rule, not invented listings |
+| 1:03–1:27 | Ask AI; show provider attribution and an evidence-based comparison | Explain that ADK model output informs but cannot approve |
+| 1:27–1:51 | Create exact PO, frozen amount, submit and authorized human approval | Make control separation obvious |
+| 1:51–2:19 | Create checkout; real PayPal Sandbox buyer login/approval and return | Show genuine Sandbox domain, not a simulated green check |
+| 2:19–2:37 | Explicit capture, completed status and payment IDs | Show amount/currency validation, no retail settlement claim |
+| 2:37–2:45 | Decision Passport, PDF export, final tagline | "Every purchase has a reason—and now it has a record." |
 
-## Unfinished external duties
+**Presenter rule:** articulate one claim per clip; keep product names, amounts,
+source badges and screen-size text large enough to read at 1080p. Zoom in
+rather than speeding up the footage. Show at least one visible rejection and
+one actual PayPal approval/capture. If the live run cannot be captured,
+**do not edit together mock results and call them live**. Resolve the blocker
+or explicitly disclose the limits of the recorded demo.
 
-The repository cannot generate real OAuth credentials, a successful PayPal buyer approval, a publicly hosted deployment, an uploaded YouTube video or a Devpost submission merely by merging source. Those are separate, required acceptance stages. There is no honest way to guarantee a top-three placement.
+## 4. Recommended screenshots (actual capture only)
+
+1. **Landing:** brand, tagline and primary action without placeholder cards.
+2. **Catalogue:** real Channel3 source and one clearly rejected alternative.
+3. **Decision:** explainable top offers, ineligibility reason and model badge.
+4. **Approval:** human reviewer decision and frozen PO amount.
+5. **PayPal proof:** Sandbox order/capture confirmation with identifiers redacted
+   where sensitive, status readable.
+6. **Passport:** one-page summary, comparison and audit/PDF.
+
+No generated UI screenshots or counterfeit PayPal confirmations. If desired,
+make a separate *clearly labelled* architecture diagram from source for
+technical explanation; never substitute it for actual working footage.
+
+## 5. Explicit technology and sponsor disclosure
+
+**Actually integrated in source:**
+- PayPal REST Orders v2 **Sandbox**: merchant OAuth, create test order, real
+  buyer approval, explicit verified capture, signed webhook processing.
+- Google **ADK/Gemini**: grounded analysis only, with output/time/call limits.
+- LiteLLM routes to Groq/OpenRouter when configured; actual provider names
+  must reflect the provider which returned the displayed response.
+- **Channel3**: actual product/offer retrieval and timestamped policy evidence.
+- FastAPI/Python, React/JSX/Vite, SQLAlchemy/Alembic/PostgreSQL, PDF exports.
+
+**Not yet verified as deployed:** Render Web Service/Static Site, persistent
+database and private Key Value. Mark Render as "used" and enter a Render
+sponsor category **only when the real deployment exists and is exercised**.
+Do not claim AG Grid, APIMatic, Bryntum or other sponsor tools unless they
+are genuinely integrated and tested.
+
+**Prize limit:** the official rules permit **one Grand Prize plus one Sponsor
+Prize OR one Honorable Mention plus one Sponsor Prize**. Multiple honorable
+mentions and multiple sponsor prizes cannot be stacked. The first objective
+is a compelling Grand Prize submission; the already meaningful Channel3
+integration is the most defensible sponsor entry today.
+
+## 6. Submission checklist
+
+- [ ] Eligibility/ownership and third-party content rights personally verified.
+- [x] Public GitHub repo with recognized MIT license.
+- [x] Complete source, documentation and offline QA scripts committed.
+- [x] Maintainer reported 9/9 offline QA gates green on 2026-11-06.
+- [ ] Rotate provider credentials exposed outside secure secret managers.
+- [ ] Add **verified live HTTPS demo URL**, or fully reproducible external
+      provider test access; do not insert a placeholder as a real URL.
+- [ ] Run real Channel3 + Google ADK provider smoke and full UI journey.
+- [ ] Run PayPal **Sandbox Personal buyer** approval and explicit capture; match
+      IDs, currency, amount and UI state.
+- [ ] Test one signed HTTPS PayPal webhook (including duplicate delivery).
+- [ ] Confirm mobile/desktop usability, no console errors, CORS and resilience.
+- [ ] Capture screenshots and publish an authentic YouTube video **under 3:00**.
+- [ ] Complete Devpost project name, description, tools used, GitHub link,
+      functional demo access and video URL, and select only eligible sponsor
+      categories.
+- [ ] Submit before **November 12 at 23:00 EAT**; keep access free through
+      **December 15**, and retain judging proof/credentials privately.
+- [ ] Confirm the submission shows a **submitted** state, not just a draft.
+
+The 9/9 offline result does not certify a public deployment, provider
+availability, security audit, webhook delivery, authorized assets or
+Devpost submission.
+
+Official references:
+- https://paypalaihackathon.devpost.com/
+- https://paypalaihackathon.devpost.com/rules
+- https://developer.paypal.com/community/blog/PayPal_AI_Hackathon/
