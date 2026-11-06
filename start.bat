@@ -65,15 +65,13 @@ if not exist "backend\.venv\Scripts\python.exe" (
 
 echo.
 echo [2/5] Installing Python dependencies...
-"backend\.venv\Scripts\python.exe" -m pip install --upgrade pip
-if errorlevel 1 (
-    echo [ERROR] Could not upgrade pip.
-    pause
-    exit /b 1
-)
-"backend\.venv\Scripts\python.exe" -m pip install -r "backend\requirements.txt"
+REM Avoid an unneeded pip self-upgrade on every startup; allow slow PyPI downloads.
+REM A timeout must never be "fixed" by downgrading security-pinned dependencies.
+"backend\.venv\Scripts\python.exe" -m pip --timeout 120 --retries 5 install -r "backend\requirements.txt"
 if errorlevel 1 (
     echo [ERROR] Python dependency installation failed.
+    echo [HINT] If pypi.org timed out, check connection and retry the setup.
+    echo [HINT] LiteLLM 1.84.0 is published; do not lower the version pin.
     pause
     exit /b 1
 )

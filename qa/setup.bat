@@ -32,9 +32,14 @@ if not exist "backend\.venv\Scripts\python.exe" (
 )
 echo.
 echo [1/2] Installing Python requirements...
-"backend\.venv\Scripts\python.exe" -m pip install -r "backend\requirements.txt"
+REM PyPI downloads (LiteLLM wheel is large) need more than pip's 15s default.
+REM Retry only package downloads; this script never contacts live model providers.
+"backend\.venv\Scripts\python.exe" -m pip --timeout 120 --retries 5 install -r "backend\requirements.txt"
 if errorlevel 1 (
-  echo [FAILED] Python package setup.
+  echo [FAILED] Python dependency download or resolution.
+  echo [HINT] A PyPI ReadTimeout may misleadingly finish with "No matching distribution".
+  echo [HINT] Check HTTPS connectivity to pypi.org and files.pythonhosted.org.
+  echo [HINT] Do not downgrade or remove the reviewed LiteLLM version pin.
   exit /b 1
 )
 echo.
