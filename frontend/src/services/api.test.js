@@ -41,6 +41,13 @@ describe('Authenticated API client',()=>{
     })).rejects.toThrow('PayPal capture did not match approved amount');
   });
 
+  it('explains a dropped API connection instead of displaying Failed to fetch',async()=>{
+    vi.stubGlobal('fetch',vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+    await expect(apiRequest('/procurement-requests/test/analyze',{
+      method:'POST',
+    })).rejects.toThrow(/Cannot reach the ProcurePilot API/);
+  });
+
   it('does not send authorization after logout',async()=>{
     const fetchMock=vi.fn().mockResolvedValue({
       ok:true,status:200,json:async()=>({}),

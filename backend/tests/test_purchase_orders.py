@@ -308,3 +308,54 @@ def test_delegated_approver_can_only_decide_assigned_order_not_pay(client,monkey
     assert client.post(f'/api/v1/purchase-orders/{po}/payments/paypal/create',
         headers=reviewer).status_code==404
     assert client.get('/api/v1/purchase-orders?status=pending_approval',headers=reviewer).json()==[]
+
+
+@pytest.fixture
+def foreign_key_client():
+    """Exercise purchase creation with FK enforcement, as on PostgreSQL."""
+    from fastapi.testclient import TestClient
+    from sqlalchemy import create_engine, event
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+    from app.main import app
+    from app.core.database import Base, get_db
+
+    engine = create_engine('sqlite://', connect_args={'check_same_thread': False},
+                           poolclass=StaticPool)
+
+    @event.listens_for(engine, 'connect')
+    def enforce_foreign_keys(connection, _):
+        connection.execute('PRAGMA foreign_keys=ON')
+
+    Base.metadata.create_all(engine)
+    testing_session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+    def override_db():
+        with testing_session() as db:
+            yield db
+
+    previous = app.dependency_overrides.get(get_db)
+    app.dependency_overrides[get_db] = override_db
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        if previous is None:
+            app.dependency_overrides.pop(get_db, None)
+        else:
+            app.dependency_overrides[get_db] = previous
+        Base.metadata.drop_all(engine)
+        engine.dispose()
+
+
+def test_create_po_persists_parent_before_item_and_audit_foreign_keys(foreign_key_client, monkeypatch):
+    headers, order = make_order(foreign_key_client, monkeypatch,
+                                email='foreign-key-order@example.com')
+    assert order['status'] == 'draft'
+    assert order['items'][0]['product_id'] == 'monitor-real-1'
+    assert any(event['action'] == 'purchase_order.created'
+               for event in order['audit_events'])
+    saved = foreign_key_client.get('/api/v1/purchase-orders/' + order['id'],
+                                    headers=headers)
+    assert saved.status_code == 200
+    assert saved.json()['id'] == order['id']
