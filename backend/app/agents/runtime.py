@@ -196,7 +196,7 @@ def configured_fallbacks(settings=None):
         )))
     if getattr(settings, 'openrouter_api_key', None):
         configured.append(('openrouter', getattr(
-            settings, 'ai_openrouter_model', 'openrouter/free',
+            settings, 'ai_openrouter_model', 'openrouter/openai/gpt-oss-20b:free',
         )))
     return configured
 

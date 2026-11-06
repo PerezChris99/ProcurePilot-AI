@@ -80,7 +80,7 @@ def get_settings() -> Settings:
 ,
     )
     ai_openrouter_model: str = Field(
-        default='openrouter/free',pattern=r'^openrouter/[A-Za-z0-9._:/-]{1,100}
+        default='openrouter/openai/gpt-oss-20b:free',pattern=r'^openrouter/[A-Za-z0-9._:/-]{1,100}
     ai_max_output_tokens: int = Field(default=900, ge=256, le=2048)
     ai_timeout_seconds: int = Field(default=60, ge=10, le=90)
     ai_daily_user_runs: int = Field(default=12, ge=1, le=500)
