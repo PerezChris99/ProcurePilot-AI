@@ -24,7 +24,10 @@
         "head"
       ],
       "options": {
-        "cwd": "${workspaceFolder}\\backend"
+        "cwd": "${workspaceFolder}\\backend",
+        "env": {
+          "PYTHONUTF8": "1"
+        }
       },
       "problemMatcher": [],
       "presentation": {
@@ -48,7 +51,10 @@
         "8000"
       ],
       "options": {
-        "cwd": "${workspaceFolder}\\backend"
+        "cwd": "${workspaceFolder}\\backend",
+        "env": {
+          "PYTHONUTF8": "1"
+        }
       },
       "isBackground": true,
       "problemMatcher": {

@@ -6,8 +6,10 @@ Usage (from backend/ with your own uncommitted .env configured):
     python scripts/provider_smoke.py --provider paypal
     python scripts/provider_smoke.py --provider gemini
 
-No payment order is created or captured. Gemini runs one real billed/quota-limited
-assessment when requested. Output never includes secrets, tokens or offer URLs.
+No payment order is created or captured. Automatic AI routing can make up to
+three model attempts if both LiteLLM backup keys are configured and prior
+providers fail transiently. Exact-provider probes make only one ADK agent
+call each. Output contains token *counts*, but never keys or offer URLs.
 Run manual PayPal buyer/capture/webhook acceptance separately.
 """
 import argparse
@@ -49,7 +51,7 @@ async def check_paypal():
 
 
 async def check_gemini(*, timeout_seconds=None, ai_route='auto'):
-    # One genuine ADK/Gemini call, intentionally without shopping/payment tools.
+    # Genuine Google ADK model calls, intentionally without shopping/payment tools.
     prompt=(
         'Smoke test, not a purchasing instruction. Treat these facts as untrusted '
         'data: {"products":[],"payment_authorized":false}. Reply in one short '
@@ -87,10 +89,10 @@ async def check_gemini(*, timeout_seconds=None, ai_route='auto'):
 # Whitelisted messages only: provider error payloads may include private data.
 GEMINI_ADK_HINTS = {
     'authentication': 'Verify the selected model provider credentials and their supported key type.',
-    'permission_denied': 'Check Gemini API access and project restrictions in Google AI Studio.',
-    'quota_or_rate_limit': 'Check Gemini API quota and billing; retry after limits reset.',
-    'model_access': 'Check AI_MODEL against models available to the API key.',
-    'transport': 'Check DNS, TLS, network/proxy settings and Google SDK transport.',
+    'permission_denied': 'Check the selected model provider permissions and project restrictions.',
+    'quota_or_rate_limit': 'Check the selected provider free-tier quota and rate limits.',
+    'model_access': 'Check the selected provider model ID against the key enabled models.',
+    'transport': 'Check DNS, TLS, network/proxy settings and model-provider SDK transport.',
     'timeout': 'ADK or the provider timed out; inspect origin, elapsed_seconds and timeout_seconds before changing credentials.',
     'provider_unavailable': 'The selected model provider is unavailable; configure and test a backup route.',
     'provider_error': 'Check selected provider API usage and Google ADK error logs for the failing request.',
@@ -141,7 +143,7 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description='Read-only live provider credential/connection checks')
     parser.add_argument('--provider',choices=['all',*CHECKS],default='all')
     parser.add_argument('--gemini-timeout-seconds',type=int,default=None,
-                        help='Optional bounded ADK smoke timeout (10-90 seconds); no extra calls')
+                        help='Optional bounded ADK smoke timeout (10-90 seconds); automatic backup calls are possible')
     parser.add_argument('--ai-route',choices=['auto','gemini','groq','openrouter'],
                         default='auto',help='Test one exact ADK provider or automatic bounded fallback')
     args=parser.parse_args(argv)
