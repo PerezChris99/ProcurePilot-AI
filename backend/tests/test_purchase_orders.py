@@ -209,6 +209,8 @@ def test_passport_freezes_evidence_and_only_owner_can_export(client,monkeypatch)
     assert payload.status_code==200
     passport=payload.json()
     assert passport['evidence']['source']=='Channel3'
+    assert passport['buyer_decision']['approval_model']==(
+        'Personal workspace; self-approval permitted')
     assert passport['evidence']['selected']['product_id']=='monitor-real-1'
     assert passport['comparison']['least_cost_eligible_total']=='240.00'
     assert passport['comparison']['selected_total']=='240.00'
@@ -305,6 +307,11 @@ def test_delegated_approver_can_only_decide_assigned_order_not_pay(client,monkey
     approved=client.post(f'/api/v1/purchase-orders/{po}/approve',headers=reviewer,json={})
     assert approved.status_code==200
     assert approved.json()['approved_by']==order['assigned_approver_id']
+    delegated_passport=client.get(
+        f'/api/v1/purchase-orders/{po}/passport',headers=owner)
+    assert delegated_passport.status_code==200
+    assert delegated_passport.json()['buyer_decision']['approval_model']==(
+        'Distinct registered reviewer assigned per order')
     assert client.post(f'/api/v1/purchase-orders/{po}/payments/paypal/create',
         headers=reviewer).status_code==404
     assert client.get('/api/v1/purchase-orders?status=pending_approval',headers=reviewer).json()==[]

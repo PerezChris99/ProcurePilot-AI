@@ -35,9 +35,9 @@
 ## AI threat model and cost enforcement
 
 - Procurement ranking, price validation, approvals and payments are deterministic. Gemini advice is never purchase authority.
-- Normal analysis: at most **one** ADK model call, **900 output tokens** by default, **35-second** wall-time limit, and **four** shortlisted products. The normal analyst has zero action tools.
+- Normal analysis: one ADK model call **per attempted provider**, up to two optional quota-reserved LiteLLM fallbacks on transient errors, **900 output tokens** by default, **60-second overall** timeout with **10–12-second per-provider slots**, and **four** shortlisted products. The analyst has no purchasing/payment tools.
 - Catalogue titles are clipped and encoded inside a short data packet. Product descriptions, arbitrary attributes, images and tracking URLs are not forwarded to the normal analysis model. Untrusted text is explicitly marked data, not instructions.
-- Exact repeated assessment requests are cached until catalogue refresh; verified empty results spend no model tokens.
+- Successful repeated assessments are cached until catalogue refresh; non-AI catalogue summaries after transient provider failures are explicitly retryable. Verified empty results spend no model tokens.
 - Database-level UTC-day allowance: 12 user calls and 100 global calls by default, reserved atomically before external model invocation. Failed/ambiguous calls still count to prevent budget bypass. Shared Redis throttling is implemented for login/registration in staging/production, but limits for ALL other routes require ingress/edge policy and further application controls.
 - Model prompts and small evidence packets reduce but do not eliminate prompt injection, hallucination, model bias, or unsafe output. Provider usage metadata can be recorded, but the budget is a **call ceiling**, not a guaranteed monetary bill.
 
@@ -73,7 +73,7 @@ Production/staging APP_ENV is now normalized to lower case; unsupported values s
 
 - **API:** A pure ASGI guard caps inbound HTTP bodies (default 1 MiB), rejects bad Content-Length, adds defensive cache/content-type/frame/referrer/permission headers, strict CSP to API JSON and HSTS on production responses. Frontend CSP and edge controls remain a separate deployment task.
 - **Authentication:** JWTs now require issuer, audience, expiration, issue/not-before timestamps and a valid UUID subject, with limited token length and 5–120 minute configurable lifetime. Previous JWTs lacking the new claims are deliberately invalidated: users must sign in again. Session revocation and MFA remain unimplemented.
-- **Public abuse controls:** Login/register use Redis-backed atomic per-source and per-identity throttles, HMAC-obfuscated keys and fail-closed HTTP 503 when Redis is missing or unavailable in staging/production. The app requires a managed `rediss://` URL and a trusted proxy that supplies the correct `request.client` address. General API/edge WAF limits remain external.
+- **Public abuse controls:** Login/register use Redis-backed atomic per-source and per-identity throttles, HMAC-obfuscated keys and fail-closed HTTP 503 when Redis is missing or unavailable in staging/production. The app requires a managed TLS `rediss://` URL or a strictly validated Render-private Key Value endpoint inside Render, plus a trusted proxy that supplies the correct `request.client` address. General API/edge WAF limits remain external.
 - **Database:** Per-worker bounded SQLAlchemy PostgreSQL pool and query/lock/idle transaction timeouts; compound indexes in Alembic 0005 for actual owner/status/date reads; migration strengthens PayPal identifier uniqueness. Lean procurement metadata lists, optional legacy full list, keyset cursors and bounded order-list audit summaries prevent large unnecessary payloads.
 - **Untrusted input/AI/payment:** Channel3 upstream responses are capped at 2 MiB, saved discovery to 120 products/request, finite money and numeric database range checks, and PayPal webhook event ID/type validation. The existing ADK one-call quota and absence of payment/approval tools remain intact.
 

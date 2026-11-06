@@ -64,7 +64,7 @@ def passport_pdf_bytes(report):
     line('Least-cost eligible snapshot offer: '+str(comparison.get('least_cost_eligible_total') or 'Unknown'))
     line('Selected price premium: '+str(comparison.get('premium_vs_least_cost') or 'Unknown'))
     line(comparison.get('note') or '')
-    label('AI EVIDENCE SUMMARY')
+    label('EVIDENCE ASSESSMENT — MODEL OR RULE-BASED')
     ai=evidence.get('ai') or {}
     line('Model: '+str(ai.get('model') or 'Unavailable')+
          ' | Source: '+str(ai.get('source') or 'Not analyzed'))

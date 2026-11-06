@@ -84,3 +84,24 @@ describe('Decision Passport evidence and exports',()=>{
     expect(screen.queryByText('Another QA monitor')).not.toBeInTheDocument();
   });
 });
+
+
+describe('Truthful saved evidence attribution',()=>{
+  beforeEach(()=>apiRequest.mockReset());
+
+  it.each([
+    ['gemini','Gemini evidence assessment'],
+    ['groq','Groq evidence assessment'],
+    ['openrouter','OpenRouter evidence assessment'],
+    ['catalogue_only','Rule-based catalogue assessment (not AI)'],
+    ['offline_example','Offline example (not AI)'],
+    [null,'Evidence assessment (source not verified)'],
+  ])('labels %s without falsely claiming Gemini',async(source,title)=>{
+    apiRequest.mockResolvedValue({...report,evidence:{
+      ...report.evidence,ai:{source,explanation:'Saved evidence only'},
+    }});
+    renderPassport();
+    fireEvent.click(screen.getByRole('button',{name:'View Decision Passport'}));
+    expect(await screen.findByRole('heading',{name:title})).toBeInTheDocument();
+  });
+});

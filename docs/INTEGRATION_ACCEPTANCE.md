@@ -1,4 +1,6 @@
-# ProcurePilot — Provider Integration Acceptance (2026-11-05)
+# ProcurePilot — Provider Integration Acceptance (updated 2026-11-06)
+
+**November 6 update:** The maintainer reports all nine offline QA gates passing locally after the screen-size regression fix. This supersedes only G1 below. G2–G6 remain independent live-provider acceptance requirements; historical smoke observations below are not current provider availability claims.
 
 ## What “fully functional” must mean
 
@@ -10,7 +12,7 @@ authorized credentials.
 
 | Gate | Acceptance | Evidence | Status in GitHub-only review |
 | --- | --- | --- | --- |
-| G1 — Local build | `verify.bat` or `verify.sh` succeeds, Python unit/integration, ESLint, Vitest, deploy tests and Vite production build | Redacted terminal log and exact git commit SHA | NOT EXECUTED |
+| G1 — Local build | Nine gates: Python syntax/pytest, fresh+upgrade migrations, Node, lint, Vitest, deploy contracts, strict build and asset smoke | Maintainer-reported local `qa/reports/summary.md`, new source changes still require re-run | **PASS reported by maintainer, 2026-11-06** |
 | G2 — Gemini/ADK | One real benign model response, correct configured model, bounded/grounded answer and safe failure behavior | JSON summary from smoke CLI; then visible UI analysis | NOT EXECUTED — credentials unavailable |
 | G3 — Channel3 | One live `POST /v1/search` returns real product IDs and valid USD-priced offers; test pagination/stock/empty/error paths | JSON smoke summary + actual signed-in UI search | NOT EXECUTED — credentials unavailable |
 | G4 — PayPal Sandbox OAuth | Valid merchant REST app credentials authenticate against the Sandbox host; invalid credentials fail safely | JSON smoke summary | NOT EXECUTED — credentials unavailable |
