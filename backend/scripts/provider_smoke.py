@@ -19,13 +19,15 @@ import sys
 import time
 from pathlib import Path
 
+import httpx
+
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 
 from app.agents.runtime import (
     run_evidence_analysis, run_single_provider_probe,
     AgentExecutionError, AgentConfigurationError,
 )
-from app.integrations.channel3.client import Channel3Client
+from app.integrations.channel3.client import Channel3Client, Channel3Unavailable, Channel3ConfigurationError
 from app.integrations.paypal.client import PayPalClient
 
 
@@ -98,6 +100,53 @@ GEMINI_ADK_HINTS = {
     'provider_error': 'Check selected provider API usage and Google ADK error logs for the failing request.',
 }
 
+# Only expose allowlisted failure metadata. Channel3 responses and exception
+# messages can contain seller data and request metadata: do NOT dump them.
+CHANNEL3_HINTS = {
+    'configuration': 'Check CHANNEL3_API_KEY and CHANNEL3_BASE_URL in the private root .env.',
+    'authentication': 'Channel3 rejected the API key; verify provider credentials.',
+    'permission_denied': 'Channel3 denied this operation; verify key permissions.',
+    'rate_limited': 'Channel3 returned HTTP 429; respect its quota and retry later.',
+    'provider_unavailable': 'Channel3 returned a transient server error; retry later.',
+    'transport': 'Check network, DNS, TLS and connectivity to the Channel3 API.',
+    'invalid_response': 'Channel3 returned a catalogue payload that failed validation.',
+    'request_rejected': 'Channel3 rejected this request; inspect provider configuration.',
+    'unknown': 'Channel3 search failed; inspect local redacted diagnostics.',
+}
+
+
+def channel3_error_metadata(error):
+    """Safe categorization, never return raw HTTP headers/body or exception strings."""
+    if isinstance(error, Channel3ConfigurationError):
+        category, code = 'configuration', None
+    elif isinstance(error, Channel3Unavailable):
+        cause = error.__cause__
+        if isinstance(cause, httpx.HTTPStatusError):
+            code = cause.response.status_code
+            if code == 401:
+                category = 'authentication'
+            elif code == 403:
+                category = 'permission_denied'
+            elif code == 429:
+                category = 'rate_limited'
+            elif code in (500, 502, 503, 504):
+                category = 'provider_unavailable'
+            else:
+                category = 'request_rejected'
+        elif isinstance(cause, httpx.TransportError):
+            category, code = 'transport', None
+        elif isinstance(cause, ValueError):
+            category, code = 'invalid_response', None
+        else:
+            category, code = 'unknown', None
+    else:
+        return None
+    result = {'category': category, 'hint': CHANNEL3_HINTS[category]}
+    if code is not None:
+        result['http_status'] = code
+    return result
+
+
 CHECKS={'channel3':check_channel3,'paypal':check_paypal,'gemini':check_gemini}
 
 
@@ -119,6 +168,10 @@ async def run_checks(provider, *, gemini_timeout_seconds=None, ai_route='auto'):
             # Never serialize exception messages or HTTP payloads, which may
             # contain credentials or product data from untrusted providers.
             entry={'status':'fail','error_type':type(exc).__name__}
+            if name=='channel3':
+                details=channel3_error_metadata(exc)
+                if details is not None:
+                    entry.update(details)
             if name=='gemini' and isinstance(exc, AgentExecutionError):
                 category=exc.category if exc.category in GEMINI_ADK_HINTS else 'provider_error'
                 entry['category']=category
