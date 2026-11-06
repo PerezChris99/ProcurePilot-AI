@@ -242,8 +242,12 @@ async def run_evidence_analysis(
             timeout_seconds=limit,
         )
     started = time.monotonic()
-    attempts = [('gemini', settings.ai_model or 'gemini-3.5-flash-lite')]
+    attempts = []
+    if getattr(settings, 'google_api_key', None):
+        attempts.append(('gemini', settings.ai_model or 'gemini-3.5-flash-lite'))
     attempts.extend(routes)
+    if not attempts:
+        raise AgentConfigurationError('No AI model provider is configured')
     last_error = None
     for index, (provider, model_name) in enumerate(attempts):
         remaining = limit - (time.monotonic() - started)
@@ -258,12 +262,9 @@ async def run_evidence_analysis(
         else:
             slot = int(remaining)
         slot = max(10, min(90, slot))
-        if index:
-            if on_fallback is not None:
-                on_fallback()  # atomic SQL quota reservation before model call
-            agent = _fallback_agent(model_name)
-        else:
-            agent = analysis_agent
+        if index and on_fallback is not None:
+            on_fallback()  # atomic SQL quota reservation before another model call
+        agent = analysis_agent if provider == 'gemini' else _fallback_agent(model_name)
         try:
             return await _run(
                 user_id, prompt, agent=agent, max_calls=1,

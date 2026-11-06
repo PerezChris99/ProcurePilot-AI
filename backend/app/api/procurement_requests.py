@@ -240,8 +240,11 @@ async def analyze_request(
         }
 
     settings = get_settings()
-    if not settings.google_api_key:
-        raise HTTPException(status_code=503, detail='Gemini is not configured. Catalogue results remain available.')
+    if not settings.google_api_key and not runtime.configured_fallbacks(settings):
+        raise HTTPException(
+            status_code=503,
+            detail='No AI model provider is configured. Catalogue results remain available.',
+        )
 
     try:
         prompt = bounded_evidence_prompt(

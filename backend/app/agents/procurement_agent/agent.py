@@ -71,7 +71,7 @@ async def discover_and_rank_products(query: str, quantity: int = 1, budget: str 
         return {'status':'error','message':'The procurement search could not be completed. Check the request and integration configuration.','results':[]}
 
 root_agent=Agent(
-    model=settings.ai_model or 'gemini-3.8-flash',
+    model=settings.ai_model or 'gemini-3.5-flash-lite',
     name='procurepilot_agent',
     description='An evidence-grounded AI assistant for business procurement research and product comparison.',
     instruction=(
@@ -85,14 +85,14 @@ root_agent=Agent(
         'purchase, and payment actions are controlled by the backend outside this agent.'
     ),
     tools=[discover_and_rank_products],
-    generate_content_config=_generation_config(settings.ai_model or 'gemini-3.8-flash'),
+    generate_content_config=_generation_config(settings.ai_model or 'gemini-3.5-flash-lite'),
 )
 
 
 # The normal /analyze flow uses one bounded, evidence-only model call instead of
 # asking Gemini to search Channel3 a second time or perform an open-ended tool loop.
 analysis_agent = Agent(
-    model=settings.ai_model or 'gemini-3.8-flash',
+    model=settings.ai_model or 'gemini-3.5-flash-lite',
     name='procurepilot_evidence_analyst',
     description='Compact evidence-grounded purchasing assessment with no action tools.',
     instruction=(
@@ -109,5 +109,5 @@ analysis_agent = Agent(
         'Do not include raw JSON in the answer. Be precise and brief.'
     ),
     tools=[],
-    generate_content_config=_generation_config(settings.ai_model or 'gemini-3.8-flash'),
+    generate_content_config=_generation_config(settings.ai_model or 'gemini-3.5-flash-lite'),
 )
