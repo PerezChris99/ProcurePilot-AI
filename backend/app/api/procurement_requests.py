@@ -240,8 +240,11 @@ async def analyze_request(
         }
 
     settings = get_settings()
-    if not settings.google_api_key:
-        raise HTTPException(status_code=503, detail='Gemini is not configured. Catalogue results remain available.')
+    if not settings.google_api_key and not runtime.configured_fallbacks(settings):
+        raise HTTPException(
+            status_code=503,
+            detail='No AI model provider is configured. Catalogue results remain available.',
+        )
 
     try:
         prompt = bounded_evidence_prompt(
@@ -262,15 +265,36 @@ async def analyze_request(
         ) from exc
 
     try:
-        result = await runtime.run_evidence_analysis(user.id, prompt)
+        # Each additional model provider attempt consumes another atomic
+        # user/global daily allowance. No unaccounted fallback calls.
+        if runtime.configured_fallbacks(settings):
+            result = await runtime.run_evidence_analysis(
+                user.id, prompt, on_fallback=lambda: reserve_ai_call(
+                    db, user.id, settings=settings,
+                ),
+            )
+        else:
+            result = await runtime.run_evidence_analysis(user.id, prompt)
+    except AiQuotaExceeded as exc:
+        scope = 'App-wide' if exc.scope == 'global' else 'Your'
+        raise HTTPException(
+            status_code=429,
+            detail=scope+' daily AI allowance reached before fallback. Saved offers remain available.',
+            headers={'Retry-After': str(_next_utc_day_seconds())},
+        ) from exc
     except AgentConfigurationError as exc:
-        raise HTTPException(status_code=503, detail='Gemini is not configured') from exc
+        raise HTTPException(status_code=503, detail='The AI model provider is not configured') from exc
     except AgentExecutionError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=503 if exc.category in (
+                'provider_unavailable','timeout','transport','quota_or_rate_limit',
+            ) else 502,
+            detail='AI analysis is temporarily unavailable. Saved catalogue results remain available.',
+        ) from exc
 
     request.analysis_json = {
         **current, 'ai_explanation': result['text'],
-        'ai_source': 'gemini', 'ai_model': result['model'],
+        'ai_source': result.get('provider','gemini'), 'ai_model': result['model'],
         'ai_usage': result['usage'], 'ai_prompt_characters': len(prompt),
     }
     db.add(request)
@@ -279,5 +303,5 @@ async def analyze_request(
         'request_id': request.id,
         'explanation': result['text'],
         'status': request.status,
-        'cached': False, 'source': 'gemini', 'usage': result['usage'],
+        'cached': False, 'source': result.get('provider','gemini'), 'usage': result['usage'],
     }

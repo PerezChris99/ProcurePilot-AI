@@ -18,7 +18,7 @@ describe('IntegrationStatusPanel',()=>{
     };
     render(<IntegrationStatusPanel health={healthy} integrations={integrations}/>);
     expect(within(row('SQLite')).getByText('Ready')).toBeInTheDocument();
-    expect(within(row('Google Gemini')).getByText('Not configured')).toBeInTheDocument();
+    expect(within(row('AI models · Google ADK')).getByText('Not configured')).toBeInTheDocument();
     expect(within(row('Channel3 catalogue')).getByText('Incomplete')).toBeInTheDocument();
     expect(within(row('PayPal Sandbox')).getByText('Incomplete')).toBeInTheDocument();
     expect(within(row('PayPal webhook')).getByText('Not configured')).toBeInTheDocument();
@@ -33,5 +33,27 @@ describe('IntegrationStatusPanel',()=>{
       data:{database:{connected:true,schema_ready:false,engine:'postgresql'},ai:{},channel3:{},paypal:{environment:'unknown'}},
     }}/>);
     expect(within(row('PostgreSQL')).getByText('Migration needed')).toBeInTheDocument();
+  });
+});
+
+
+describe('AI provider backup status',()=>{
+  it('shows configured Groq and OpenRouter backups without suggesting live validation',()=>{
+    render(<IntegrationStatusPanel health={healthy} integrations={{
+      isPending:false,isError:false,isFetching:false,dataUpdatedAt:0,refetch:vi.fn(),
+      data:{
+        database:{connected:true,schema_ready:true,engine:'postgresql'},
+        ai:{configured:true,api_key_set:true,model:'gemini-3.5-flash-lite',
+          fallback_enabled:true,backup_providers:{groq:true,openrouter:true}},
+        channel3:{configured:true,api_key_set:true,base_url_configured:true},
+        paypal:{environment:'sandbox',credentials_configured:true,client_id_set:true,
+          client_secret_set:true,webhook_configured:false},
+      },
+    }}/>);
+    const modelRow=row('AI models · Google ADK');
+    expect(within(modelRow).getByText('Configured')).toBeInTheDocument();
+    expect(within(modelRow).getByText(/Groq ready/)).toBeInTheDocument();
+    expect(within(modelRow).getByText(/OpenRouter ready/)).toBeInTheDocument();
+    expect(screen.getByText(/configured means credentials are present, not verified/i)).toBeInTheDocument();
   });
 });

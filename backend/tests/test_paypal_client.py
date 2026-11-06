@@ -202,3 +202,38 @@ def test_hackathon_checkout_refuses_live_paypal_credentials_before_network():
     client.client_secret="live-client-secret"
     with pytest.raises(PayPalConfigurationError,match="Sandbox transactions only"):
         asyncio.run(client._access_token())
+
+
+def test_paypal_oauth_retries_single_503_without_replaying_payment_mutations():
+    calls=[]
+    def handler(request):
+        calls.append(request)
+        if request.url.path.endswith('/v1/oauth2/token'):
+            if sum(r.url.path.endswith('/v1/oauth2/token') for r in calls)==1:
+                return httpx.Response(503,json={'error':'unavailable'})
+            return httpx.Response(200,json={'access_token':'sandbox-token'})
+        assert request.headers['paypal-request-id']=='capture-stable-key'
+        return httpx.Response(503,json={'error':'capture uncertain'})
+    client=PayPalClient(transport=httpx.MockTransport(handler))
+    client.client_id='test-client'
+    client.client_secret='test-secret'
+    from app.integrations.paypal.client import PayPalUnavailable
+    with pytest.raises(PayPalUnavailable):
+        asyncio.run(client.capture_order('ORDER-123','capture-stable-key'))
+    assert sum(r.url.path.endswith('/v1/oauth2/token') for r in calls)==2
+    assert sum(r.url.path.endswith('/capture') for r in calls)==1
+
+
+@pytest.mark.parametrize('code',[401,403,429])
+def test_paypal_oauth_does_not_retry_invalid_or_limited_access(code):
+    requests=[]
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(code,json={'error':'not-retryable'})
+    client=PayPalClient(transport=httpx.MockTransport(handler))
+    client.client_id='sandbox-client'
+    client.client_secret='sandbox-secret'
+    from app.integrations.paypal.client import PayPalUnavailable
+    with pytest.raises(PayPalUnavailable):
+        asyncio.run(client._access_token())
+    assert len(requests)==1

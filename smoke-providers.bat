@@ -3,6 +3,8 @@ setlocal EnableExtensions
 REM Root-level, ADK-only live provider verification for Windows.
 REM Do not echo private credentials, run tests from backend/ so ../.env loads.
 set "PROJECT_ROOT=%~dp0"
+REM ADK's LiteLLM adapter recommends UTF-8 for Windows file handling.
+set "PYTHONUTF8=1"
 set "PYTHON=%PROJECT_ROOT%backend\.venv\Scripts\python.exe"
 set "PROVIDER=%~1"
 if "%PROVIDER%"=="" set "PROVIDER=all"
@@ -17,10 +19,15 @@ pushd "%PROJECT_ROOT%backend" || exit /b 2
 echo Checking %PROVIDER% using ProcurePilot ADK and provider clients...
 REM Optional second argument: Gemini-only diagnostic timeout (10 to 90 seconds).
 REM Python argparse validates the bound. All paths still use the real ADK agent.
-if "%~2"=="" (
-  "%PYTHON%" scripts\provider_smoke.py --provider "%PROVIDER%"
+REM Optional third arg selects ADK route: auto, gemini, groq, openrouter.
+if "%~3"=="" (
+  if "%~2"=="" (
+    "%PYTHON%" scripts\provider_smoke.py --provider "%PROVIDER%"
+  ) else (
+    "%PYTHON%" scripts\provider_smoke.py --provider "%PROVIDER%" --gemini-timeout-seconds "%~2"
+  )
 ) else (
-  "%PYTHON%" scripts\provider_smoke.py --provider "%PROVIDER%" --gemini-timeout-seconds "%~2"
+  "%PYTHON%" scripts\provider_smoke.py --provider "%PROVIDER%" --gemini-timeout-seconds "%~2" --ai-route "%~3"
 )
 set "STATUS=%ERRORLEVEL%"
 popd

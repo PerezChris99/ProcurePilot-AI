@@ -1,4 +1,5 @@
 import re
+import asyncio
 import httpx
 
 from urllib.parse import urlsplit
@@ -74,20 +75,33 @@ class PayPalClient:
     async def _access_token(self):
         self.ensure_configured()
         try:
-            async with httpx.AsyncClient(
-                timeout=httpx.Timeout(15, connect=4), transport=self.transport
-            ) as client:
-                response = await client.post(
-                    self.base_url + "/v1/oauth2/token",
-                    auth=(self.client_id, self.client_secret),
-                    data={"grant_type": "client_credentials"},
-                    headers={"Accept": "application/json", "Accept-Language": "en_US"},
-                )
-                response.raise_for_status()
-                token = response.json().get("access_token")
-                if not token:
-                    raise PayPalUnavailable("PayPal did not issue an access token")
-                return token
+            # OAuth token fetch is not a charge/payment. Retry only a single
+            # transport/502-504 failure; never retry denied credentials or 429.
+            for attempt in range(2):
+                try:
+                    async with httpx.AsyncClient(
+                        timeout=httpx.Timeout(15, connect=4), transport=self.transport
+                    ) as client:
+                        response = await client.post(
+                            self.base_url + "/v1/oauth2/token",
+                            auth=(self.client_id, self.client_secret),
+                            data={"grant_type": "client_credentials"},
+                            headers={"Accept": "application/json", "Accept-Language": "en_US"},
+                        )
+                        response.raise_for_status()
+                        token = response.json().get("access_token")
+                        if not token:
+                            raise PayPalUnavailable("PayPal did not issue an access token")
+                        return token
+                except (httpx.TransportError,httpx.HTTPStatusError) as exc:
+                    transient = isinstance(exc,httpx.TransportError) or (
+                        isinstance(exc,httpx.HTTPStatusError)
+                        and exc.response.status_code in (502,503,504)
+                    )
+                    if attempt == 0 and transient:
+                        await asyncio.sleep(0.25)
+                        continue
+                    raise
         except (httpx.HTTPError, ValueError) as exc:
             raise PayPalUnavailable("PayPal authentication failed") from exc
 

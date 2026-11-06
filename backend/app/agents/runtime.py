@@ -2,6 +2,7 @@
 import asyncio
 import time
 
+from google.adk.agents import Agent
 from google.adk.agents.run_config import RunConfig
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -92,10 +93,15 @@ def _usage_from_event(event):
     return {name: getattr(metadata, attribute, None) for name, attribute in keys}
 
 
-async def _run(user_id: str, prompt: str, *, agent, max_calls: int, timeout_seconds=None):
+async def _run(user_id: str, prompt: str, *, agent, max_calls: int,
+               timeout_seconds=None, provider='gemini', model_name=None):
     settings = get_settings()
-    if not settings.google_api_key:
-        raise AgentConfigurationError('Gemini API credentials are not configured')
+    key_field = {
+        'gemini':'google_api_key','groq':'groq_api_key',
+        'openrouter':'openrouter_api_key',
+    }.get(provider)
+    if not key_field or not getattr(settings, key_field, None):
+        raise AgentConfigurationError('Selected AI provider is not configured')
     if not prompt.strip() or len(prompt) > 10_000:
         raise AgentExecutionError('The evidence packet is invalid or exceeds the allowed size')
     limit = settings.ai_timeout_seconds if timeout_seconds is None else timeout_seconds
@@ -128,7 +134,7 @@ async def _run(user_id: str, prompt: str, *, agent, max_calls: int, timeout_seco
                         event_error, getattr(event, 'error_message', None)
                     )
                     raise AgentExecutionError(
-                        'Gemini ADK reported an unsuccessful model call',
+                        'The ADK model adapter reported an unsuccessful model call',
                         category=category,
                         origin='adk_error_event',
                         elapsed_seconds=round(time.monotonic() - started, 2),
@@ -145,7 +151,8 @@ async def _run(user_id: str, prompt: str, *, agent, max_calls: int, timeout_seco
             raise AgentExecutionError('The AI provider returned no usable final assessment')
         return {
             'text': final_text.strip()[:3500],
-            'model': settings.ai_model or 'gemini-flash-latest',
+            'model': model_name or settings.ai_model or 'gemini-flash-latest',
+            'provider': provider,
             'usage': usage,
         }
     except (AgentConfigurationError, AgentExecutionError):
@@ -170,10 +177,125 @@ async def _run(user_id: str, prompt: str, *, agent, max_calls: int, timeout_seco
         ) from exc
 
 
-async def run_evidence_analysis(user_id: str, prompt: str, *, timeout_seconds=None) -> dict:
-    """One ADK model call, zero tools; optional bounded timeout for smoke probes."""
+# Fail over only transient provider conditions. Never mask an invalid key,
+# unauthorized project, bad model, or malformed request with a different model.
+_FAILOVER_CATEGORIES = frozenset((
+    'provider_unavailable', 'timeout', 'transport', 'quota_or_rate_limit',
+))
+
+
+def configured_fallbacks(settings=None):
+    """Return at most two routes in fixed order; no arbitrary URLs/providers."""
+    settings = settings or get_settings()
+    if not getattr(settings, 'ai_fallback_enabled', False):
+        return []
+    configured = []
+    if getattr(settings, 'groq_api_key', None):
+        configured.append(('groq', getattr(
+            settings, 'ai_groq_model', 'groq/openai/gpt-oss-20b',
+        )))
+    if getattr(settings, 'openrouter_api_key', None):
+        configured.append(('openrouter', getattr(
+            settings, 'ai_openrouter_model', 'openrouter/openai/gpt-oss-20b:free',
+        )))
+    return configured
+
+
+def _fallback_agent(model_name):
+    """A fresh tool-free ADK agent; LiteLLM translates only the model call."""
+    try:
+        from google.adk.models.lite_llm import LiteLlm
+    except ImportError as exc:
+        raise AgentConfigurationError(
+            'LiteLLM fallback dependency is missing; install backend requirements'
+        ) from exc
+    # Reuse exactly the same evidence-only instruction; no product search or
+    # payment tools, no provider-specific unsupported Gemini thinking settings.
+    return Agent(
+        model=LiteLlm(model=model_name),
+        name='procurepilot_evidence_fallback',
+        description=analysis_agent.description,
+        instruction=analysis_agent.instruction,
+        tools=[],
+        generate_content_config=types.GenerateContentConfig(
+            max_output_tokens=get_settings().ai_max_output_tokens,
+        ),
+    )
+
+
+async def run_evidence_analysis(
+    user_id: str, prompt: str, *, timeout_seconds=None, on_fallback=None,
+) -> dict:
+    """Bounded ADK primary + up to two opt-in LiteLLM backup calls.
+
+    The caller may reserve an additional SQL AI-budget unit *before every*
+    backup. Never retry captures, orders, Channel3 or user actions here.
+    """
+    settings = get_settings()
+    limit = settings.ai_timeout_seconds if timeout_seconds is None else timeout_seconds
+    if type(limit) is not int or not 10 <= limit <= 90:
+        raise AgentConfigurationError('AI timeout must be an integer between 10 and 90 seconds')
+    routes = configured_fallbacks(settings)
+    if not routes:
+        return await _run(
+            user_id, prompt, agent=analysis_agent, max_calls=1,
+            timeout_seconds=limit,
+        )
+    started = time.monotonic()
+    attempts = []
+    if getattr(settings, 'google_api_key', None):
+        attempts.append(('gemini', settings.ai_model or 'gemini-3.5-flash-lite'))
+    attempts.extend(routes)
+    if not attempts:
+        raise AgentConfigurationError('No AI model provider is configured')
+    last_error = None
+    for index, (provider, model_name) in enumerate(attempts):
+        remaining = limit - (time.monotonic() - started)
+        if remaining < 10:
+            break
+        # Primary has 25s to avoid burning the whole deadline when Google is
+        # overloaded. Each backup gets a bounded 20s slot, or the remaining
+        # budget for the final provider (never above the total deadline).
+        more_routes = len(attempts)-index-1
+        if more_routes and remaining >= 20:
+            slot = min(25 if index == 0 else 20, int(remaining - 10))
+        else:
+            slot = int(remaining)
+        slot = max(10, min(90, slot))
+        if index and on_fallback is not None:
+            on_fallback()  # atomic SQL quota reservation before another model call
+        agent = analysis_agent if provider == 'gemini' else _fallback_agent(model_name)
+        try:
+            return await _run(
+                user_id, prompt, agent=agent, max_calls=1,
+                timeout_seconds=slot, provider=provider, model_name=model_name,
+            )
+        except AgentExecutionError as exc:
+            last_error = exc
+            if exc.category not in _FAILOVER_CATEGORIES or not more_routes:
+                raise
+    if last_error is not None:
+        raise last_error
+    raise AgentExecutionError(
+        'AI providers exceeded the bounded request deadline',
+        category='timeout', origin='local_deadline',timeout_seconds=limit,
+    )
+
+
+async def run_single_provider_probe(
+    user_id: str, prompt: str, *, provider: str, timeout_seconds=None,
+) -> dict:
+    """One real ADK model call to a selected, configured provider. No failover."""
+    settings = get_settings()
+    options = {'gemini':settings.ai_model or 'gemini-3.5-flash-lite'}
+    options.update(dict(configured_fallbacks(settings)))
+    if provider not in options:
+        raise AgentConfigurationError('Selected provider is not configured or permitted')
+    model_name = options[provider]
     return await _run(
-        user_id, prompt, agent=analysis_agent, max_calls=1,
+        user_id, prompt,
+        agent=analysis_agent if provider=='gemini' else _fallback_agent(model_name),
+        max_calls=1, provider=provider, model_name=model_name,
         timeout_seconds=timeout_seconds,
     )
 

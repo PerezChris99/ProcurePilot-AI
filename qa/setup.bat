@@ -1,5 +1,6 @@
 @echo off
 setlocal EnableExtensions
+set "PYTHONUTF8=1"
 cd /d "%~dp0.."
 echo.
 echo ============================================================

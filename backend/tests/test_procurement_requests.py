@@ -255,3 +255,98 @@ def test_catalogue_snapshot_evaluates_policy_once_per_offer(monkeypatch):
     assert len(calls)==3
     assert snapshot['policy']['eligible_offer_urls']==['https://shop.example/item0']
     assert len(snapshot['policy']['offer_reasons'])==3
+
+
+def test_real_api_ai_failover_records_groq_source_and_caches_answer(client,monkeypatch):
+    headers=auth_headers(client,'live-routing@example.com')
+    request_id=client.post('/api/v1/procurement-requests',headers=headers,json={
+        'request_text':'Two office monitors for procurement review',
+        'quantity':2,'budget':'300.00','currency':'USD',
+    }).json()['id']
+
+    async def search(self,query,*,limit=20,filters=None,user_id=None,page_token=None):
+        return Channel3SearchResponse(products=[Channel3Product(
+            id='screen-1',title='Office monitor',
+            offers=[Channel3Offer(
+                url='https://shop.example/monitor',domain='shop.example',
+                availability='InStock',
+                price=Channel3Price(amount='100.00',currency='USD'),
+            )],
+        )])
+    monkeypatch.setattr(Channel3Client,'search_products',search)
+
+    settings=SimpleNamespace(
+        google_api_key='test-key',groq_api_key='test-groq-key',
+        openrouter_api_key=None,ai_fallback_enabled=True,
+        ai_groq_model='groq/openai/gpt-oss-20b',
+        ai_model='gemini-3.5-flash-lite',ai_timeout_seconds=60,
+        ai_evidence_candidates=4,ai_daily_user_runs=2,ai_daily_global_runs=2,
+    )
+    monkeypatch.setattr(procurement_api,'get_settings',lambda:settings)
+    monkeypatch.setattr(runtime,'get_settings',lambda:settings)
+    monkeypatch.setattr(runtime,'_fallback_agent',lambda model:'LiteLLM:'+model)
+    calls=[]
+    async def inference(user_id,prompt,*,agent,max_calls,timeout_seconds,
+                        provider='gemini',model_name=None):
+        calls.append(provider)
+        assert max_calls==1
+        if provider=='gemini':
+            raise runtime.AgentExecutionError('Google 503',category='provider_unavailable')
+        return {
+            'text':'Product screen-1 meets the saved price and stock rules.',
+            'model':model_name,'provider':provider,
+            'usage':{'input_tokens':250,'output_tokens':19},
+        }
+    monkeypatch.setattr(runtime,'_run',inference)
+
+    response=client.post(f'/api/v1/procurement-requests/{request_id}/analyze',headers=headers)
+    assert response.status_code==200
+    assert response.json()['source']=='groq'
+    assert calls==['gemini','groq']
+    saved=client.get(f'/api/v1/procurement-requests/{request_id}',headers=headers).json()
+    assert saved['analysis_json']['ai_model']=='groq/openai/gpt-oss-20b'
+    again=client.post(f'/api/v1/procurement-requests/{request_id}/analyze',headers=headers)
+    assert again.status_code==200
+    assert again.json()['cached'] is True
+    assert calls==['gemini','groq']
+
+
+def test_real_api_ai_backup_refuses_when_daily_quota_has_one_slot(client,monkeypatch):
+    headers=auth_headers(client,'backup-quota@example.com')
+    request_id=client.post('/api/v1/procurement-requests',headers=headers,json={
+        'request_text':'Office chairs with in-stock purchase evidence',
+        'quantity':1,'currency':'USD',
+    }).json()['id']
+
+    async def search(self,query,*,limit=20,filters=None,user_id=None,page_token=None):
+        return Channel3SearchResponse(products=[Channel3Product(
+            id='chair-1',title='Office chair',
+            offers=[Channel3Offer(
+                url='https://shop.example/chair',domain='shop.example',
+                availability='InStock',
+                price=Channel3Price(amount='100.00',currency='USD'),
+            )],
+        )])
+    monkeypatch.setattr(Channel3Client,'search_products',search)
+    settings=SimpleNamespace(
+        google_api_key='test-key',groq_api_key='test-groq-key',
+        openrouter_api_key=None,ai_fallback_enabled=True,
+        ai_groq_model='groq/openai/gpt-oss-20b',
+        ai_model='gemini-3.5-flash-lite',ai_timeout_seconds=60,
+        ai_evidence_candidates=4,ai_daily_user_runs=1,ai_daily_global_runs=1,
+    )
+    monkeypatch.setattr(procurement_api,'get_settings',lambda:settings)
+    monkeypatch.setattr(runtime,'get_settings',lambda:settings)
+    calls=[]
+    async def inference(user_id,prompt,*,agent,max_calls,timeout_seconds,
+                        provider='gemini',model_name=None):
+        calls.append(provider)
+        raise runtime.AgentExecutionError('Google 503',category='provider_unavailable')
+    monkeypatch.setattr(runtime,'_run',inference)
+    response=client.post(f'/api/v1/procurement-requests/{request_id}/analyze',headers=headers)
+    assert response.status_code==429
+    assert response.headers.get('Retry-After')
+    assert calls==['gemini']
+    saved=client.get(f'/api/v1/procurement-requests/{request_id}',headers=headers).json()
+    assert saved['analysis_json']['source']=='Channel3'
+    assert len(saved['analysis_json']['results'])==1

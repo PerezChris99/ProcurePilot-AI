@@ -1,4 +1,5 @@
 import json
+import asyncio
 import httpx
 from pydantic import ValidationError
 from app.core.config import get_settings
@@ -36,17 +37,37 @@ class Channel3Client:
         if filters: payload['filters']=filters
         if page_token: payload['page_token']=page_token
         try:
-            async with httpx.AsyncClient(base_url=self.base_url,timeout=httpx.Timeout(12.0,connect=3.0),transport=self.transport) as client:
-                async with client.stream('POST','search',headers=headers,json=payload) as response:
-                    response.raise_for_status()
-                    size=0
-                    chunks=[]
-                    async for chunk in response.aiter_bytes():
-                        size+=len(chunk)
-                        if size>2_097_152:
-                            raise Channel3Unavailable('Channel3 catalogue response exceeds the safe size limit')
-                        chunks.append(chunk)
-                    return Channel3SearchResponse.model_validate(json.loads(b''.join(chunks)))
+            # Catalogue search is read-only even though Channel3 uses POST.
+            # Retry once for transient transport/5xx only; never retry 401,
+            # 403, 429, invalid JSON or unsafe payment/order mutations.
+            for attempt in range(2):
+                try:
+                    async with httpx.AsyncClient(
+                        base_url=self.base_url,
+                        timeout=httpx.Timeout(12.0,connect=3.0),
+                        transport=self.transport,
+                    ) as client:
+                        async with client.stream(
+                            'POST','search',headers=headers,json=payload,
+                        ) as response:
+                            response.raise_for_status()
+                            size=0
+                            chunks=[]
+                            async for chunk in response.aiter_bytes():
+                                size+=len(chunk)
+                                if size>2_097_152:
+                                    raise Channel3Unavailable('Channel3 catalogue response exceeds the safe size limit')
+                                chunks.append(chunk)
+                            return Channel3SearchResponse.model_validate(json.loads(b''.join(chunks)))
+                except (httpx.TransportError,httpx.HTTPStatusError) as exc:
+                    transient = isinstance(exc,httpx.TransportError) or (
+                        isinstance(exc,httpx.HTTPStatusError)
+                        and exc.response.status_code in (502,503,504)
+                    )
+                    if attempt == 0 and transient:
+                        await asyncio.sleep(0.25)
+                        continue
+                    raise
         except (httpx.HTTPError,ValidationError,ValueError) as exc:
             raise Channel3Unavailable('Channel3 product search failed or returned an invalid response') from exc
 
@@ -61,24 +82,35 @@ class Channel3Client:
         headers={'x-api-key':self.api_key,'Accept':'application/json'}
         if user_id: headers['x-user-id']=user_id
         try:
-            async with httpx.AsyncClient(
-                base_url=self.base_url,timeout=httpx.Timeout(12.0,connect=3.0),
-                transport=self.transport,
-            ) as transport:
-                async with transport.stream(
-                    'GET','products/'+quote(product_id,safe=''),headers=headers,
-                ) as response:
-                    response.raise_for_status()
-                    size=0
-                    chunks=[]
-                    async for chunk in response.aiter_bytes():
-                        size+=len(chunk)
-                        if size>2_097_152:
-                            raise Channel3Unavailable('Channel3 product details exceed the safe size limit')
-                        chunks.append(chunk)
-                    raw=json.loads(b''.join(chunks))
-                    if not isinstance(raw,dict):
-                        raise ValueError('Invalid Channel3 product object')
-                    return Channel3Product.model_validate(raw.get('product',raw))
+            for attempt in range(2):
+                try:
+                    async with httpx.AsyncClient(
+                        base_url=self.base_url,timeout=httpx.Timeout(12.0,connect=3.0),
+                        transport=self.transport,
+                    ) as transport:
+                        async with transport.stream(
+                            'GET','products/'+quote(product_id,safe=''),headers=headers,
+                        ) as response:
+                            response.raise_for_status()
+                            size=0
+                            chunks=[]
+                            async for chunk in response.aiter_bytes():
+                                size+=len(chunk)
+                                if size>2_097_152:
+                                    raise Channel3Unavailable('Channel3 product details exceed the safe size limit')
+                                chunks.append(chunk)
+                            raw=json.loads(b''.join(chunks))
+                            if not isinstance(raw,dict):
+                                raise ValueError('Invalid Channel3 product object')
+                            return Channel3Product.model_validate(raw.get('product',raw))
+                except (httpx.TransportError,httpx.HTTPStatusError) as exc:
+                    transient = isinstance(exc,httpx.TransportError) or (
+                        isinstance(exc,httpx.HTTPStatusError)
+                        and exc.response.status_code in (502,503,504)
+                    )
+                    if attempt == 0 and transient:
+                        await asyncio.sleep(0.25)
+                        continue
+                    raise
         except (httpx.HTTPError,ValidationError,ValueError) as exc:
             raise Channel3Unavailable('Channel3 product verification failed') from exc

@@ -83,6 +83,7 @@ def integration_status(
     paypal_id_set = _set(settings.paypal_client_id)
     paypal_secret_set = _set(settings.paypal_client_secret)
     paypal_webhook_set = _set(settings.paypal_webhook_id)
+    fallback_enabled = getattr(settings,'ai_fallback_enabled',False)
     return {
         "runtime": {
             "environment": settings.app_env,
@@ -94,10 +95,20 @@ def integration_status(
             "engine": dialect,
         },
         "ai": {
-            "provider": "Google Gemini",
-            "configured": google_key_set,
+            "provider": "Google ADK / LiteLLM",
+            "configured": google_key_set or (fallback_enabled and (
+                _set(getattr(settings,'groq_api_key',None))
+                or _set(getattr(settings,'openrouter_api_key',None))
+            )),
             "api_key_set": google_key_set,
-            "model": settings.ai_model or "gemini-3.8-flash",
+            "primary_configured": google_key_set,
+            "model": settings.ai_model or "gemini-3.5-flash-lite",
+            "fallback_enabled": fallback_enabled,
+            "backup_providers": {
+                "groq": fallback_enabled and _set(getattr(settings, 'groq_api_key', None)),
+                "openrouter": fallback_enabled and _set(getattr(settings, 'openrouter_api_key', None)),
+            },
+            "provider_checks": "configuration_only",
         },
         "channel3": {
             "provider": "Channel3",

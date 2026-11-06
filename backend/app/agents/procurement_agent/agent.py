@@ -28,6 +28,13 @@ def _configure_adk_gemini_api(key: str | None):
 
 
 _configure_adk_gemini_api(settings.google_api_key)
+# LiteLLM reads its provider credentials from process variables. Bind only the
+# values actually resolved by Pydantic (root .env or explicit process override).
+# No keys or customer evidence are ever sent to an unconfigured fallback.
+if settings.groq_api_key:
+    os.environ['GROQ_API_KEY'] = settings.groq_api_key
+if settings.openrouter_api_key:
+    os.environ['OPENROUTER_API_KEY'] = settings.openrouter_api_key
 
 async def discover_and_rank_products(query: str, quantity: int = 1, budget: str | None = None, currency: str = 'USD', mandatory_attributes: dict[str,str] | None = None, preferred_attributes: dict[str,str] | None = None) -> dict:
     """Search Channel3 and rank real catalogue products against explicit purchasing constraints.
@@ -64,7 +71,7 @@ async def discover_and_rank_products(query: str, quantity: int = 1, budget: str 
         return {'status':'error','message':'The procurement search could not be completed. Check the request and integration configuration.','results':[]}
 
 root_agent=Agent(
-    model=settings.ai_model or 'gemini-3.8-flash',
+    model=settings.ai_model or 'gemini-3.5-flash-lite',
     name='procurepilot_agent',
     description='An evidence-grounded AI assistant for business procurement research and product comparison.',
     instruction=(
@@ -78,14 +85,14 @@ root_agent=Agent(
         'purchase, and payment actions are controlled by the backend outside this agent.'
     ),
     tools=[discover_and_rank_products],
-    generate_content_config=_generation_config(settings.ai_model or 'gemini-3.8-flash'),
+    generate_content_config=_generation_config(settings.ai_model or 'gemini-3.5-flash-lite'),
 )
 
 
 # The normal /analyze flow uses one bounded, evidence-only model call instead of
 # asking Gemini to search Channel3 a second time or perform an open-ended tool loop.
 analysis_agent = Agent(
-    model=settings.ai_model or 'gemini-3.8-flash',
+    model=settings.ai_model or 'gemini-3.5-flash-lite',
     name='procurepilot_evidence_analyst',
     description='Compact evidence-grounded purchasing assessment with no action tools.',
     instruction=(
@@ -102,5 +109,5 @@ analysis_agent = Agent(
         'Do not include raw JSON in the answer. Be precise and brief.'
     ),
     tools=[],
-    generate_content_config=_generation_config(settings.ai_model or 'gemini-3.8-flash'),
+    generate_content_config=_generation_config(settings.ai_model or 'gemini-3.5-flash-lite'),
 )

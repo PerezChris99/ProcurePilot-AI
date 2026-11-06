@@ -10,7 +10,7 @@ ProcurePilot uses **deterministic orchestration with a bounded Google ADK/Gemini
 | Python scorer | Requirements, stock, budget, ranking | Zero |
 | Evidence builder | Include policy-eligible price evidence in a 3600-character packet; reduce candidate count when needed | Zero |
 | Daily budget service | Reserve calls in atomic SQL transaction | Zero |
-| ADK analysis_agent | Explain verified saved evidence in plain language | One maximum |
+| ADK analysis_agent | Explain verified saved evidence in plain language | One per provider; up to two quota-reserved backup attempts on transient errors |
 | Purchase-order and payment routes | Snapshot, approve, checkout and capture | Zero |
 
 A legacy tool-capable root_agent remains in the code for future controlled research, capped at three calls; the normal public /analyze endpoint uses the **tool-free** analysis_agent. This is intentional and prevents duplicate catalogue queries.
@@ -48,7 +48,7 @@ flowchart LR
 | Variable | Default | Limit / meaning |
 | --- | --- | --- |
 | GOOGLE_API_KEY | Empty | Required for real Gemini analysis |
-| AI_MODEL | gemini-3.8-flash in .env.example | Model choice, backend only |
+| AI_MODEL | gemini-3.5-flash-lite in .env.example | Model choice, backend only |
 | AI_MAX_OUTPUT_TOKENS | 900 | Validated 256 to 2048 |
 | AI_TIMEOUT_SECONDS | 60 | Validated 10 to 90; bounded wall clock, not extra Gemini tokens |
 | AI_DAILY_USER_RUNS | 12 | Calls per user per UTC day |
@@ -136,3 +136,32 @@ keys or model names solely because a request timed out. A persistent remote
 `provider_exception` or `adk_error_event` timeout requires provider/network
 inspection; a persistent `local_deadline` means the ADK call exceeded our
 bounded wall time. No live Gemini pass is claimed by this code change.
+
+
+## November 6: optional LiteLLM failover
+
+Normal path is native Gemini Flash-Lite through ADK. If present, backend-only
+Groq/OpenRouter keys unlock a backup model through
+`google.adk.models.lite_llm.LiteLlm`, still wrapped in a tool-free Google
+ADK `Agent` and `RunConfig(max_llm_calls=1)`. On provider unavailable,
+timeout, transport or upstream quota/429, one Groq attempt may follow; then
+one OpenRouter attempt if configured. Never fallback on authentication,
+permission, invalid model, malformed evidence or any payment action.
+
+The 60-second total user-visible analysis ceiling is split into bounded
+per-provider attempts, not multiplied by three. Each fallback reserves
+another SQL daily AI allowance **before** it calls a provider; exhaustion
+returns 429 with saved Channel3 evidence untouched. The app stores the actual
+selected model/provider and provider-reported usage. Cached assessments incur
+zero further calls. SDKs may implement internal HTTP retries, so API attempts
+and provider HTTP requests are not necessarily one-to-one.
+
+Provider credentials and prompts stay server-side. Fallback does disclose the
+allowlisted procurement evidence packet to the selected external model host,
+so review provider privacy terms before submitting sensitive purchasing text.
+Channel3 product discovery and PayPal Sandbox capture are outside LiteLLM,
+never delegated to the agent.
+
+See [AI_PROVIDER_FAILOVER.md](AI_PROVIDER_FAILOVER.md) for configuration,
+live smoke commands and expected failure modes. No availability SLA or live
+backup connectivity is assumed until key-bearing tests pass.

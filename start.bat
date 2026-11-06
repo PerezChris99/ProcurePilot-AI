@@ -1,5 +1,6 @@
 @echo off
 setlocal EnableExtensions
+set "PYTHONUTF8=1"
 
 REM ProcurePilot AI - Windows local development bootstrap.
 REM Run from PowerShell or a VS Code terminal. This script installs dependencies,

@@ -56,7 +56,7 @@ def test_gemini_adk_error_exposes_allowlisted_category_not_secret(monkeypatch):
     assert entry['error_type']=='AgentExecutionError'
     assert entry['category']=='authentication'
     assert entry['http_status']==401
-    assert 'Verify the Gemini AI Studio API key' in entry['hint']
+    assert 'selected model provider credentials' in entry['hint']
     assert 'never-print-this' not in repr(result)
 
 
@@ -115,3 +115,35 @@ def test_smoke_single_gemini_call_accepts_bounded_override_and_counts_usage(monk
     assert entry['usage']['thinking_tokens']==14
     assert 'unknown_metadata' not in repr(result)
     assert entry['elapsed_seconds']>=0
+
+
+def test_explicit_groq_probe_uses_exact_adk_provider_once(monkeypatch):
+    calls=[]
+    async def single_provider(user_id,prompt,*,provider,timeout_seconds=None):
+        calls.append((provider,timeout_seconds))
+        assert 'payment_authorized' in prompt
+        return {
+            'text':'No verified payment or recommendation exists.',
+            'model':'groq/openai/gpt-oss-20b','provider':provider,
+            'usage':{'input_tokens':111,'output_tokens':14,'total_tokens':125},
+        }
+    monkeypatch.setattr(provider_smoke,'run_single_provider_probe',single_provider)
+    result=asyncio.run(provider_smoke.run_checks(
+        'gemini',gemini_timeout_seconds=45,ai_route='groq',
+    ))
+    assert result['status']=='pass'
+    assert result['checks']['gemini']['provider']=='groq'
+    assert result['checks']['gemini']['usage']['total_tokens']==125
+    assert calls==[('groq',45)]
+
+
+def test_explicit_provider_probe_missing_key_returns_safe_configuration_status(monkeypatch):
+    from app.agents.runtime import AgentConfigurationError
+    async def missing(user_id,prompt,*,provider,timeout_seconds=None):
+        raise AgentConfigurationError('secret-key-not-to-be-shared')
+    monkeypatch.setattr(provider_smoke,'run_single_provider_probe',missing)
+    result=asyncio.run(provider_smoke.run_checks('gemini',ai_route='openrouter'))
+    assert result['status']=='fail'
+    entry=result['checks']['gemini']
+    assert entry['category']=='configuration'
+    assert 'secret-key-not-to-be-shared' not in repr(result)

@@ -24,6 +24,18 @@ class Settings(BaseSettings):
     max_request_body_bytes: int = Field(default=1048576, ge=1024, le=8388608)
     google_api_key: str | None = None
     ai_model: str | None = None
+    # Optional Google ADK LiteLLM backups; no key, no backup call.
+    ai_fallback_enabled: bool = True
+    groq_api_key: str | None = None
+    openrouter_api_key: str | None = None
+    ai_groq_model: str = Field(
+        default='groq/openai/gpt-oss-20b',
+        pattern=r'^groq/[A-Za-z0-9._/-]{1,100}$',
+    )
+    ai_openrouter_model: str = Field(
+        default='openrouter/openai/gpt-oss-20b:free',
+        pattern=r'^openrouter/[A-Za-z0-9._:/-]{1,100}$',
+    )
     ai_max_output_tokens: int = Field(default=900, ge=256, le=2048)
     ai_timeout_seconds: int = Field(default=60, ge=10, le=90)
     ai_daily_user_runs: int = Field(default=12, ge=1, le=500)

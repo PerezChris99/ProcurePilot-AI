@@ -10,14 +10,14 @@ ProcurePilot keeps all provider credentials on the FastAPI backend. Configure th
 
    ```dotenv
    GOOGLE_API_KEY=your_google_ai_studio_api_key
-   AI_MODEL=gemini-3.8-flash
+   AI_MODEL=gemini-3.5-flash-lite
    ```
 
 4. Restart the backend process after changing the environment.
 5. In ProcurePilot, open a procurement request and use **Ask AI to analyze**.
 6. Confirm the request returns an AI explanation and that the backend logs contain no authentication, quota, or model errors.
 
-The normal AI analysis also enforces AI_MAX_OUTPUT_TOKENS=900, AI_TIMEOUT_SECONDS=35, AI_DAILY_USER_RUNS=12, AI_DAILY_GLOBAL_RUNS=100 and AI_EVIDENCE_CANDIDATES=4 by default. Changes go in backend .env only. Repeating the unchanged assessment is cached with no second Gemini request. The current default model remains configurable through `AI_MODEL`. `gemini-3.8-flash` is the selected stable model for this setup; `gemini-flash-latest` is the ADK documented rolling alias. Check Google's model availability and pricing for the project before changing models.
+Normal analysis uses AI_MAX_OUTPUT_TOKENS=900, AI_TIMEOUT_SECONDS=60 (total bounded window), AI_DAILY_USER_RUNS=12, AI_DAILY_GLOBAL_RUNS=100 and AI_EVIDENCE_CANDIDATES=4. Put secrets only in the **repository-root .env**, not frontend/VITE variables. Repeating a saved unchanged assessment uses the cache. The primary `gemini-3.5-flash-lite` has passed the entrant's live ADK smoke check; actual model availability may fluctuate. Optional Groq and OpenRouter backups through LiteLLM need their own keys and each attempted model call consumes an AI daily quota reservation. See [LiteLLM setup](AI_PROVIDER_FAILOVER.md).
 
 The agent is intentionally limited to research and explanation. It must not approve purchase orders or execute payments.
 

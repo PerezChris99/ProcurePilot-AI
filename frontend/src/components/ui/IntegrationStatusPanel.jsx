@@ -61,8 +61,11 @@ export default function IntegrationStatusPanel({health,integrations}){
     <Row icon={Database} name={engine}
       description={state?.database?.connected?'Connection checked · schema '+(state?.database?.schema_ready?'ready':'not ready'):'Database connection'}
       {...db}/>
-    <Row icon={Sparkles} name="Google Gemini"
-      description={(state?.ai?.model||'Model not reported')+' · '+(state?.ai?.api_key_set?'Key set':'Key missing')}
+    <Row icon={Sparkles} name="AI models · Google ADK"
+      description={'Primary: '+(state?.ai?.model||'Model not reported')+
+        ' ('+(state?.ai?.api_key_set?'key set':'key missing')+')'+
+        ' · Backup: '+(state?.ai?.backup_providers?.groq?'Groq ready':'Groq not set')+
+        ', '+(state?.ai?.backup_providers?.openrouter?'OpenRouter ready':'OpenRouter not set')}
       {...ai}/>
     <Row icon={PackageSearch} name="Channel3 catalogue"
       description={'API key '+(state?.channel3?.api_key_set?'set':'missing')+' · HTTPS URL '+(state?.channel3?.base_url_configured?'set':'missing')}

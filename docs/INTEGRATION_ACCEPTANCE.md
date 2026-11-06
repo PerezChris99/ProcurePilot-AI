@@ -20,7 +20,7 @@ authorized credentials.
 ### Immediate local procedure
 
 1. Checkout/pull the latest `main` commit, ensure Python 3.12+ and a Node version meeting `frontend/package.json` engines; run `start.bat` on Windows (or `./start.sh`). Run backend migrations. Use `verify.bat` to execute all local code gates; capture failure logs with secrets redacted.
-2. Configure the repository-root **uncommitted** `.env` (not `frontend/.env`): `GOOGLE_API_KEY`, `AI_MODEL=gemini-3.8-flash`, `CHANNEL3_API_KEY`, `CHANNEL3_BASE_URL=https://api.trychannel3.com/v1`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com`, `PAYPAL_WEBHOOK_ID`. Create Sandbox **Business** merchant + separate **Personal** buyer accounts. Never copy these secrets into git, Devpost public text, ChatGPT, issue comments or logs.
+2. Configure the repository-root **uncommitted** `.env` (not `frontend/.env`): `GOOGLE_API_KEY`, `AI_MODEL=gemini-3.5-flash-lite`, `CHANNEL3_API_KEY`, `CHANNEL3_BASE_URL=https://api.trychannel3.com/v1`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com`, `PAYPAL_WEBHOOK_ID`. Create Sandbox **Business** merchant + separate **Personal** buyer accounts. Never copy these secrets into git, Devpost public text, ChatGPT, issue comments or logs.
 3. Run **read-only** provider smoke checks from the `backend` directory using the current Python environment:
 
    ```powershell
@@ -138,3 +138,20 @@ without extra model calls or loosening token quotas. Run
 `smoke-providers.bat all 75` to isolate a slow provider response from
 local deadline. The user's actual credential-bearing execution is required
 to confirm if Gemini is operational. A merged PR cannot establish a live pass.
+
+
+## 2026-11-06 optional provider resilience implementation
+
+User-observed smoke evidence: Gemini Flash-Lite ADK, Channel3 search and
+PayPal Sandbox OAuth have all passed the combined local provider test.
+A subsequent full procurement AI request received a real Gemini 503, so
+availability is still a practical issue. The repository now has optional,
+key-gated LiteLLM routes to Groq and OpenRouter through the same Google ADK
+Runner; source and regression tests have been authored but not executed on
+the user's machine. See [AI_PROVIDER_FAILOVER.md](AI_PROVIDER_FAILOVER.md).
+
+Acceptance gates added: local dependency installation; offline QA; isolated
+live primary, Groq and OpenRouter probes; forced transient failure with exactly
+one quota-reserved backup; actual browser assessment with true provider
+attribution; unchanged PayPal buyer/capture/webhook validation. A combined
+OAuth + search + AI smoke PASS does not prove payment capture or public uptime.
