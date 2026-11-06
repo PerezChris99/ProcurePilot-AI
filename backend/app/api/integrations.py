@@ -95,9 +95,13 @@ def integration_status(
             "engine": dialect,
         },
         "ai": {
-            "provider": "Google Gemini",
-            "configured": google_key_set,
+            "provider": "Google ADK / LiteLLM",
+            "configured": google_key_set or (fallback_enabled and (
+                _set(getattr(settings,'groq_api_key',None))
+                or _set(getattr(settings,'openrouter_api_key',None))
+            )),
             "api_key_set": google_key_set,
+            "primary_configured": google_key_set,
             "model": settings.ai_model or "gemini-3.5-flash-lite",
             "fallback_enabled": fallback_enabled,
             "backup_providers": {

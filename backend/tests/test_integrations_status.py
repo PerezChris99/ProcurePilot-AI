@@ -47,10 +47,14 @@ def test_integration_status_reports_configured_providers_without_secrets(
     assert payload["database"]["engine"] == "sqlite"
     assert payload["runtime"]["provider_checks"] == "configuration_only"
     assert payload["ai"] == {
-        "provider": "Google Gemini",
+        "provider": "Google ADK / LiteLLM",
         "configured": True,
         "api_key_set": True,
+        "primary_configured": True,
         "model": "gemini-3.8-flash",
+        "fallback_enabled": False,
+        "backup_providers": {"groq":False,"openrouter":False},
+        "provider_checks": "configuration_only",
     }
     assert payload["channel3"]["configured"] is True
     assert payload["paypal"]["credentials_configured"] is True
@@ -88,7 +92,7 @@ def test_integration_status_tracks_missing_credentials_and_partial_paypal_setup(
     assert result.status_code == 200
     state = result.json()
     assert state["ai"]["configured"] is False
-    assert state["ai"]["model"] == "gemini-3.8-flash"
+    assert state["ai"]["model"] == "gemini-3.5-flash-lite"
     assert state["channel3"]["configured"] is False
     assert state["channel3"]["base_url_configured"] is True
     assert state["channel3"]["api_key_set"] is False
@@ -139,3 +143,27 @@ def test_channel3_status_uses_same_documented_default_url_as_live_client(client,
     assert state['base_url_configured'] is True
     assert state['configured'] is True
     assert 'test-channel3-key' not in response.text
+
+
+def test_backup_only_ai_status_is_configured_without_exposing_provider_keys(client, monkeypatch):
+    monkeypatch.setattr(
+        integrations,'get_settings',
+        lambda: SimpleNamespace(
+            app_env='development',google_api_key=None,ai_model='gemini-3.5-flash-lite',
+            ai_fallback_enabled=True,
+            groq_api_key='private-groq-key',openrouter_api_key='private-openrouter-key',
+            channel3_api_key=None,channel3_base_url=None,
+            paypal_client_id=None,paypal_client_secret=None,paypal_webhook_id=None,
+            paypal_base_url='https://api-m.sandbox.paypal.com',
+        ),
+    )
+    response=client.get('/api/v1/integrations/status',
+                        headers=_register(client,email='backup-only@example.com'))
+    assert response.status_code==200
+    ai=response.json()['ai']
+    assert ai['configured'] is True
+    assert ai['primary_configured'] is False
+    assert ai['backup_providers']=={'groq':True,'openrouter':True}
+    assert ai['provider_checks']=='configuration_only'
+    assert 'private-groq-key' not in response.text
+    assert 'private-openrouter-key' not in response.text
