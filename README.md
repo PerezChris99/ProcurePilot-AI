@@ -68,6 +68,29 @@ On macOS/Linux, use `python3 judge-preview.py --seed-email YOUR_REGISTERED_EMAIL
 
 *The exact products and prices depend on the live catalogue; the example above is an input scenario, not a claim that particular products or offers exist.*
 
+## Decision Trust Lab: verify the rules, not just the story
+
+From your signed-in dashboard, open **Decision Trust Lab** (`/trust-lab`).
+Its **Run policy checks** action evaluates **twelve labelled synthetic
+scenarios against the actual server purchase policy and verification predicates**.
+It covers a valid offer; 72-inch versus 24-inch monitors; missing size proof;
+monitor accessories; out-of-stock products; budget overflow; foreign currency;
+unapproved merchants; insecure HTTP offers; expired mandates; unauthorized
+delegated review; and altered PayPal order amounts.
+
+The lab is read-only and does not invoke Channel3, Gemini or PayPal, create
+purchase orders or run actual penetration tests. Results include the exact
+observed rejection reason and expected outcome; no fabricated provider status.
+
+The **Decision Passport** complements the lab with *real saved purchase
+evidence* from eligible order creation: policy-blocked offer counts, the
+cheapest eligible same-currency snapshot, the cheapest rejected listing and
+why it was disqualified, the selected price premium and the human/PayPal
+audit history. A cheap **rejected** item is never counted as realized
+savings. Exports remain factual, owner-scoped and available as PDF/JSON.
+
+[Technical acceptance and source-code proof](docs/LIVE_HOSTING_ACCEPTANCE.md)
+
 ## How it works
 
 ```mermaid
@@ -141,7 +164,17 @@ See [AI operation and quotas](docs/agent.md), [payment trust boundaries](docs/se
 Get-Content .\qa\reports\summary.md
 ```
 
-The suite covers Python syntax, backend Pytest with branch coverage, fresh/upgrade Alembic scenarios, Node compatibility, ESLint, React Vitest, frontend deployment contracts, strict Vite build and built-asset smoke checks. The report is generated locally and deliberately gitignored. Browser E2E, real PostgreSQL deployment, actual PayPal Sandbox buyer/capture and signed remote webhooks require **separate acceptance**.
+The suite covers Python syntax, backend Pytest with branch coverage (including the new 12-scenario Trust Lab and fact-based Passport comparisons), fresh/upgrade Alembic scenarios, Node compatibility, ESLint, React Vitest, frontend deployment contracts, strict Vite build and built-asset smoke checks. The report is generated locally and deliberately gitignored. Browser E2E, real PostgreSQL deployment, actual PayPal Sandbox buyer/capture and signed remote webhooks require **separate acceptance**.
+
+After publishing a public HTTPS UI and API, run the read-only live hosting checker:
+
+```powershell
+python .\qa\live_demo_check.py --frontend https://YOUR-FRONTEND-HOST --api https://YOUR-API-HOST
+```
+
+It checks seven deployment/authorization gates: home, deep links, health,
+database readiness, CORS, and protected Orders/Trust Lab access. This is **not**
+a substitute for testing real provider calls and Sandbox captures.
 
 **Stack:** React 19 + React Router + TanStack Query + Recharts; FastAPI + Python 3.12+ + SQLAlchemy + Alembic + PostgreSQL; Gemini / Google ADK + LiteLLM fallback; Channel3; PayPal Sandbox; optional Render Static Site/Web Service/managed database/Key Value.
 
@@ -155,6 +188,7 @@ Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/), dea
 - [Devpost write-up, presentation storyboard and submission checklist](docs/HACKATHON_SUBMISSION_KIT.md)
 - [Official judging scorecard and remaining work](docs/HACKATHON_FINAL_AUDIT.md)
 - [PayPal Sandbox, Gemini and Channel3 live acceptance](docs/INTEGRATION_ACCEPTANCE.md)
+- [Public HTTPS infrastructure readiness checks](docs/LIVE_HOSTING_ACCEPTANCE.md)
 - [Render deployment runbook](docs/RENDER_DEPLOYMENT.md)
 
 **License:** [MIT](LICENSE) · [Attribution and third-party notices](NOTICE). Independent hackathon prototype; use of third-party product/service names does not imply endorsement. No actual payment credentials, merchant credentials or buyer passwords belong in public source.
@@ -169,7 +203,7 @@ backend/app/procurement/    Deterministic policy, ranking, Decision Passport/PDF
 backend/app/integrations/   Channel3 and PayPal clients
 backend/alembic/            SQL migrations
 backend/tests/             API and integration regressions (mocked providers)
-qa/                        Nine-gate offline test/build runner
+qa/                        Nine-gate offline test/build runner + seven-check HTTPS probe
 docs/                      Architecture, security, judge and deployment manuals
 judge-preview.py / .bat     Isolated, intentionally non-payable judge preview
 ```

@@ -2,6 +2,20 @@
 
 Source-authored tests are not proof of runtime success. Run the commands below on a Windows machine with the installed dependencies and a configured PostgreSQL database.
 
+## Current judge-focused verification
+
+The maintainer reported all nine offline gates passed on November 6 **before**
+the latest source changes. Re-run `.\test-all.bat` and inspect
+`qa/reports/summary.md` to accept this revision. The added Python checks
+cover twelve live-executed synthetic policy, approval and PayPal matching
+fixtures, frozen evidence impact accounting, and seven read-only hosting
+checks with a mocked transport. React tests cover the Trust Lab interface,
+reload/failure and Decision Passport rejected-alternative explanation.
+
+For public infrastructure, use `qa/live_demo_check.py` with the real
+HTTPS origins; see [live hosting acceptance](LIVE_HOSTING_ACCEPTANCE.md).
+No offline gate or mocked network reply proves a live Sandbox buyer capture.
+
 ## One-command local validation
 
 From the repository root:
@@ -11,7 +25,7 @@ From the repository root:
 .\verify.bat
 ~~~
 
-The launcher installs missing dependencies, applies Alembic migrations through 0005_read_indexes, opens VS Code, then executes a frontend build and starts the API/React dev server in integrated terminals. If VS Code blocks automatic tasks until trust is granted, run the named task **ProcurePilot: Build then Start (VS Code Terminals)**. Stop old backend/frontend terminals before relaunching to avoid port conflicts.
+The launcher installs missing dependencies, applies Alembic migrations through the current head (0009_delegated_approver), opens VS Code, then executes a frontend build and starts the API/React dev server in integrated terminals. If VS Code blocks automatic tasks until trust is granted, run the named task **ProcurePilot: Build then Start (VS Code Terminals)**. Stop old backend/frontend terminals before relaunching to avoid port conflicts.
 
 The verifier runs:
 1. Python compileall across backend application and tests.

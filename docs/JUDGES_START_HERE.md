@@ -111,6 +111,21 @@ Ask for **72-inch monitors**. A 24-inch screen, an unknown-diagonal display
 or a monitor stand must **not** be orderable simply because its price is
 within budget. The request's hard specifications remain authoritative.
 
+## Optional: reproduce twelve policy safeguards without spending money
+
+While signed in, select **Open Decision Trust Lab** on Overview, then
+**Run policy checks**. All twelve cases execute against the same deterministic
+purchase eligibility and matching logic used by the API. One valid monitor
+passes; eleven disallowed cases are rejected (including wrong specifications,
+missing evidence, budget, merchant restrictions, unauthorized delegated
+review and altered payment amounts). Inputs are explicitly synthetic: no
+payment or third-party interaction is performed.
+
+For a **real saved purchase order**, open its **Decision Passport** to inspect
+the lowest eligible quote, the cheapest rejected same-currency listing with
+its policy violation, approval events, and actual Sandbox status. Rejected
+quotes are not called savings, and merchant settlement remains unverified.
+
 ## How to verify the repo
 
 Windows PowerShell after dependencies are installed:
@@ -120,11 +135,15 @@ Windows PowerShell after dependencies are installed:
 Get-Content .\qa\reports\summary.md
 ```
 
-The maintainer reported all **nine offline gates passing** on Windows on
+The maintainer reported all **nine offline gates passing before these recent updates** on Windows on
 November 6, 2026. The local suite writes its report to ignored `qa/reports`;
 it does not use live provider credentials, exercise real remote webhooks or
 represent a hosted payment checkout. Source changes after that report require
 the suite to be rerun.
+
+When the public UI/API exists, run [the credential-free hosted readiness
+checker](LIVE_HOSTING_ACCEPTANCE.md) to verify seven HTTPS, schema, CORS and
+authorization gates. It does not prove external integration acceptance.
 
 ## What counts as a meaningful integration
 

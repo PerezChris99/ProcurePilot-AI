@@ -47,6 +47,21 @@ stateDiagram-v2
   rejected --> [*]
 ~~~
 
+## Verifiable policy lab and impact accounting
+
+`GET /api/v1/trust-lab/scenarios` (authenticated) executes twelve labelled
+fixtures through the real `evaluate_offer`, delegated reviewer and PayPal
+order-match predicates, without calling providers or storing purchases.
+An incorrect scenario outcome is shown as **FAIL**, never silently fixed.
+This is a deterministic scenario test, not a penetration test or live provider
+certification.
+
+The Decision Passport is calculated from the **immutable-at-PO-creation saved
+source snapshot**. Eligible same-currency offers determine the lowest
+orderable comparison; ineligible same-currency offers may be shown as
+rejected examples with policy reasons, but never counted as savings. Delivery,
+tax, inventory truth, and retailer settlement remain unverified.
+
 ## Tables / data ownership
 
 | Table | Purpose |
@@ -73,7 +88,7 @@ Orders: POST /api/v1/procurement-requests/{request_id}/purchase-orders, GET /api
 
 Payments: POST /api/v1/purchase-orders/{id}/payments/paypal/create and /capture; POST /api/v1/webhooks/paypal.
 
-Liveness: GET /api/v1/health. Database readiness: GET /api/v1/ready. Authenticated configuration status: GET /api/v1/integrations/status; overview: GET /api/v1/dashboard/summary.
+Trust Lab: GET /api/v1/trust-lab/scenarios (authenticated, synthetic fixture execution only). Liveness: GET /api/v1/health. Database readiness: GET /api/v1/ready. Authenticated configuration status: GET /api/v1/integrations/status; overview: GET /api/v1/dashboard/summary.
 
 ## Security/trust boundaries
 

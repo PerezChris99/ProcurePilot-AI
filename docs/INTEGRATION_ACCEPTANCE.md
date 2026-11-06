@@ -19,6 +19,22 @@ authorized credentials.
 | G5 — PayPal buyer→capture | Explicitly human-approved PO; real Sandbox personal buyer approval and server capture; amount/currency/capture IDs match, replay causes no duplicate capture | Redacted UI order/audit page + PayPal Sandbox merchant transaction | NOT EXECUTED — buyer access unavailable |
 | G6 — HTTPS signed webhook | PayPal delivers real event to public HTTPS API; signature verification succeeds; duplicate/rejected/mismatched events do not double-mark paid | Redacted API event/audit details | NOT EXECUTED — HTTPS endpoint and credentials unavailable |
 
+### New code-only controls for reproducible judge verification
+
+- **Decision Trust Lab:** signed-in `/trust-lab` executes twelve controlled
+  synthetic policy/reviewer/PayPal amount-matching cases using actual backend
+  validation predicates. Zero provider calls, payments and new database rows.
+- **Decision Passport impact:** from a real saved PO snapshot, report the
+  cheapest eligible and cheapest rejected same-currency offers, explicit
+  rejection reasons, policy-blocked counts and the selected premium. An
+  ineligible offer is not a spendable baseline or actual realized savings.
+- **Public hosting CLI:** after HTTPS deployment, run
+  `python qa/live_demo_check.py --frontend https://ACTUAL-UI --api https://ACTUAL-API`
+  for seven read-only infrastructure/authorization gates.
+- All three features are **code and test changes only** until the revised
+  `test-all.bat` passes locally and actual remote provider acceptance is
+  recorded. They do not replace PayPal Sandbox buyer/capture/webhook testing.
+
 ### Immediate local procedure
 
 1. Checkout/pull the latest `main` commit, ensure Python 3.12+ and a Node version meeting `frontend/package.json` engines; run `start.bat` on Windows (or `./start.sh`). Run backend migrations. Use `verify.bat` to execute all local code gates; capture failure logs with secrets redacted.
