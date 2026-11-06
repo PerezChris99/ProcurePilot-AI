@@ -13,6 +13,7 @@ from app.integrations.channel3.schemas import (
     Channel3Offer, Channel3Price, Channel3Product,
 )
 from app.procurement.policy import evaluate_offer
+from app.api.purchase_orders import _can_approve_order, _paypal_order_matches
 
 # One positive control and negative controls for independently enforced gates.
 _SCENARIOS = (
@@ -212,6 +213,43 @@ def trust_lab_scenarios():
             "allowed": allowed,
             "passed": allowed == case["expected_allowed"],
             "violations": reasons,
+        })
+    # These two safeguards reuse the real API's authorization and PayPal
+    # matching predicates. No database or payment provider is contacted.
+    delegated_order = SimpleNamespace(
+        id="synthetic-po", user_id="owner", assigned_approver_id="reviewer",
+        total_amount=Decimal("300.00"), currency="USD",
+    )
+    attacker_allowed = _can_approve_order(delegated_order, "other-user")
+    paypal_payment = SimpleNamespace(paypal_order_id="SYNTHETIC-PAYPAL-ORDER")
+    provider_payload = {
+        "id": "SYNTHETIC-PAYPAL-ORDER", "status": "APPROVED",
+        "purchase_units": [{
+            "custom_id": "synthetic-po",
+            "amount": {"value": "1.00", "currency_code": "USD"},
+        }],
+    }
+    altered_amount_allowed = _paypal_order_matches(
+        provider_payload, delegated_order, paypal_payment
+    )
+    for id_, name, allowed, failure in (
+        ("unauthorized_approver", "Unassigned reviewer attempts approval",
+         attacker_allowed, "Actor is not the assigned registered reviewer"),
+        ("tampered_paypal_amount", "PayPal response amount was altered",
+         altered_amount_allowed, "Remote PayPal amount differs from the frozen PO"),
+    ):
+        results.append({
+            "id": id_, "name": name,
+            "intent": ("Approve a delegated purchase order" if id_=="unauthorized_approver"
+                       else "Verify remote Sandbox payment amount"),
+            "product_title": "Synthetic approved purchase order",
+            "quantity": 1, "unit_price": "300.00",
+            "quoted_total": "300.00", "budget": "300.00",
+            "offer_currency": "USD", "request_currency": "USD",
+            "availability": "Not applicable", "merchant": "Synthetic verification",
+            "expected_allowed": False, "allowed": allowed,
+            "passed": not allowed,
+            "violations": [] if allowed else [failure],
         })
     return {
         "source": "synthetic_policy_fixtures",

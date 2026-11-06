@@ -38,7 +38,7 @@ amount/currency, webhook signatures including duplicate delivery, and an
 accurate Decision Passport. Record a redacted result without merchant secrets.
 
 For self-serve reproducible policy verification, sign into the hosted app
-and open **Decision Trust Lab** from the overview. It executes ten controlled
+and open **Decision Trust Lab** from the overview. It executes twelve controlled
 synthetic inputs through the same deterministic purchase eligibility function
 and does not make any provider or payment calls. It is not a substitute for
 the above live acceptance.
