@@ -9,9 +9,10 @@ vi.mock('../services/api.js',()=>({apiRequest:vi.fn()}));
 
 function renderPage(){
   const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
-  return render(<QueryClientProvider client={client}>
+  const result=render(<QueryClientProvider client={client}>
     <MemoryRouter><TrustLabPage/></MemoryRouter>
   </QueryClientProvider>);
+  return {...result,client};
 }
 
 const example={
@@ -36,7 +37,7 @@ describe('Decision Trust Lab',()=>{
 
   it('shows real policy results on clearly labelled synthetic fixture data',async()=>{
     apiRequest.mockResolvedValue(example);
-    renderPage();
+    const {client}=renderPage();
     expect(await screen.findByRole('heading',{name:'2 / 2 checks matched expectations'}))
       .toBeInTheDocument();
     expect(screen.getByText('Wrong monitor diagonal')).toBeInTheDocument();
@@ -46,13 +47,31 @@ describe('Decision Trust Lab',()=>{
       .toBeInTheDocument();
     expect(apiRequest).toHaveBeenCalledWith('/trust-lab/scenarios');
     fireEvent.click(screen.getByRole('button',{name:'Run policy checks'}));
-    await waitFor(()=>expect(apiRequest).toHaveBeenCalledTimes(2));
+    // Await the REFRESH COMPLETION, not merely its invocation, so one test
+    // cannot leave a query active while the next test changes the API mock.
+    await waitFor(()=>{
+      expect(apiRequest).toHaveBeenCalledTimes(2);
+      expect(client.isFetching()).toBe(0);
+    });
   });
 
-  it('reports backend failure instead of inventing passed scenarios',async()=>{
-    apiRequest.mockRejectedValue(new Error('Not authenticated'));
-    renderPage();
+  it('reports backend failure without fabricating checks and recovers only after a successful retry',async()=>{
+    // Reject exactly the initial request. A later explicit retry must use a
+    // real resolved API response rather than inheriting a permanently failing
+    // mock from this test.
+    apiRequest.mockRejectedValueOnce(new Error('Not authenticated'))
+      .mockResolvedValueOnce(example);
+    const {client}=renderPage();
     expect(await screen.findByRole('alert')).toHaveTextContent('Not authenticated');
     expect(screen.queryByText(/checks matched expectations/)).not.toBeInTheDocument();
+    expect(apiRequest).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button',{name:'Run policy checks'}));
+    expect(await screen.findByRole('heading',{name:'2 / 2 checks matched expectations'}))
+      .toBeInTheDocument();
+    await waitFor(()=>{
+      expect(apiRequest).toHaveBeenCalledTimes(2);
+      expect(client.isFetching()).toBe(0);
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
