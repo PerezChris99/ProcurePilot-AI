@@ -9,7 +9,7 @@ vi.mock('../services/api.js',()=>({
  getDashboardSummary:vi.fn().mockResolvedValue({completed_orders:2,active_orders:3,pending_approvals:1,requests_with_results:4,recent_activity:[{id:'event-1',action:'purchase_order.created',created_at:'2026-11-04T12:00:00Z'}]}),
  getIntegrationStatus:vi.fn().mockResolvedValue({
   database:{connected:true,schema_ready:true,engine:'postgresql'},
-  ai:{provider:'Google Gemini',configured:true,api_key_set:true,model:'gemini-3.8-flash'},
+  ai:{provider:'Google ADK / LiteLLM',configured:true,api_key_set:true,model:'gemini-3.5-flash-lite',fallback_enabled:true,backup_providers:{groq:true,openrouter:true}},
   channel3:{provider:'Channel3',configured:true,api_key_set:true,base_url_configured:true},
   paypal:{provider:'PayPal',credentials_configured:true,client_id_set:true,client_secret_set:true,webhook_configured:false,environment:'sandbox'}
  })
@@ -26,10 +26,13 @@ describe('DashboardPage',()=>{
  });
  it('shows live provider configuration rather than hard-coded not configured labels',async()=>{
   renderPage();
+  // Dashboard renders the actual ADK and LiteLLM provider configuration.
   // Provider names render before React Query resolves, but the PayPal
   // environment and credential states come from the asynchronous API response.
   await waitFor(()=>{
-   expect(screen.getByText('Google Gemini')).toBeInTheDocument();
+   expect(screen.getByText('AI models · Google ADK')).toBeInTheDocument();
+   expect(screen.getByText(/Primary: gemini-3.5-flash-lite/)).toBeInTheDocument();
+   expect(screen.getByText(/Groq ready, OpenRouter ready/)).toBeInTheDocument();
    expect(screen.getByText('PayPal Sandbox')).toBeInTheDocument();
    expect(screen.getAllByText('Configured')).toHaveLength(3);
    expect(screen.getByText('Webhook ID missing')).toBeInTheDocument();

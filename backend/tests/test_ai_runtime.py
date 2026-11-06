@@ -247,17 +247,17 @@ def test_configured_adk_backups_are_opt_in_and_ordered():
         ai_fallback_enabled=True,groq_api_key='groq-key',
         openrouter_api_key='router-key',
         ai_groq_model='groq/openai/gpt-oss-20b',
-        ai_openrouter_model='openrouter/openai/gpt-oss-20b:free',
+        ai_openrouter_model='openrouter/google/gemma-4-26b-a4b-it:free',
     )
     assert runtime.configured_fallbacks(settings)==[
         ('groq','groq/openai/gpt-oss-20b'),
-        ('openrouter','openrouter/openai/gpt-oss-20b:free'),
+        ('openrouter','openrouter/google/gemma-4-26b-a4b-it:free'),
     ]
     settings.ai_fallback_enabled=False
     assert runtime.configured_fallbacks(settings)==[]
     settings.ai_fallback_enabled=True
     settings.groq_api_key=None
-    assert runtime.configured_fallbacks(settings)==[('openrouter','openrouter/openai/gpt-oss-20b:free')]
+    assert runtime.configured_fallbacks(settings)==[('openrouter','openrouter/google/gemma-4-26b-a4b-it:free')]
 
 
 def test_temporary_gemini_503_uses_one_groq_adk_fallback_and_records_quota(monkeypatch):
@@ -265,7 +265,7 @@ def test_temporary_gemini_503_uses_one_groq_adk_fallback_and_records_quota(monke
         ai_fallback_enabled=True,google_api_key='google-key',
         groq_api_key='groq-key',openrouter_api_key='router-key',
         ai_groq_model='groq/openai/gpt-oss-20b',
-        ai_openrouter_model='openrouter/openai/gpt-oss-20b:free',
+        ai_openrouter_model='openrouter/google/gemma-4-26b-a4b-it:free',
         ai_timeout_seconds=60,ai_model='gemini-3.5-flash-lite',
     )
     monkeypatch.setattr(runtime,'get_settings',lambda:settings)
@@ -325,7 +325,7 @@ def test_backups_count_every_model_attempt_not_just_the_first(monkeypatch):
         ai_fallback_enabled=True,google_api_key='google-key',
         groq_api_key='groq-key',openrouter_api_key='router-key',
         ai_groq_model='groq/openai/gpt-oss-20b',
-        ai_openrouter_model='openrouter/openai/gpt-oss-20b:free',
+        ai_openrouter_model='openrouter/google/gemma-4-26b-a4b-it:free',
         ai_timeout_seconds=60,ai_model='gemini-3.5-flash-lite',
     )
     monkeypatch.setattr(runtime,'get_settings',lambda:settings)

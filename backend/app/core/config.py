@@ -33,7 +33,7 @@ class Settings(BaseSettings):
         pattern=r'^groq/[A-Za-z0-9._/-]{1,100}$',
     )
     ai_openrouter_model: str = Field(
-        default='openrouter/openai/gpt-oss-20b:free',
+        default='openrouter/google/gemma-4-26b-a4b-it:free',
         pattern=r'^openrouter/[A-Za-z0-9._:/-]{1,100}$',
     )
     ai_max_output_tokens: int = Field(default=900, ge=256, le=2048)

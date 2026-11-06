@@ -5,10 +5,11 @@
 The procurement analyst uses **Google ADK** for every model call, including
 backup providers. Normal route: native `gemini-3.5-flash-lite`; optional
 route 2: `groq/openai/gpt-oss-20b`; optional route 3:
-`openrouter/openai/gpt-oss-20b:free`. The latter is the LiteLLM provider
-prefix plus the OpenRouter model ID `openai/gpt-oss-20b:free`, not the
-`openrouter/free` convenience router, whose behavior across LiteLLM releases
-is less predictable. Both model choices can be changed to an enabled model
+`openrouter/google/gemma-4-26b-a4b-it:free`. This is the LiteLLM provider prefix plus the OpenRouter model ID
+`google/gemma-4-26b-a4b-it:free`. The previously configured free GPT-OSS
+endpoint returned HTTP 404 on November 6, 2026; do not replace it with the
+paid GPT-OSS slug. The `openrouter/free` convenience router has different
+routing semantics and is not used as the default here. Both model choices can be changed to an enabled model
 within the respective provider using the `AI_*_MODEL` settings.
 
 No API secret is needed to keep the current Gemini-only behavior. LiteLLM
@@ -30,11 +31,13 @@ AI_FALLBACK_ENABLED=true
 GROQ_API_KEY=<your-Groq-key>
 AI_GROQ_MODEL=groq/openai/gpt-oss-20b
 OPENROUTER_API_KEY=<your-OpenRouter-key>
-AI_OPENROUTER_MODEL=openrouter/openai/gpt-oss-20b:free
+AI_OPENROUTER_MODEL=openrouter/google/gemma-4-26b-a4b-it:free
 AI_TIMEOUT_SECONDS=60
 AI_DAILY_USER_RUNS=12
 AI_DAILY_GLOBAL_RUNS=100
 ```
+
+If your private root `.env` still contains `AI_OPENROUTER_MODEL=openrouter/openai/gpt-oss-20b:free`, update that value explicitly. Environment variables override the repository default. Run `Get-ChildItem Env:AI_OPENROUTER_MODEL` in your launch terminal to detect an inherited override.
 
 If you have no backup key, leave the corresponding value empty. An absent
 backup key does not cause a live API call. Set `AI_FALLBACK_ENABLED=false`
@@ -142,5 +145,5 @@ merchant settlement, production security, or PayPal transaction correctness.
 - LiteLLM security note: https://docs.litellm.ai/blog/security-update-march-2026
 - Groq model selection: https://console.groq.com/docs/models
 - OpenRouter free model list: https://openrouter.ai/collections/free-models
-- OpenRouter specific free GPT-OSS endpoint:
-  https://openrouter.ai/openai/gpt-oss-20b%3Afree
+- OpenRouter currently listed free Gemma endpoint (verify availability before relying on it):
+  https://openrouter.ai/google/gemma-4-26b-a4b-it%3Afree
