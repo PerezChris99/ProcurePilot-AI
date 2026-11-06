@@ -65,11 +65,20 @@ export default function DecisionPassport({orderId}){
           <div><dt>Selected total</dt><dd>{money(comparison.selected_total,snapshot.request?.currency)}</dd></div>
           <div><dt>Least-cost eligible</dt><dd>{money(comparison.least_cost_eligible_total,snapshot.request?.currency)}</dd></div>
           <div><dt>Price premium</dt><dd>{money(comparison.premium_vs_least_cost,snapshot.request?.currency)}</dd></div>
+          <div><dt>Offers evaluated</dt><dd>{comparison.offers_evaluated_count??'Not recorded'}</dd></div>
+          <div><dt>Rejected by policy</dt><dd>{comparison.policy_blocked_offer_count??'Not recorded'}</dd></div>
+          <div><dt>Lowest rejected listing</dt><dd>{money(comparison.cheapest_rejected_total,snapshot.request?.currency)}</dd></div>
           <div><dt>Human approval</dt><dd>{decision.approved_at?'Recorded':'Pending'}</dd></div>
           <div><dt>Sandbox capture</dt><dd>{proof.capture_id||'Not captured'}</dd></div>
           <div><dt>Signed webhook</dt><dd>{proof.signed_webhook_correlated?'Correlated':'Not yet recorded'}</dd></div>
           <div><dt>Latest quote check</dt><dd>{currentOffer.status||'Not requested'}</dd></div>
         </dl>
+        {comparison.cheapest_rejected_offer&&<p className="passport-help">
+          The lowest priced rejected listing was <strong>{comparison.cheapest_rejected_offer.title||'Unnamed product'}</strong>
+          {' '}({comparison.cheapest_rejected_offer.merchant||'Merchant unknown'}). It cannot be ordered:
+          {' '}{(comparison.cheapest_rejected_offer.blocked_by||[]).join('; ')||'Purchasing policy not satisfied'}.
+          This is a saved quotation comparison, not realized savings.
+        </p>}
         <p className="passport-help">{comparison.note}</p>
         <h4>Why alternatives qualify or fail</h4>
         <div className="evidence-table-scroll"><table className="evidence-table">

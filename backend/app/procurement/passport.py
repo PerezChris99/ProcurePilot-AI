@@ -94,15 +94,41 @@ def build_passport(order,items,approvals,payment,events):
             if amount is not None:
                 suitable.append((amount*int(evidence.get('request',{}).get('quantity') or 1),row))
     cheapest=min(suitable,key=lambda x:x[0]) if suitable else None
+    # Comparisons are SOURCE SNAPSHOT prices, not proof of currently buyable
+    # inventory. Keep disqualified offers out of the eligible baseline.
+    rejected=[
+        (_price(row.get('unit_price'))*int(evidence.get('request',{}).get('quantity') or 1),row)
+        for row in candidates
+        if not row.get('eligible') and row.get('currency')==order.currency
+        and _price(row.get('unit_price')) is not None
+    ]
+    cheapest_rejected=min(rejected,key=lambda x:x[0]) if rejected else None
     chosen_total=_price(selected.get('total_price'))
     price_comparison={
+        'offers_evaluated_count':len(candidates),
+        'policy_blocked_offer_count':sum(not row.get('eligible') for row in candidates),
         'eligible_offer_count':len(suitable),
         'least_cost_eligible_total':str(cheapest[0]) if cheapest else None,
         'least_cost_eligible_product':cheapest[1].get('product_id') if cheapest else None,
         'selected_total':str(chosen_total) if chosen_total is not None else str(order.total_amount),
+        'selected_is_lowest_eligible':chosen_total==cheapest[0]
+            if chosen_total is not None and cheapest else None,
         'premium_vs_least_cost':str(max(Decimal(0),chosen_total-cheapest[0]))
             if chosen_total is not None and cheapest else None,
-        'note':'Compared only eligible same-currency snapshot offers; not realized savings. Shipping/tax excluded.',
+        'cheapest_rejected_total':str(cheapest_rejected[0]) if cheapest_rejected else None,
+        'cheapest_rejected_offer':{
+            'product_id':cheapest_rejected[1].get('product_id'),
+            'title':cheapest_rejected[1].get('title'),
+            'merchant':cheapest_rejected[1].get('merchant'),
+            'blocked_by':(cheapest_rejected[1].get('blocked_by') or [])[:8],
+        } if cheapest_rejected else None,
+        'eligible_vs_rejected_price_gap':str(cheapest[0]-cheapest_rejected[0])
+            if cheapest and cheapest_rejected else None,
+        'note':(
+            'Compared only same-currency saved catalogue snapshots. Rejected offers '
+            'are NEVER payable baselines; the price difference is not savings or '
+            'a claim that rejected inventory was actually buyable. Shipping and tax excluded.'
+        ),
     }
     timeline=[{
         'action':event.action,
