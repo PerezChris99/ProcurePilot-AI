@@ -15,6 +15,7 @@ const PUBLIC={
   '/login': ['Sign in','Sign in to your private procurement workspace.'],
   '/register': ['Create workspace','Create a workspace and start a procurement request.'],
   '/dashboard': ['Overview','Your authenticated procurement dashboard and integration configuration.'],
+  '/trust-lab': ['Decision Trust Lab','Read-only execution of deterministic purchasing safeguards against labelled synthetic fixtures.'],
   '/procurement': ['New procurement','Describe a purchasing request and review real catalogue evidence.'],
   '/orders': ['Purchase orders','Review approvals, PayPal Sandbox status and order audit history.'],
   '/approvals': ['Approvals','Review pending purchasing decisions with explicit human approval.'],

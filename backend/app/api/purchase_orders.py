@@ -26,6 +26,11 @@ def _owned_order(order_id,user,db):
     if order is None: raise HTTPException(status_code=404,detail='Purchase order not found')
     return order
 
+def _can_approve_order(order, actor_id):
+    """One shared predicate for delegated vs default owner authorization."""
+    return (order.assigned_approver_id or order.user_id)==actor_id
+
+
 def _approval_order(order_id,user,db):
     """Only an explicitly appointed reviewer, or owner if unassigned, can decide."""
     order=db.scalar(select(PurchaseOrder).where(
@@ -36,7 +41,7 @@ def _approval_order(order_id,user,db):
                  PurchaseOrder.user_id==user.id),
         ),
     ))
-    if order is None:
+    if order is None or not _can_approve_order(order,user.id):
         raise HTTPException(status_code=404,detail='Assigned approval not found')
     return order
 
@@ -201,7 +206,7 @@ def list_purchase_orders(
     ).all()
     records=_serialize_many(orders,db)
     for order,record in zip(orders,records):
-        record['can_approve']=(order.assigned_approver_id or order.user_id)==user.id
+        record['can_approve']=_can_approve_order(order,user.id)
     return records
 
 @router.get('/purchase-orders/{order_id}',response_model=PurchaseOrderResponse)

@@ -107,6 +107,24 @@ boundaries tend to outperform invented polish under technical questioning.
   refunds/disputes, enterprise authorization or actual retail settlement.
 - A public YouTube demo, private judge test access or submitted Devpost form.
 
+## Source execution update — engineering and evidence (November 6)
+
+**Implemented since the first competition scorecard, pending a fresh local
+9/9 QA run:** a protected, read-only twelve-case **Decision Trust Lab** that
+reuses actual production policy, delegated approval and PayPal amount-match
+predicates; synthetic cases are distinguished from real remote tests. The
+frozen **Decision Passport** now proves the lowest eligible quote, count of
+blocked offers and the cheapest *rejected* same-currency alternative with
+reasons, without claiming fictitious savings. A seven-gate read-only
+`qa/live_demo_check.py` probes deployed HTTPS homepage/deep links, backend
+health/database readiness, CORS and anonymous auth boundaries.
+
+These are source implementations plus source-authored tests, **not** verified
+current Windows runs, real PayPal captures, professional penetration testing,
+production monitoring or independent impact interviews. The new work must
+pass the complete suite after merge; live hosting and authenticated buyer
+acceptance still require real provider accounts.
+
 ## P0: must finish before submission (strict priority)
 
 1. **Rotate exposed service credentials** using Google, Groq, OpenRouter,

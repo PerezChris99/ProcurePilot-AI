@@ -25,6 +25,10 @@ const report={
     selected_total:'240.00',least_cost_eligible_total:'240.00',
     premium_vs_least_cost:'0.00',
     note:'Not realized savings; shipping and tax excluded.',
+    offers_evaluated_count:3,policy_blocked_offer_count:1,
+    cheapest_rejected_total:'60.00',
+    cheapest_rejected_offer:{title:'Wrong-size monitor',merchant:'example.invalid',
+      blocked_by:['Required 27-inch diagonal is not evidenced']},
   },
   payment_proof:{status:'not_started',capture_id:null,signed_webhook_correlated:false},
   buyer_decision:{approved_at:null},audit_timeline:[],
@@ -54,6 +58,10 @@ describe('Decision Passport evidence and exports',()=>{
       .toBeInTheDocument();
     expect(apiRequest).toHaveBeenCalledWith('/purchase-orders/po-qa/passport');
     expect(screen.getByText('Another QA monitor')).toBeInTheDocument();
+    expect(screen.getByText('Offers evaluated')).toBeInTheDocument();
+    expect(screen.getByText('Rejected by policy')).toBeInTheDocument();
+    expect(screen.getByText(/Wrong-size monitor/)).toBeInTheDocument();
+    expect(screen.getByText(/it cannot be ordered/i)).toBeInTheDocument();
     expect(screen.getByText(/not an externally notarized record/i))
       .toBeInTheDocument();
   });

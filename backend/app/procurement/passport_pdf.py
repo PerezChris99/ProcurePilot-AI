@@ -63,6 +63,15 @@ def passport_pdf_bytes(report):
     comparison=report.get('comparison') or {}
     line('Least-cost eligible snapshot offer: '+str(comparison.get('least_cost_eligible_total') or 'Unknown'))
     line('Selected price premium: '+str(comparison.get('premium_vs_least_cost') or 'Unknown'))
+    line('Offers checked: '+str(comparison.get('offers_evaluated_count') or 'Unknown')+
+         ' | Policy blocked: '+str(comparison.get('policy_blocked_offer_count', 'Unknown')))
+    line('Cheapest rejected same-currency snapshot: '+
+         str(comparison.get('cheapest_rejected_total') or 'Not available'))
+    blocked=comparison.get('cheapest_rejected_offer') or {}
+    if blocked:
+        line('Rejected listing: '+str(blocked.get('title') or 'Unknown'))
+        for reason in (blocked.get('blocked_by') or [])[:4]:
+            line('Policy refusal: '+str(reason)[:180])
     line(comparison.get('note') or '')
     label('EVIDENCE ASSESSMENT — MODEL OR RULE-BASED')
     ai=evidence.get('ai') or {}

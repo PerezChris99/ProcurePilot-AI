@@ -6,6 +6,7 @@ import PublicInfoPage from './pages/PublicInfoPage.jsx';
 import AppShell from './components/layout/AppShell.jsx';
 import RequireAuth from './components/routing/RequireAuth.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
+import TrustLabPage from './pages/TrustLabPage.jsx';
 import ProcurementPage from './pages/ProcurementPage.jsx';
 import OrdersPage from './pages/OrdersPage.jsx';
 import ApprovalsPage from './pages/ApprovalsPage.jsx';
@@ -32,6 +33,7 @@ export default function App(){
     <Route element={<RequireAuth/>}>
       <Route element={<AppShell/>}>
         <Route path="/dashboard" element={<DashboardPage/>}/>
+        <Route path="/trust-lab" element={<TrustLabPage/>}/>
         <Route path="/procurement" element={<ProcurementPage/>}/>
         <Route path="/orders" element={<OrdersPage/>}/>
         <Route path="/approvals" element={<ApprovalsPage/>}/>

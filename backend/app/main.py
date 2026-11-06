@@ -10,6 +10,7 @@ from app.api.integrations import router as integrations_router
 from app.api.paypal_webhooks import router as paypal_webhooks_router
 from app.api.procurement_requests import router as procurement_router
 from app.api.purchase_orders import router as purchase_orders_router
+from app.api.trust_lab import router as trust_lab_router
 from app.core.config import get_settings
 from app.security.http import SecurityMiddleware
 
@@ -68,6 +69,7 @@ app.include_router(dashboard_router, prefix=settings.api_v1_prefix)
 app.include_router(integrations_router, prefix=settings.api_v1_prefix)
 app.include_router(procurement_router, prefix=settings.api_v1_prefix)
 app.include_router(purchase_orders_router, prefix=settings.api_v1_prefix)
+app.include_router(trust_lab_router, prefix=settings.api_v1_prefix)
 app.include_router(paypal_webhooks_router, prefix=settings.api_v1_prefix)
 
 
