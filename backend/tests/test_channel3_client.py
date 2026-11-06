@@ -136,3 +136,50 @@ def test_search_and_product_lookup_normalize_api_root_and_endpoint(configured_ba
     product=asyncio.run(client.get_product('monitor-1'))
     assert product.id=='monitor-1'
     assert calls==[('POST','/v1/search'),('GET','/v1/products/monitor-1')]
+
+
+def test_channel3_transient_503_retries_only_once_for_catalogue_search():
+    calls=[]
+    def handler(request):
+        calls.append(request)
+        if len(calls)==1:
+            return httpx.Response(503,json={'error':'unavailable'})
+        return httpx.Response(200,json={'products':[{'id':'shoe-1','title':'Running shoes'}]})
+    client=Channel3Client(
+        api_key='test-key',base_url='https://api.trychannel3.com/v1',
+        transport=httpx.MockTransport(handler),
+    )
+    result=asyncio.run(client.search_products('running shoes'))
+    assert result.products[0].id=='shoe-1'
+    assert len(calls)==2
+
+
+@pytest.mark.parametrize('code',[401,403,429])
+def test_channel3_nontransient_provider_errors_are_not_retried(code):
+    calls=[]
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(code,json={'error':'not retryable'})
+    client=Channel3Client(
+        api_key='test-key',base_url='https://api.trychannel3.com/v1',
+        transport=httpx.MockTransport(handler),
+    )
+    with pytest.raises(Channel3Unavailable):
+        asyncio.run(client.search_products('running shoes'))
+    assert len(calls)==1
+
+
+def test_channel3_transient_product_lookup_retries_without_relaxing_validation():
+    calls=[]
+    def handler(request):
+        calls.append(request)
+        if len(calls)==1:
+            return httpx.Response(503,json={'error':'unavailable'})
+        return httpx.Response(200,json={'id':'shoe-1','title':'Running shoe'})
+    client=Channel3Client(
+        api_key='test-key',base_url='https://api.trychannel3.com/v1',
+        transport=httpx.MockTransport(handler),
+    )
+    result=asyncio.run(client.get_product('shoe-1'))
+    assert result.id=='shoe-1'
+    assert len(calls)==2
