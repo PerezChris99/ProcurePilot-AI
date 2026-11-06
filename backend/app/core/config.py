@@ -1,3 +1,5 @@
+import os
+import re
 from functools import lru_cache
 from urllib.parse import urlsplit
 from pydantic import Field, model_validator
@@ -58,11 +60,31 @@ class Settings(BaseSettings):
         if environment not in ('development','test','testing','staging','production'):
             raise ValueError('APP_ENV must be development, test, testing, staging, or production')
         self.app_env = environment
+        # Render managed Postgres emits postgresql:// while this application's
+        # SQLAlchemy driver is psycopg 3 (postgresql+psycopg://).
+        # Normalize only the scheme; never log or alter credentials/host.
+        if self.database_url.startswith(('postgres://', 'postgresql://')):
+            self.database_url = 'postgresql+psycopg://' + self.database_url.split('://', 1)[1]
         if environment in ('staging','production'):
             if self.rate_limit_redis_url:
                 redis_url = urlsplit(self.rate_limit_redis_url)
-                if redis_url.scheme != 'rediss' or not redis_url.hostname:
-                    raise ValueError('Public RATE_LIMIT_REDIS_URL must use rediss:// with TLS')
+                # Render Key Value's private URL uses redis://red-<id>:6379.
+                # It stays inside the platform private network; never permit
+                # arbitrary plaintext Redis endpoints in a public environment.
+                render_private = (
+                    bool(os.environ.get('RENDER_SERVICE_ID'))
+                    and redis_url.scheme == 'redis'
+                    and bool(re.fullmatch(r'red-[a-z0-9]{10,}', redis_url.hostname or ''))
+                    and redis_url.port == 6379
+                    and not (redis_url.path or redis_url.query or redis_url.fragment)
+                )
+                if not redis_url.hostname or not (
+                    redis_url.scheme == 'rediss' or render_private
+                ):
+                    raise ValueError(
+                        'Public RATE_LIMIT_REDIS_URL must use rediss:// TLS or '
+                        'a Render-internal private Key Value connection'
+                    )
             if (len(self.jwt_secret_key)<32 or self.jwt_secret_key in
                     ('development-only-change-this-secret','replace-with-a-long-random-secret')
                     or len(set(self.jwt_secret_key))<12):
