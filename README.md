@@ -372,8 +372,9 @@ The signed-in Overview prioritizes the greeting, **New procurement** action, liv
 Gemini Flash-Lite remains the native Google ADK primary. When `GROQ_API_KEY`
 or `OPENROUTER_API_KEY` is configured in the private repository-root
 `.env`, the tool-free evidence analyst can use the reviewed LiteLLM adapter
-through ADK. Groq GPT-OSS 20B runs first and an explicitly free OpenRouter
-GPT-OSS 20B endpoint is second. A fallback only occurs for transient 503,
+through ADK. Groq GPT-OSS 20B runs first and a verified-listed OpenRouter
+Gemma 4 26B A4B free endpoint is second. Free models can rotate or disappear;
+validate each exact provider route before the submission. A fallback only occurs for transient 503,
 timeout, transport or provider quota errors, not bad credentials, denied
 permissions or payment/order operations. Each attempted provider call is
 charged against the existing daily user/global AI reservation; total analysis
