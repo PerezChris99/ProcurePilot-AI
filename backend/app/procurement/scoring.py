@@ -17,7 +17,16 @@ def score_product(product: Channel3Product,requirements: ProcurementRequirements
         if _normal(expected) in attributes.get(_normal(key),set()): matched.append(key)
         else: unmet.append(key)
     display_failures=display_size_violations(requirements.query,product)
-    if display_failures: unmet.append('display_size')
+    # A buyer can specify the same size both in plain language and in a
+    # mandatory structured attribute. Keep the product blocked without adding
+    # two unmet fields for one failed screen-diagonal constraint.
+    size_keys={'screen_size','display_size','screen_diagonal',
+               'display_diagonal','diagonal_size'}
+    size_already_unmet=any(
+        _normal(key).replace(' ','_') in size_keys for key in unmet
+    )
+    if display_failures and not size_already_unmet:
+        unmet.append('display_size')
     preferred_total=len(requirements.preferred_attributes)
     preferred_matches=sum(1 for key,value in requirements.preferred_attributes.items() if _normal(value) in attributes.get(_normal(key),set()))
     spec_values=[]

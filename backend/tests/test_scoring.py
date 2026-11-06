@@ -12,6 +12,43 @@ def test_mandatory_attribute_mismatch_makes_product_ineligible():
     assert result.eligible is False
     assert result.unmet_requirements==['screen_size']
 
+def test_explicit_size_failure_does_not_repeat_structured_size_failure():
+    # The same unmet buyer requirement can originate from two independent
+    # validators; it should appear once in the product ranking's diagnostic.
+    for size_key in ('screen_size','screen size','display_size',
+                     'screen_diagonal','display diagonal','diagonal_size'):
+        requirements=ProcurementRequirements(
+            query='27 inch monitor',
+            mandatory_attributes={size_key:'27 inch'},
+        )
+        result=score_product(product('p1',{'screen_size':'24 inch'}),requirements)
+        assert result.eligible is False
+        assert result.unmet_requirements==[size_key]
+        assert any('Required 27-inch monitor diagonal' in note
+                   for note in result.explanation)
+
+
+def test_explicit_size_still_blocks_without_structured_mandate():
+    # De-duplication must never treat a missing 72-inch specification as met.
+    requirements=ProcurementRequirements(query='72 inch monitors')
+    result=score_product(product('p2',{'screen_size':'24 inch'}),requirements)
+    assert result.eligible is False
+    assert result.unmet_requirements==['display_size']
+
+
+def test_conflicting_title_still_blocks_when_mandatory_attribute_matches():
+    # Do not hide contradictory catalogue evidence during de-duplication.
+    requirements=ProcurementRequirements(
+        query='27 inch monitor',
+        mandatory_attributes={'screen_size':'27 inch'},
+    )
+    item=product('p3',{'screen_size':'27 inch'})
+    item.title='HP 24 in Monitor'
+    result=score_product(item,requirements)
+    assert result.eligible is False
+    assert result.unmet_requirements==['display_size']
+
+
 def test_ranker_prefers_verified_mandatory_match():
     requirements=ProcurementRequirements(query='27 inch monitor',mandatory_attributes={'screen_size':'27 inch'},budget=Decimal('500'))
     ranked=rank_products([product('wrong',{'screen_size':'24 inch'}),product('right',{'screen_size':'27 inch'},'90')],requirements)
