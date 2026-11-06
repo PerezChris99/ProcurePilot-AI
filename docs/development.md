@@ -151,7 +151,7 @@ Open `D:\\NEW PROJECTS\\ProcurePilot-AI` in VS Code and run `.\\start.bat`. The 
 
 ## Responsive navigation and status
 
-Desktop uses six distinct sidebar routes; phones/tablets get the same six links in an iPhone-safe-area bottom dock. Status is refreshed from the authenticated `/api/v1/integrations/status` endpoint, which checks DB/required schema and reports non-secret Gemini, Channel3 and PayPal credential flags. It is not a live provider ping and does not spend Gemini tokens. The user can refresh the panel manually and it polls while the workspace is active. Configure actual provider credentials in the root .env and restart the backend after changing them.
+Desktop uses six distinct sidebar routes; phones/tablets get the same six links in an iPhone-safe-area bottom dock. Status is refreshed from the authenticated `/api/v1/integrations/status` endpoint, which checks DB/required schema and reports non-secret Gemini, Channel3 and PayPal credential flags. It is not a live provider ping and does not spend Gemini tokens. The user can refresh the panel manually and it polls while the workspace is active. Configure actual provider credentials in the root .env and restart the backend after changing them. For an isolated, explicitly non-payable judge preview without touching the developer's .env or PostgreSQL, run `judge-preview.bat` (Windows) or `python3 judge-preview.py` (macOS/Linux); see `docs/JUDGES_START_HERE.md`.
 
 ## Public site, authentication and provider landing tour
 
@@ -163,7 +163,7 @@ Vercel SPA deep links: deploy with Root Directory `frontend`; `frontend/vercel.j
 
 ## Security-aware configuration after hardening
 
-The local Windows/macOS/Linux startup scripts install the new Python Redis client dependency and apply Alembic revision `0005_read_indexes`. Existing SQLite demo mode does not need Redis. In `APP_ENV=staging` and `production`, login/registration **fail closed (503)** if `RATE_LIMIT_REDIS_URL` is not configured or unreachable; use a managed `rediss://` TLS service. Proxy client-IP identity must be trusted and tested before relying on per-source limits.
+The local Windows/macOS/Linux startup scripts install the new Python Redis client dependency and apply Alembic revision `0005_read_indexes`. Existing SQLite demo mode does not need Redis. In `APP_ENV=staging` and `production`, login/registration **fail closed (503)** if `RATE_LIMIT_REDIS_URL` is not configured or unreachable; use a managed `rediss://` TLS service or strictly validated Render-private Key Value within Render. Proxy client-IP identity must be trusted and tested before relying on per-source limits.
 
 PostgreSQL database connection pool defaults to 5 persistent + 5 burst connections per worker, and connections use query, lock and idle-in-transaction timeouts. Do not scale API workers without checking total connections across instances against a real PostgreSQL/PgBouncer capacity budget. See [scaling and operations](scaling.md).
 

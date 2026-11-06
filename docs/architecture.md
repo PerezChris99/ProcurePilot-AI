@@ -27,7 +27,7 @@ flowchart TB
 4. Asking for AI first triggers a single Channel3 discovery if necessary; if ranked evidence already exists, it is reused. Repeated unchanged AI assessments return cached text. A verified empty catalogue returns no model hallucination or spend.
 5. An allowlisted evidence packet of at most four candidates is passed to the ADK analysis_agent with one-call and output/time limits. A global+user call reservation in ai_daily_budgets prevents unbounded call volume. The normal analyst has NO order/payment tools.
 6. The buyer selects a saved real Channel3 offer. Server code verifies its exact product and offer URL, price, currency, stock, mandatory attributes and budget; it derives quantity*unit price, then freezes a PO and item snapshot.
-7. Submission moves a draft PO to pending_approval. The dedicated Approvals route loads owner-scoped pending items and records approve/reject actions. **The personal-workspace owner may approve their own order: true independent approver roles do not exist.**
+7. Submission moves a draft PO to pending_approval. The dedicated Approvals route loads owner-scoped pending items and records approve/reject actions. **The owner may self-approve when no reviewer is assigned. A distinct registered reviewer can instead be assigned to decide a specific order without operating its payment; organization-wide RBAC/invitations are not implemented.**
 8. Approved orders may create a separate PayPal Sandbox checkout. Buyer approves in the SAME browser tab to preserve the session on return. Capture validates remote order/custom IDs, currency, amounts and final completed capture evidence.
 9. PayPal webhooks are validated through PayPal's signature endpoint. Event IDs and capture matching reduce duplicates and mismatch risk; a real HTTPS webhook still needs environment configuration.
 10. The dashboard reads user-scoped SQL counts and recent order audit history. Provider status displays configuration flags, not proof of live connectivity.
@@ -61,7 +61,7 @@ stateDiagram-v2
 | audit_events | User/order/request actions and time |
 | ai_daily_budgets | Atomic per-scope UTC-day call count; no prompts or secrets |
 
-Migration chain: 0001_users → 0002_requests → 0003_orders → 0004_ai_budget. Windows startup automatically runs Alembic upgrade head before serving the app.
+Migration chain: 0001_users → 0002_requests → 0003_orders → 0004_ai_budget → 0005_read_indexes → 0006_purchase_policy → 0007_decision_evidence → 0008_offer_verification → 0009_delegated_approver. Windows startup automatically runs Alembic upgrade head before serving the app.
 
 ## API surface
 
@@ -73,7 +73,7 @@ Orders: POST /api/v1/procurement-requests/{request_id}/purchase-orders, GET /api
 
 Payments: POST /api/v1/purchase-orders/{id}/payments/paypal/create and /capture; POST /api/v1/webhooks/paypal.
 
-Readiness: GET /api/v1/health, GET /api/v1/integrations/status, GET /api/v1/dashboard/summary.
+Liveness: GET /api/v1/health. Database readiness: GET /api/v1/ready. Authenticated configuration status: GET /api/v1/integrations/status; overview: GET /api/v1/dashboard/summary.
 
 ## Security/trust boundaries
 
@@ -81,4 +81,4 @@ Browser controls and catalogue content are untrusted. Amounts and transitions ar
 
 ## Outstanding engineering work
 
-No multi-actor role-based approvals, reconciliation worker, distributed auth/discovery/checkout rate limiter, session revocation, live provider acceptance tests, end-to-end browser suite, immutable audit ledger or proven production monitoring/recovery. Channel3 merchant checkout is separate from PayPal Sandbox and is not implemented. The project is a demonstration, not a live multi-merchant payment processor.
+No organization-wide RBAC/invitations, reconciliation worker, distributed discovery/checkout rate limiter, session revocation, live provider acceptance tests, end-to-end browser suite, independently anchored audit ledger or proven production monitoring/recovery. Public login/register use Redis-backed throttling, and per-order registered delegated reviewers are supported. Channel3 merchant checkout is separate from PayPal Sandbox and is not implemented. The project is a demonstration, not a live multi-merchant payment processor.

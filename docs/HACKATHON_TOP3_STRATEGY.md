@@ -1,5 +1,12 @@
 # ProcurePilot AI — Top-Three Hackathon Strategy and Delivery Status
 
+> **Updated November 6, 2026:** This is the earlier working strategy.
+> Current prize-cap, acceptance and category decisions are in the
+> [Hackathon Final Audit](HACKATHON_FINAL_AUDIT.md). Use the newer
+> [submission kit](HACKATHON_SUBMISSION_KIT.md) for the actual 2:45 video.
+> The maintainer reports 9/9 offline gates green; hosted provider,
+> Sandbox buyer/capture, webhook and YouTube evidence remain external.
+
 Research date: **2026-11-05**. Competition: **PayPal AI Hackathon / “Build What's Next with PayPal and AI”**. Objective: a credible shot at the **top three overall**, plus the most relevant sponsor category. Project: **ProcurePilot AI**. The owner subsequently authorized implementation. The source now includes substantial P1–P3 work; the separate external-provider, browser, operational and submission gates remain unverified. This document distinguishes implemented source from unfinished proof.
 
 ## 1. Competition ground truth
