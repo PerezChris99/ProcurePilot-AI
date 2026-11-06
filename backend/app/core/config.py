@@ -24,111 +24,17 @@ class Settings(BaseSettings):
     max_request_body_bytes: int = Field(default=1048576, ge=1024, le=8388608)
     google_api_key: str | None = None
     ai_model: str | None = None
-    # Optional secondary ADK/LiteLLM routes; no extra call when keys are unset.
+    # Optional Google ADK LiteLLM backups; no key, no backup call.
     ai_fallback_enabled: bool = True
     groq_api_key: str | None = None
     openrouter_api_key: str | None = None
     ai_groq_model: str = Field(
-        default='groq/openai/gpt-oss-20b',pattern=r'^groq/[A-Za-z0-9._/-]{1,100}
-    ai_max_output_tokens: int = Field(default=900, ge=256, le=2048)
-    ai_timeout_seconds: int = Field(default=60, ge=10, le=90)
-    ai_daily_user_runs: int = Field(default=12, ge=1, le=500)
-    ai_daily_global_runs: int = Field(default=100, ge=1, le=5000)
-    ai_evidence_candidates: int = Field(default=4, ge=1, le=8)
-    ai_max_prompt_chars: int = Field(default=3600, ge=1500, le=8000)
-    channel3_api_key: str | None = None
-    channel3_base_url: str | None = None
-    paypal_client_id: str | None = None
-    paypal_client_secret: str | None = None
-    paypal_base_url: str = 'https://api-m.sandbox.paypal.com'
-    paypal_webhook_id: str | None = None
-    model_config = SettingsConfigDict(env_file=('.env','../.env'),env_file_encoding='utf-8',case_sensitive=False,extra='ignore')
-
-    @model_validator(mode='after')
-    def validate_production_secrets(self):
-        environment = self.app_env.strip().lower()
-        if self.db_lock_timeout_ms >= self.db_statement_timeout_ms:
-            raise ValueError('DB_LOCK_TIMEOUT_MS must be lower than DB_STATEMENT_TIMEOUT_MS')
-        if environment not in ('development','test','testing','staging','production'):
-            raise ValueError('APP_ENV must be development, test, testing, staging, or production')
-        self.app_env = environment
-        if environment in ('staging','production'):
-            if self.rate_limit_redis_url:
-                redis_url = urlsplit(self.rate_limit_redis_url)
-                if redis_url.scheme != 'rediss' or not redis_url.hostname:
-                    raise ValueError('Public RATE_LIMIT_REDIS_URL must use rediss:// with TLS')
-            if (len(self.jwt_secret_key)<32 or self.jwt_secret_key in
-                    ('development-only-change-this-secret','replace-with-a-long-random-secret')
-                    or len(set(self.jwt_secret_key))<12):
-                raise ValueError('Production requires a unique JWT_SECRET_KEY of at least 32 characters')
-            if self.database_url == 'postgresql+psycopg://postgres:postgres@localhost:5432/procurepilot':
-                raise ValueError('Public environments must replace the example PostgreSQL credentials')
-            if not self.database_url.startswith('postgresql+psycopg://'):
-                raise ValueError('Production DATABASE_URL must use postgresql+psycopg:// and a persistent PostgreSQL database')
-            url = urlsplit(self.frontend_url)
-            if (url.scheme != 'https' or not url.hostname
-                    or url.hostname in ('localhost', '127.0.0.1', '::1')
-                    or url.username or url.password or url.query or url.fragment
-                    or url.path not in ('', '/')):
-                raise ValueError('Production FRONTEND_URL must be a public HTTPS origin without path or query')
-            self.frontend_url = self.frontend_url.rstrip('/')
-        return self
-
-@lru_cache
-def get_settings() -> Settings:
-    return Settings()
-,
+        default='groq/openai/gpt-oss-20b',
+        pattern=r'^groq/[A-Za-z0-9._/-]{1,100}$',
     )
     ai_openrouter_model: str = Field(
-        default='openrouter/openai/gpt-oss-20b:free',pattern=r'^openrouter/[A-Za-z0-9._:/-]{1,100}
-    ai_max_output_tokens: int = Field(default=900, ge=256, le=2048)
-    ai_timeout_seconds: int = Field(default=60, ge=10, le=90)
-    ai_daily_user_runs: int = Field(default=12, ge=1, le=500)
-    ai_daily_global_runs: int = Field(default=100, ge=1, le=5000)
-    ai_evidence_candidates: int = Field(default=4, ge=1, le=8)
-    ai_max_prompt_chars: int = Field(default=3600, ge=1500, le=8000)
-    channel3_api_key: str | None = None
-    channel3_base_url: str | None = None
-    paypal_client_id: str | None = None
-    paypal_client_secret: str | None = None
-    paypal_base_url: str = 'https://api-m.sandbox.paypal.com'
-    paypal_webhook_id: str | None = None
-    model_config = SettingsConfigDict(env_file=('.env','../.env'),env_file_encoding='utf-8',case_sensitive=False,extra='ignore')
-
-    @model_validator(mode='after')
-    def validate_production_secrets(self):
-        environment = self.app_env.strip().lower()
-        if self.db_lock_timeout_ms >= self.db_statement_timeout_ms:
-            raise ValueError('DB_LOCK_TIMEOUT_MS must be lower than DB_STATEMENT_TIMEOUT_MS')
-        if environment not in ('development','test','testing','staging','production'):
-            raise ValueError('APP_ENV must be development, test, testing, staging, or production')
-        self.app_env = environment
-        if environment in ('staging','production'):
-            if self.rate_limit_redis_url:
-                redis_url = urlsplit(self.rate_limit_redis_url)
-                if redis_url.scheme != 'rediss' or not redis_url.hostname:
-                    raise ValueError('Public RATE_LIMIT_REDIS_URL must use rediss:// with TLS')
-            if (len(self.jwt_secret_key)<32 or self.jwt_secret_key in
-                    ('development-only-change-this-secret','replace-with-a-long-random-secret')
-                    or len(set(self.jwt_secret_key))<12):
-                raise ValueError('Production requires a unique JWT_SECRET_KEY of at least 32 characters')
-            if self.database_url == 'postgresql+psycopg://postgres:postgres@localhost:5432/procurepilot':
-                raise ValueError('Public environments must replace the example PostgreSQL credentials')
-            if not self.database_url.startswith('postgresql+psycopg://'):
-                raise ValueError('Production DATABASE_URL must use postgresql+psycopg:// and a persistent PostgreSQL database')
-            url = urlsplit(self.frontend_url)
-            if (url.scheme != 'https' or not url.hostname
-                    or url.hostname in ('localhost', '127.0.0.1', '::1')
-                    or url.username or url.password or url.query or url.fragment
-                    or url.path not in ('', '/')):
-                raise ValueError('Production FRONTEND_URL must be a public HTTPS origin without path or query')
-            self.frontend_url = self.frontend_url.rstrip('/')
-        return self
-
-@lru_cache
-def get_settings() -> Settings:
-    return Settings()
-,
+        default='openrouter/openai/gpt-oss-20b:free',
+        pattern=r'^openrouter/[A-Za-z0-9._:/-]{1,100}$',
     )
     ai_max_output_tokens: int = Field(default=900, ge=256, le=2048)
     ai_timeout_seconds: int = Field(default=60, ge=10, le=90)
