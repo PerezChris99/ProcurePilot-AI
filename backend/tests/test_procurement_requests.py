@@ -438,3 +438,45 @@ def test_all_transient_ai_failures_yield_honest_retryable_catalogue_summary(clie
                       headers=headers)
     assert again.json()['cached'] is True
     assert calls==['failed','recovered']
+
+
+def test_legacy_saved_snapshot_revalidates_72inch_requirement_and_drops_outdated_ai():
+    """Previously saved affordable 24in offers must no longer be sold as 72in."""
+    from app.api import procurement_requests as api
+    request=SimpleNamespace(
+        request_text='i need 72 inch monitors',
+        quantity=4,budget=Decimal('3000.00'),currency='USD',policy_json={},
+        analysis_json={
+            'source':'Channel3','discovered_at':'2026-11-06T17:00:00+00:00',
+            'results':[{
+                'ranking':{'eligible':True,'unmet_requirements':[]},
+                'product':Channel3Product(
+                    id='old-24inch',title='HP 24 in Monitor',
+                    offers=[Channel3Offer(
+                        url='https://seller.example/old-monitor',
+                        domain='seller.example',
+                        availability='InStock',
+                        price=Channel3Price(amount='300.00',currency='USD'),
+                    )],
+                ).model_dump(mode='json'),
+                'policy':{'eligible_offer_urls':['https://seller.example/old-monitor']},
+            }],
+            'ai_explanation':'This 24in monitor fully satisfies the 72in request',
+            'ai_source':'gemini',
+        },
+    )
+    class FakeSession:
+        def __init__(self):self.commits=0
+        def add(self,record):assert record is request
+        def commit(self):self.commits+=1
+        def refresh(self,record):assert record is request
+    db=FakeSession()
+    api._upgrade_legacy_snapshot(request,db)
+    assert db.commits==1
+    assert request.analysis_json['policy_version']==2
+    item=request.analysis_json['results'][0]
+    assert item['ranking']['eligible'] is False
+    assert item['policy']['eligible_offer_urls']==[]
+    assert 'ai_explanation' not in request.analysis_json
+    api._upgrade_legacy_snapshot(request,db)
+    assert db.commits==1
