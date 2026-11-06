@@ -74,3 +74,22 @@ def test_passport_never_compares_or_leaks_unknown_and_foreign_currency_prices():
     assert compare["cheapest_rejected_total"] is None
     assert compare["least_cost_eligible_total"] is None
     assert compare["eligible_vs_rejected_price_gap"] is None
+
+def test_passport_accepts_historical_order_fixture_without_delegated_approver_field():
+    """Older order adapters and minimal QA fixtures predate migration 0009."""
+    order=example_order()
+    del order.assigned_approver_id
+    report=build_passport(order,[],[],None,[])
+    assert report['buyer_decision']['approval_model']==(
+        'Personal workspace; self-approval permitted')
+    assert report['comparison']['least_cost_eligible_total']=='300.00'
+    assert report['payment_proof']['retailer_settlement'] is False
+
+
+def test_passport_distinguishes_assigned_reviewer_from_owner_self_approval():
+    order=example_order()
+    order.assigned_approver_id='separate-registered-reviewer'
+    report=build_passport(order,[],[],None,[])
+    assert report['buyer_decision']['approval_model']==(
+        'Distinct registered reviewer assigned per order')
+    assert report['buyer_decision']['approved_by_user_id']=='buyer'

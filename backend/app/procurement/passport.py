@@ -160,7 +160,7 @@ def build_passport(order,items,approvals,payment,events):
         'buyer_decision':{
             'approved_by_user_id':order.approved_by,
             'approved_at':order.approved_at.isoformat() if order.approved_at else None,
-            'approval_model':('Distinct registered reviewer assigned per order' if order.assigned_approver_id else 'Personal workspace; self-approval permitted'),
+            'approval_model':('Distinct registered reviewer assigned per order' if getattr(order,'assigned_approver_id',None) else 'Personal workspace; self-approval permitted'),
             'entries':[{
                 'actor_user_id':record.actor_user_id,
                 'decision':record.decision,
