@@ -9,6 +9,14 @@ function money(value,currency){
     .format(Number(value))}
   catch{return String(value)+' '+(currency||'')}
 }
+export function evidenceAssessmentTitle(source){
+  if(source==='gemini')return 'Gemini evidence assessment';
+  if(source==='groq')return 'Groq evidence assessment';
+  if(source==='openrouter')return 'OpenRouter evidence assessment';
+  if(source==='catalogue_only')return 'Rule-based catalogue assessment (not AI)';
+  if(source==='offline_example')return 'Offline example (not AI)';
+  return 'Evidence assessment (source not verified)';
+}
 export default function DecisionPassport({orderId}){
   const [open,setOpen]=useState(false);
   const [downloadError,setDownloadError]=useState('');
@@ -72,7 +80,7 @@ export default function DecisionPassport({orderId}){
             <td>{row.eligible?'Eligible':(row.blocked_by||[]).join('; ')||'Not verified'}</td>
           </tr>)}</tbody>
         </table></div>
-        {snapshot.ai?.explanation&&<div className="passport-analysis"><h4>Gemini evidence assessment</h4><p>{snapshot.ai.explanation}</p></div>}
+        {snapshot.ai?.explanation&&<div className="passport-analysis"><h4>{evidenceAssessmentTitle(snapshot.ai.source)}</h4><p>{snapshot.ai.explanation}</p></div>}
         <h4>Approval and payment events</h4>
         <ol className="passport-timeline">{(data.audit_timeline||[]).map((event,index)=><li key={event.action+'-'+index}>
           <span>{event.action.replaceAll('.', ' · ').replaceAll('_',' ')}</span>

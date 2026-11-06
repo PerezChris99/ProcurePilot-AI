@@ -76,7 +76,7 @@ def snapshot_for_order(request,product_id,offer_url):
         'limitations':[
             'Product and stock data are a historical Channel3 catalogue snapshot.',
             'Shipping, tax, delivery and merchant settlement are not verified.',
-            'Gemini describes evidence; deterministic policies decide eligibility.',
+            'Model assessments are advisory; deterministic policies decide eligibility. Rule-only summaries are not AI.',
             'PayPal Sandbox transfers no real money to a Channel3 retailer.',
         ],
     }
@@ -134,7 +134,7 @@ def build_passport(order,items,approvals,payment,events):
         'buyer_decision':{
             'approved_by_user_id':order.approved_by,
             'approved_at':order.approved_at.isoformat() if order.approved_at else None,
-            'approval_model':'Personal workspace; self-approval permitted',
+            'approval_model':('Distinct registered reviewer assigned per order' if order.assigned_approver_id else 'Personal workspace; self-approval permitted'),
             'entries':[{
                 'actor_user_id':record.actor_user_id,
                 'decision':record.decision,
