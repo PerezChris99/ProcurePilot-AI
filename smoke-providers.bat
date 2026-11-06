@@ -3,6 +3,8 @@ setlocal EnableExtensions
 REM Root-level, ADK-only live provider verification for Windows.
 REM Do not echo private credentials, run tests from backend/ so ../.env loads.
 set "PROJECT_ROOT=%~dp0"
+REM ADK's LiteLLM adapter recommends UTF-8 for Windows file handling.
+set "PYTHONUTF8=1"
 set "PYTHON=%PROJECT_ROOT%backend\.venv\Scripts\python.exe"
 set "PROVIDER=%~1"
 if "%PROVIDER%"=="" set "PROVIDER=all"

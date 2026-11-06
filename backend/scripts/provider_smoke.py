@@ -70,6 +70,7 @@ async def check_gemini(*, timeout_seconds=None):
     return {
         'answered':True, 'model':result.get('model'),
         'character_count':len(result['text']),
+        'provider':result.get('provider','gemini'),
         'elapsed_seconds':round(time.monotonic()-started,2),
         'usage':counts or None,
     }
@@ -136,7 +137,7 @@ def main(argv=None):
         if args.provider not in ('all','gemini'):
             parser.error('--gemini-timeout-seconds requires --provider all or gemini')
     if args.provider in ('all','gemini'):
-        print('NOTICE: Gemini check makes one real model call; no payment is created.',file=sys.stderr)
+        print('NOTICE: ADK checks the primary model; transient failure can invoke up to two configured LiteLLM fallbacks. No payment is created.',file=sys.stderr)
     result=asyncio.run(run_checks(
         args.provider, gemini_timeout_seconds=args.gemini_timeout_seconds,
     ))

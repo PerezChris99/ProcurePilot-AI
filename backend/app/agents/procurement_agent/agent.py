@@ -28,6 +28,13 @@ def _configure_adk_gemini_api(key: str | None):
 
 
 _configure_adk_gemini_api(settings.google_api_key)
+# LiteLLM reads its provider credentials from process variables. Bind only the
+# values actually resolved by Pydantic (root .env or explicit process override).
+# No keys or customer evidence are ever sent to an unconfigured fallback.
+if settings.groq_api_key:
+    os.environ['GROQ_API_KEY'] = settings.groq_api_key
+if settings.openrouter_api_key:
+    os.environ['OPENROUTER_API_KEY'] = settings.openrouter_api_key
 
 async def discover_and_rank_products(query: str, quantity: int = 1, budget: str | None = None, currency: str = 'USD', mandatory_attributes: dict[str,str] | None = None, preferred_attributes: dict[str,str] | None = None) -> dict:
     """Search Channel3 and rank real catalogue products against explicit purchasing constraints.
