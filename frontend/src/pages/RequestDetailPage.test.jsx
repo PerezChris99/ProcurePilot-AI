@@ -145,3 +145,48 @@ describe('LiteLLM model source attribution',()=>{
       .toBeInTheDocument();
   });
 });
+
+
+describe('PO button-scoped in-flight state',()=>{
+  beforeEach(()=>apiRequest.mockReset());
+
+  it('only shows Creating on the selected offer and guards against duplicate submits',async()=>{
+    let completeOrder;
+    const inFlight=new Promise(resolve=>{completeOrder=resolve;});
+    const secondOffer={...offer,url:'https://approved.example.com/second',
+      domain:'second.example.com'};
+    const fixture=requestFixture();
+    fixture.analysis_json.results[0].product.offers.push(secondOffer);
+    fixture.analysis_json.results[0].policy.eligible_offer_urls.push(secondOffer.url);
+    apiRequest.mockImplementation(path=>{
+      if(path==='/procurement-requests/req-qa')return Promise.resolve(fixture);
+      if(path==='/procurement-requests/req-qa/purchase-orders')return inFlight;
+      return Promise.resolve({});
+    });
+    renderRequest();
+    const buttons=await screen.findAllByRole('button',{name:/create po/i});
+    expect(buttons).toHaveLength(2);
+    fireEvent.click(buttons[0]);
+    expect(await screen.findByRole('button',{name:/creating/i})).toBeDisabled();
+    const untouched=screen.getByRole('button',{name:/create po/i});
+    expect(untouched).toBeEnabled();
+    fireEvent.click(untouched);
+    expect(apiRequest.mock.calls.filter(call=>
+      call[0]==='/procurement-requests/req-qa/purchase-orders')).toHaveLength(1);
+    completeOrder({id:'po-from-qa'});
+    expect(await screen.findByRole('heading',{name:'Purchase orders after creation'}))
+      .toBeInTheDocument();
+  });
+
+  it('presents provider outages as catalogue-only and provides a retry action',async()=>{
+    const fixture=requestFixture();
+    fixture.analysis_json.ai_source='catalogue_only';
+    fixture.analysis_json.ai_explanation='Models unavailable; saved offers only.';
+    fixture.analysis_json.ai_retryable=true;
+    apiRequest.mockResolvedValue(fixture);
+    renderRequest();
+    expect(await screen.findByRole('heading',{name:'Catalogue policy assessment'}))
+      .toBeInTheDocument();
+    expect(screen.getByRole('button',{name:'Retry AI analysis'})).toBeEnabled();
+  });
+});

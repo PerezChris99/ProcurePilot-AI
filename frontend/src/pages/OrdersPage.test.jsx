@@ -4,8 +4,10 @@ import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {MemoryRouter} from 'react-router-dom';
 import OrdersPage from './OrdersPage.jsx';
 import {apiRequest} from '../services/api.js';
+import {redirectToPayPalSandbox} from '../services/paypalCheckout.js';
 
 vi.mock('../services/api.js',()=>({apiRequest:vi.fn(),downloadAuthorizedFile:vi.fn()}));
+vi.mock('../services/paypalCheckout.js',()=>({redirectToPayPalSandbox:vi.fn()}));
 
 const pendingOrder={
   id:'po-1',
@@ -96,5 +98,29 @@ describe('Decision Passport disclosure',()=>{
     expect(screen.getByText('Monitor A')).toBeInTheDocument();
     expect(screen.getByRole('button',{name:'Export PDF'})).toBeInTheDocument();
     expect(apiRequest).toHaveBeenCalledWith('/purchase-orders/po-1/passport');
+  });
+});
+
+
+describe('Instant PayPal Sandbox checkout navigation',()=>{
+  beforeEach(()=>{apiRequest.mockReset();redirectToPayPalSandbox.mockReset();});
+
+  it('redirects to the verified PayPal approval URL when checkout creation succeeds',async()=>{
+    const checkout='https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL-123';
+    apiRequest.mockImplementation(path=>{
+      if(path==='/purchase-orders')return Promise.resolve([
+        {...pendingOrder,status:'approved'},
+      ]);
+      if(path==='/purchase-orders/po-1/payments/paypal/create')
+        return Promise.resolve({approval_url:checkout});
+      return Promise.resolve([]);
+    });
+    renderPage();
+    fireEvent.click(await screen.findByRole('button',{
+      name:/create paypal sandbox checkout/i,
+    }));
+    await waitFor(()=>expect(redirectToPayPalSandbox).toHaveBeenCalledWith(checkout));
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/purchase-orders/po-1/payments/paypal/create',{method:'POST'});
   });
 });

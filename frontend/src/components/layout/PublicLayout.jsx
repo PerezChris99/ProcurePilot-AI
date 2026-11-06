@@ -53,6 +53,10 @@ export function PublicFooter(){
 export default function PublicLayout(){
   const {user}=useAuth();
   const location=useLocation();
+  const scrollHomeToTop=()=>{
+    const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({top:0,behavior:reduced?'auto':'smooth'});
+  };
   useEffect(()=>{
     if(location.hash){
       let id=location.hash.slice(1);
@@ -68,7 +72,7 @@ export default function PublicLayout(){
     <a href="#site-main" className="site-skip-link">Skip to content</a>
     <header className="site-header">
       <div className="site-header-inner">
-        <Link to="/" className="site-brand" aria-label="ProcurePilot AI home">
+        <Link to="/" className="site-brand" aria-label="ProcurePilot AI home" onClick={scrollHomeToTop}>
           <img src="/favicon.svg" alt="" width="34" height="34"/>
           <span>procurepilot<span className="site-brand-period">.</span></span>
         </Link>
