@@ -2,6 +2,7 @@ from decimal import Decimal,InvalidOperation
 import re
 from app.integrations.channel3.schemas import Channel3Product
 from app.procurement.schemas import ProcurementRequirements,ProductScore
+from app.procurement.specifications import display_size_violations
 
 WEIGHTS={'specification_match':Decimal('0.35'),'budget_fit':Decimal('0.30'),'availability':Decimal('0.15'),'delivery_suitability':Decimal('0.10'),'listing_completeness':Decimal('0.10')}
 
@@ -15,6 +16,8 @@ def score_product(product: Channel3Product,requirements: ProcurementRequirements
     for key,expected in requirements.mandatory_attributes.items():
         if _normal(expected) in attributes.get(_normal(key),set()): matched.append(key)
         else: unmet.append(key)
+    display_failures=display_size_violations(requirements.query,product)
+    if display_failures: unmet.append('display_size')
     preferred_total=len(requirements.preferred_attributes)
     preferred_matches=sum(1 for key,value in requirements.preferred_attributes.items() if _normal(value) in attributes.get(_normal(key),set()))
     spec_values=[]
@@ -43,6 +46,7 @@ def score_product(product: Channel3Product,requirements: ProcurementRequirements
     notes=[]
     if requirements.mandatory_attributes and not unmet: notes.append('All mandatory attributes are evidenced in Channel3 structured attributes.')
     if unmet: notes.append('Mandatory attributes are missing or do not match: '+', '.join(unmet)+'.')
+    notes.extend(display_failures)
     if best_price is not None: notes.append('Best verified in-stock matching-currency offer: '+str(best_price)+' '+requirements.currency+'.')
     if available is True: notes.append('At least one matching-currency offer is marked in stock.')
     elif available is False: notes.append('Matching-currency offers are marked out of stock.')

@@ -2,12 +2,13 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import ValidationError
 from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import Session
 
 from app.agents import runtime
 from app.agents.budget import AiQuotaExceeded, reserve_ai_call
-from app.agents.evidence import bounded_evidence_prompt, has_eligible_offer
+from app.agents.evidence import bounded_evidence_prompt, has_eligible_offer, provider_outage_assessment
 from app.agents.runtime import AgentConfigurationError, AgentExecutionError
 from app.core.config import get_settings
 from app.core.database import get_db
@@ -111,7 +112,9 @@ def get_request(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return _owned_request(request_id, user, db)
+    request = _owned_request(request_id, user, db)
+    _upgrade_legacy_snapshot(request, db)
+    return request
 
 
 def _snapshot_product_entry(item, request, by_id):
@@ -129,6 +132,42 @@ def _snapshot_product_entry(item, request, by_id):
             'offer_reasons': dict(checks[:30]),
         },
     }
+
+
+_POLICY_VERSION = 2
+
+
+def _upgrade_legacy_snapshot(request: ProcurementRequest, db: Session) -> None:
+    """Revalidate cached offers when deterministic purchasing rules improve.
+
+    Prevent old product/AI snapshots from continuing to claim affordability
+    equals suitability after explicit monitor-diagonal checks were introduced.
+    No provider calls or model quota are consumed by this one-time conversion.
+    """
+    previous = request.analysis_json or {}
+    if previous.get('source') != 'Channel3' or previous.get('policy_version') == _POLICY_VERSION:
+        return
+    try:
+        products = [
+            Channel3Product.model_validate(entry['product'])
+            for entry in previous.get('results', [])
+        ]
+        by_id = {product.id: product for product in products}
+        rankings = rank_products(products, requirements_for_request(request))
+        results = [_snapshot_product_entry(item, request, by_id) for item in rankings]
+        updated = {**previous, 'results': results, 'policy_version': _POLICY_VERSION}
+    except (ValidationError, KeyError, ValueError, TypeError):
+        # Corrupted old evidence is not usable purchasing authority.
+        updated = {**previous, 'results': [], 'policy_version': _POLICY_VERSION,
+                   'next_page_available': False, 'next_page_token': None}
+    # A pre-policy model comparison has no right to remain labelled current.
+    for key in ('ai_explanation', 'ai_source', 'ai_model', 'ai_usage',
+                'ai_prompt_characters', 'ai_retryable'):
+        updated.pop(key, None)
+    request.analysis_json = updated
+    db.add(request)
+    db.commit()
+    db.refresh(request)
 
 
 async def _catalogue_snapshot(request: ProcurementRequest, user_id: str, *, current=None, page_token=None):
@@ -155,6 +194,7 @@ async def _catalogue_snapshot(request: ProcurementRequest, user_id: str, *, curr
     by_id = {product.id: product for product in products}
     return {
         'source': 'Channel3',
+        'policy_version': _POLICY_VERSION,
         'discovered_at': source_timestamp(),
         'results': [
             _snapshot_product_entry(item, request, by_id)
@@ -204,11 +244,12 @@ async def analyze_request(
     user: User = Depends(get_current_user),
 ):
     request = _owned_request(request_id, user, db)
+    _upgrade_legacy_snapshot(request, db)
     current = request.analysis_json or {}
 
     # Repeated clicks and refreshes must not spend another model call on the same
     # saved evidence. Refreshing Channel3 deliberately invalidates this cache.
-    if current.get('ai_explanation'):
+    if current.get('ai_explanation') and not current.get('ai_retryable'):
         return {
             'request_id': request.id, 'explanation': current['ai_explanation'],
             'status': request.status, 'cached': True,
@@ -304,17 +345,33 @@ async def analyze_request(
     except AgentConfigurationError as exc:
         raise HTTPException(status_code=503, detail='The AI model provider is not configured') from exc
     except AgentExecutionError as exc:
+        if exc.category in ('provider_unavailable', 'timeout', 'transport',
+                            'quota_or_rate_limit'):
+            # A provider outage cannot invalidate already verified catalogue
+            # data. Surface a truthful non-AI comparison with a retry option.
+            explanation = provider_outage_assessment(request, current['results'])
+            request.analysis_json = {
+                **current, 'ai_explanation': explanation,
+                'ai_source': 'catalogue_only', 'ai_usage': None,
+                'ai_retryable': True,
+            }
+            db.add(request)
+            db.commit()
+            return {
+                'request_id': request.id, 'explanation': explanation,
+                'status': request.status, 'cached': False,
+                'source': 'catalogue_only', 'usage': None, 'retryable': True,
+            }
         raise HTTPException(
-            status_code=503 if exc.category in (
-                'provider_unavailable','timeout','transport','quota_or_rate_limit',
-            ) else 502,
-            detail='AI analysis is temporarily unavailable. Saved catalogue results remain available.',
+            status_code=502,
+            detail='AI provider authentication or model access failed. Review the integration configuration.',
         ) from exc
 
     request.analysis_json = {
         **current, 'ai_explanation': result['text'],
         'ai_source': result.get('provider','gemini'), 'ai_model': result['model'],
         'ai_usage': result['usage'], 'ai_prompt_characters': len(prompt),
+        'ai_retryable': False,
     }
     db.add(request)
     db.commit()

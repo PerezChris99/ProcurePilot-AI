@@ -253,15 +253,16 @@ async def run_evidence_analysis(
         remaining = limit - (time.monotonic() - started)
         if remaining < 10:
             break
-        # Primary has 25s to avoid burning the whole deadline when Google is
-        # overloaded. Each backup gets a bounded 20s slot, or the remaining
-        # budget for the final provider (never above the total deadline).
+        # ADK/SDK transports can internally retry 503s and shared-pool 429s.
+        # A short hard wall-clock slot is necessary for fast failover; do not
+        # let the primary consume the entire API request deadline.
         more_routes = len(attempts)-index-1
-        if more_routes and remaining >= 20:
-            slot = min(25 if index == 0 else 20, int(remaining - 10))
+        if more_routes:
+            slot = min(12 if index == 0 else 10, max(10, int(remaining)-10))
         else:
-            slot = int(remaining)
-        slot = max(10, min(90, slot))
+            slot = min(12, int(remaining))
+        if slot < 10:
+            break
         if index and on_fallback is not None:
             on_fallback()  # atomic SQL quota reservation before another model call
         agent = analysis_agent if provider == 'gemini' else _fallback_agent(model_name)

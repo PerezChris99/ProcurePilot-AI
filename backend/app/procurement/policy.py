@@ -3,6 +3,7 @@ from datetime import datetime,timezone
 from decimal import Decimal,InvalidOperation
 from urllib.parse import urlsplit
 from app.procurement.schemas import ProcurementRequirements
+from app.procurement.specifications import display_size_violations
 
 
 def source_timestamp():
@@ -38,6 +39,7 @@ def evaluate_offer(request,product,offer,*,now=None):
     reasons=[]
     if policy_expired(request,now=now):
         reasons.append('Buyer mandate expired')
+    reasons.extend(display_size_violations(getattr(request,'request_text',''), product))
     expected=policy.get('mandatory_attributes') or {}
     attributes={
         str(key).strip().casefold():{str(v).strip().casefold()

@@ -272,12 +272,37 @@ async def create_paypal_order(order_id:str,db:Session=Depends(get_db),user:User=
         raise HTTPException(status_code=409,detail='A PayPal checkout attempt is already being created for this purchase order.') from exc
     db.refresh(payment)
     item=db.scalar(select(PurchaseOrderItem).where(PurchaseOrderItem.purchase_order_id==order.id))
+    if item is None:
+        raise HTTPException(status_code=409,detail='Purchase order has no saved line item.')
     settings=get_settings()
+    pending_payment_id=payment.id
+    checkout_args={
+        'po_id':order.id, 'po_number':order.po_number,
+        'amount':f'{order.total_amount:.2f}', 'currency':order.currency,
+        'description':item.product_title, 'quantity':item.quantity,
+        'unit_price':f'{item.unit_price:.2f}',
+        'idempotency_key':payment.idempotency_key,
+        'return_url':settings.frontend_url.rstrip('/')+'/orders?paypal=return&po='+order.id,
+        'cancel_url':settings.frontend_url.rstrip('/')+'/orders?paypal=cancel&po='+order.id,
+    }
+    # Release the read-only transaction before potentially slow PayPal OAuth and
+    # create-order HTTP calls (Postgres idle-in-transaction timeout is 15s).
+    # The creating record and stable idempotency key are already committed.
+    db.rollback()
     try:
-        result=await client.create_order(po_id=order.id,po_number=order.po_number,amount=f'{order.total_amount:.2f}',currency=order.currency,description=item.product_title,quantity=item.quantity,unit_price=f'{item.unit_price:.2f}',idempotency_key=payment.idempotency_key,return_url=settings.frontend_url.rstrip('/')+'/orders?paypal=return&po='+order.id,cancel_url=settings.frontend_url.rstrip('/')+'/orders?paypal=cancel&po='+order.id)
+        result=await client.create_order(**checkout_args)
     except (PayPalConfigurationError,PayPalUnavailable) as exc:
-        payment.status='failed'; db.commit()
+        payment=db.get(Payment,pending_payment_id)
+        if payment and payment.status=='creating':
+            payment.status='failed'
+            db.commit()
         raise HTTPException(status_code=503 if isinstance(exc,PayPalConfigurationError) else 502,detail='PayPal could not create the checkout order. Check Sandbox connectivity and credentials.') from exc
+    payment=db.get(Payment,pending_payment_id)
+    order=_owned_order(order_id,user,db)
+    if payment is None or payment.purchase_order_id!=order.id or payment.idempotency_key!=checkout_args['idempotency_key']:
+        raise HTTPException(status_code=409,detail='Checkout reservation changed while contacting PayPal.')
+    if order.status not in ('approved','payment_pending'):
+        raise HTTPException(status_code=409,detail='The approved purchase order changed while PayPal checkout was created.')
     links=result.get('links') or []
     approval_url=next((link.get('href') for link in links if link.get('rel') in ('approve','payer-action')),None)
     if not result.get('id') or not approval_url or not PayPalClient.is_valid_order_id(result.get('id')) or not PayPalClient.is_approval_url(approval_url):
@@ -296,16 +321,32 @@ async def capture_paypal_order(order_id:str,db:Session=Depends(get_db),user:User
     if payment is None or not payment.paypal_order_id: raise HTTPException(status_code=409,detail='Create a PayPal checkout order first.')
     if payment.status=='completed' and order.status=='paid': return _serialize(order,db)
     if order.status not in ('approved','payment_pending'): raise HTTPException(status_code=409,detail='Purchase order is not eligible for payment capture.')
+    payment_id=payment.id
+    paypal_order_id=payment.paypal_order_id
+    # Detached records retain the immutable values needed for provider
+    # verification, while the database read transaction is released before I/O.
+    db.expunge(order)
+    db.expunge(payment)
+    db.rollback()
     try:
         client=PayPalClient()
         client.ensure_configured()
-        remote=await client.get_order(payment.paypal_order_id)
+        remote=await client.get_order(paypal_order_id)
         if not _paypal_order_matches(remote,order,payment): raise HTTPException(status_code=409,detail='PayPal order details do not match the approved purchase order.')
-        result=await client.capture_order(payment.paypal_order_id,hashlib.sha256(('capture:'+payment.idempotency_key).encode()).hexdigest()[:32]) if remote.get('status')=='APPROVED' else remote
+        result=await client.capture_order(paypal_order_id,hashlib.sha256(('capture:'+payment.idempotency_key).encode()).hexdigest()[:32]) if remote.get('status')=='APPROVED' else remote
     except (PayPalConfigurationError,PayPalUnavailable) as exc:
         raise HTTPException(status_code=503 if isinstance(exc,PayPalConfigurationError) else 502,detail='PayPal could not verify or capture this order.') from exc
     if not _paypal_order_matches(result,order,payment):
         raise HTTPException(status_code=502,detail='PayPal capture response does not match the approved purchase order.')
+    order=_owned_order(order_id,user,db)
+    current_payment=db.scalar(select(Payment).where(Payment.purchase_order_id==order.id))
+    if not current_payment or current_payment.id!=payment_id or current_payment.paypal_order_id!=paypal_order_id:
+        raise HTTPException(status_code=409,detail='The saved PayPal payment changed during verification.')
+    payment=current_payment
+    if order.status=='paid' and payment.status=='completed':
+        return _serialize(order,db)
+    if order.status not in ('approved','payment_pending'):
+        raise HTTPException(status_code=409,detail='Purchase order status changed while confirming payment.')
     if result.get('status')!='COMPLETED':
         payment.status='pending'; payment.provider_response={'paypal_status':result.get('status')}
         _audit(db,user.id,'payment.capture_pending',order_id=order.id,request_id=order.request_id,details={'paypal_status':result.get('status')})
@@ -384,14 +425,28 @@ async def verify_retailer_offer(
                 return previous
         except (ValueError,TypeError):
             pass
+    product_id=item.product_id
+    offer_url=item.offer_url
+    owner_id=user.id
+    # The configured 15s PostgreSQL idle-in-transaction limit must not include
+    # the Channel3 network call. No mutations have occurred yet.
+    db.rollback()
     try:
-        product=await Channel3Client().get_product(item.product_id,user_id=user.id)
+        product=await Channel3Client().get_product(product_id,user_id=owner_id)
     except Channel3ConfigurationError as exc:
         raise HTTPException(status_code=503,detail='Channel3 verification is not configured') from exc
     except Channel3Unavailable as exc:
         raise HTTPException(status_code=502,detail='Channel3 verification is temporarily unavailable') from exc
 
-    offer=next((offer for offer in product.offers if str(offer.url)==item.offer_url),None)
+    # Another request may have changed this PO while Channel3 responded.
+    # Reload the owner-scoped order and exact frozen line item before writing.
+    order=_owned_order(order_id,user,db)
+    if order.status not in ('draft','pending_approval','approved'):
+        raise HTTPException(status_code=409,detail='The purchase order changed while checking its retailer offer.')
+    item=db.scalar(select(PurchaseOrderItem).where(PurchaseOrderItem.purchase_order_id==order.id))
+    if item is None or item.product_id!=product_id or item.offer_url!=offer_url:
+        raise HTTPException(status_code=409,detail='The frozen offer changed while checking Channel3.')
+    offer=next((offer for offer in product.offers if str(offer.url)==offer_url),None)
     request=db.get(ProcurementRequest,order.request_id)
     if offer is None:
         result={'status':'unavailable','reason':'The original retailer offer was not found on the refreshed product.',

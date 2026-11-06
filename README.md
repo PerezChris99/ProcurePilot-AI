@@ -4,6 +4,8 @@
 
 ProcurePilot AI is an accountable purchasing decision system: real Channel3 catalogue evidence, deterministic buyer mandates, bounded Gemini analysis, human approval, frozen Decision Passports and a separately verifiable PayPal Sandbox payment demonstration.
 
+**Render deployment:** [Web Service + Static Site + PostgreSQL + private Key Value setup](docs/RENDER_DEPLOYMENT.md). Do not select a Workflow to host the API, and rotate any provider keys previously shared outside a secret manager.
+
 **Project status:** Functional prototype under active hardening. The Sandbox does not pay retailers, and a passing local build is not evidence of production readiness, unrestricted provider access, or high-load capacity.
 
 ## Installation and local development

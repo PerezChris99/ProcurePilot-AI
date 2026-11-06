@@ -359,3 +359,123 @@ def test_create_po_persists_parent_before_item_and_audit_foreign_keys(foreign_ke
                                     headers=headers)
     assert saved.status_code == 200
     assert saved.json()['id'] == order['id']
+
+
+def test_plain_language_screen_size_blocks_wrong_display_and_accessories(client,monkeypatch):
+    headers=register(client,'requested-72in@example.com')
+    request_id=client.post('/api/v1/procurement-requests',headers=headers,json={
+        'request_text':'i need 72 inch monitors',
+        'quantity':4,'budget':'3000.00','currency':'USD',
+    }).json()['id']
+
+    async def search(self,query,*,limit=20,filters=None,user_id=None,page_token=None):
+        def product(identifier,title):
+            return Channel3Product(id=identifier,title=title,offers=[
+                Channel3Offer(url='https://retailer.example/'+identifier,
+                    domain='retailer.example',availability='InStock',
+                    price=Channel3Price(amount=Decimal('400'),currency='USD'))
+            ])
+        return Channel3SearchResponse(products=[
+            product('wrong-size','HP 24 in Monitor'),
+            product('stand','Dual Monitor Stand'),
+            product('correct','72 inch Commercial Monitor'),
+        ])
+    monkeypatch.setattr(Channel3Client,'search_products',search)
+    snapshot=client.post(f'/api/v1/procurement-requests/{request_id}/discover',
+                         headers=headers)
+    assert snapshot.status_code==200
+    entries={entry['product']['id']:entry for entry in snapshot.json()['results']}
+    assert entries['wrong-size']['policy']['eligible_offer_urls']==[]
+    assert entries['stand']['policy']['eligible_offer_urls']==[]
+    assert entries['correct']['policy']['eligible_offer_urls']==[
+        'https://retailer.example/correct']
+
+    for blocked in ('wrong-size','stand'):
+        response=client.post(
+            f'/api/v1/procurement-requests/{request_id}/purchase-orders',
+            headers=headers,json={'product_id':blocked,
+                                  'offer_url':'https://retailer.example/'+blocked})
+        assert response.status_code==422
+
+    created=client.post(
+        f'/api/v1/procurement-requests/{request_id}/purchase-orders',
+        headers=headers,json={'product_id':'correct',
+                              'offer_url':'https://retailer.example/correct'})
+    assert created.status_code==201
+    assert created.json()['total_amount']=='1600.00'
+
+
+def test_paypal_create_and_capture_release_read_transactions_before_network(client,monkeypatch):
+    """The 15-second PostgreSQL idle transaction deadline must not span PayPal I/O."""
+    headers,order=approved_order(client,monkeypatch,'paypal-transactions@example.com')
+    fake_paypal(monkeypatch,order['id'])
+    from app.core.database import get_db
+    from app.main import app
+    original_override=app.dependency_overrides[get_db]
+    sessions=[]
+
+    def tracked_db():
+        for db in original_override():
+            sessions.append(db)
+            yield db
+
+    app.dependency_overrides[get_db]=tracked_db
+    try:
+        original_create=PayPalClient.create_order
+        original_get=PayPalClient.get_order
+        original_capture=PayPalClient.capture_order
+
+        async def checked_create(self,**kwargs):
+            assert sessions[-1].in_transaction() is False
+            return await original_create(self,**kwargs)
+
+        async def checked_get(self,order_id):
+            assert sessions[-1].in_transaction() is False
+            return await original_get(self,order_id)
+
+        async def checked_capture(self,order_id,key):
+            assert sessions[-1].in_transaction() is False
+            return await original_capture(self,order_id,key)
+
+        monkeypatch.setattr(PayPalClient,'create_order',checked_create)
+        monkeypatch.setattr(PayPalClient,'get_order',checked_get)
+        monkeypatch.setattr(PayPalClient,'capture_order',checked_capture)
+        checkout=client.post(f"/api/v1/purchase-orders/{order['id']}/payments/paypal/create",headers=headers)
+        assert checkout.status_code==200
+        capture=client.post(f"/api/v1/purchase-orders/{order['id']}/payments/paypal/capture",headers=headers)
+        assert capture.status_code==200
+        assert capture.json()['status']=='paid'
+    finally:
+        app.dependency_overrides[get_db]=original_override
+
+
+def test_channel3_recheck_releases_postgres_read_transaction(client,monkeypatch):
+    headers,order=make_order(client,monkeypatch,email='offer-recheck-window@example.com')
+    from app.main import app
+    from app.core.database import get_db
+    original_override=app.dependency_overrides[get_db]
+    seen=[]
+    def tracked_db():
+        for session in original_override():
+            seen.append(session)
+            yield session
+    app.dependency_overrides[get_db]=tracked_db
+    try:
+        async def get_product(self,product_id,*,user_id=None):
+            assert seen[-1].in_transaction() is False
+            return Channel3Product(
+                id=product_id,title='Business monitor 27 inch',
+                offers=[Channel3Offer(
+                    url='https://retailer.example/monitor',
+                    domain='retailer.example',
+                    price=Channel3Price(amount=Decimal('120.00'),currency='USD'),
+                    availability='InStock')],
+            )
+        monkeypatch.setattr(Channel3Client,'get_product',get_product)
+        response=client.post(
+            f"/api/v1/purchase-orders/{order['id']}/verify-offer",headers=headers,
+        )
+        assert response.status_code==200
+        assert response.json()['status']=='unchanged'
+    finally:
+        app.dependency_overrides[get_db]=original_override

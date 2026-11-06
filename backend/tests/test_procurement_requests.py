@@ -387,3 +387,96 @@ def test_channel3_discovery_and_implicit_ai_discovery_close_read_transactions(cl
     assert analysis.status_code == 200
     assert analysis.json()['source'] == 'catalogue_only'
     assert releases == ids
+
+
+def test_all_transient_ai_failures_yield_honest_retryable_catalogue_summary(client, monkeypatch):
+    headers=auth_headers(client,'transient-models@example.com')
+    request_id=client.post('/api/v1/procurement-requests',headers=headers,json={
+        'request_text':'Two office monitors for purchasing',
+        'quantity':2,'budget':'500.00','currency':'USD',
+    }).json()['id']
+
+    async def search(self, query, *, limit=20, filters=None, user_id=None,
+                     page_token=None):
+        return Channel3SearchResponse(products=[Channel3Product(
+            id='monitor-saved', title='Office monitor',
+            offers=[Channel3Offer(url='https://seller.example/monitor',
+                domain='seller.example',availability='InStock',
+                price=Channel3Price(amount='125.00',currency='USD'))]
+        )])
+    calls=[]
+    async def fail_once(user_id,prompt):
+        calls.append('failed')
+        raise runtime.AgentExecutionError('All providers exhausted',
+                                          category='quota_or_rate_limit')
+    async def succeed(user_id,prompt):
+        calls.append('recovered')
+        return {'text':'Saved monitor is within budget.',
+                'model':'gemini-3.5-flash-lite','provider':'gemini','usage':None}
+
+    monkeypatch.setattr(Channel3Client,'search_products',search)
+    monkeypatch.setattr(runtime,'run_evidence_analysis',fail_once)
+    monkeypatch.setattr(procurement_api,'get_settings',lambda:_fake_settings())
+
+    first=client.post(f'/api/v1/procurement-requests/{request_id}/analyze',
+                      headers=headers)
+    assert first.status_code==200
+    assert first.json()['source']=='catalogue_only'
+    assert first.json()['retryable'] is True
+    assert 'not a generated AI assessment' in first.json()['explanation']
+    assert '250.00 USD' in first.json()['explanation']
+    stored=client.get(f'/api/v1/procurement-requests/{request_id}',
+                      headers=headers).json()
+    assert stored['analysis_json']['ai_retryable'] is True
+
+    monkeypatch.setattr(runtime,'run_evidence_analysis',succeed)
+    retry=client.post(f'/api/v1/procurement-requests/{request_id}/analyze',
+                      headers=headers)
+    assert retry.status_code==200 and retry.json()['source']=='gemini'
+    assert calls==['failed','recovered']
+    again=client.post(f'/api/v1/procurement-requests/{request_id}/analyze',
+                      headers=headers)
+    assert again.json()['cached'] is True
+    assert calls==['failed','recovered']
+
+
+def test_legacy_saved_snapshot_revalidates_72inch_requirement_and_drops_outdated_ai():
+    """Previously saved affordable 24in offers must no longer be sold as 72in."""
+    from app.api import procurement_requests as api
+    request=SimpleNamespace(
+        request_text='i need 72 inch monitors',
+        quantity=4,budget=Decimal('3000.00'),currency='USD',policy_json={},
+        analysis_json={
+            'source':'Channel3','discovered_at':'2026-11-06T17:00:00+00:00',
+            'results':[{
+                'ranking':{'eligible':True,'unmet_requirements':[]},
+                'product':Channel3Product(
+                    id='old-24inch',title='HP 24 in Monitor',
+                    offers=[Channel3Offer(
+                        url='https://seller.example/old-monitor',
+                        domain='seller.example',
+                        availability='InStock',
+                        price=Channel3Price(amount='300.00',currency='USD'),
+                    )],
+                ).model_dump(mode='json'),
+                'policy':{'eligible_offer_urls':['https://seller.example/old-monitor']},
+            }],
+            'ai_explanation':'This 24in monitor fully satisfies the 72in request',
+            'ai_source':'gemini',
+        },
+    )
+    class FakeSession:
+        def __init__(self):self.commits=0
+        def add(self,record):assert record is request
+        def commit(self):self.commits+=1
+        def refresh(self,record):assert record is request
+    db=FakeSession()
+    api._upgrade_legacy_snapshot(request,db)
+    assert db.commits==1
+    assert request.analysis_json['policy_version']==2
+    item=request.analysis_json['results'][0]
+    assert item['ranking']['eligible'] is False
+    assert item['policy']['eligible_offer_urls']==[]
+    assert 'ai_explanation' not in request.analysis_json
+    api._upgrade_legacy_snapshot(request,db)
+    assert db.commits==1

@@ -121,6 +121,47 @@ def evidence_prompt(request, results, *, max_candidates=4):
     )
 
 
+def provider_outage_assessment(request, results):
+    """Factual offline fallback when all transient LLM routes are unavailable.
+
+    This is NOT an AI response. Offer eligibility and money come exclusively
+    from already policy-checked, saved Channel3 evidence.
+    """
+    lines = [
+        'Live AI providers are temporarily unavailable. This is a rule-based '
+        'catalogue summary, not a generated AI assessment.'
+    ]
+    eligible = []
+    for entry in results:
+        offer = _eligible_entry_offer(entry, request.currency)
+        if offer:
+            product = entry.get('product') or {}
+            try:
+                total = Decimal(offer['unit_price']) * request.quantity
+            except (InvalidOperation, ValueError, TypeError):
+                continue
+            eligible.append((
+                _clean(product.get('title'), 75),
+                _clean(product.get('id'), 64),
+                str(total.quantize(Decimal('0.01'))),
+            ))
+        if len(eligible) >= 3:
+            break
+    if eligible:
+        for title, product_id, total in eligible:
+            lines.append(
+                f'{title} ({product_id}): eligible saved offer; '
+                f'{request.quantity} units total {total} {request.currency}.'
+            )
+    else:
+        lines.append('No offer satisfies the verified purchase requirements.')
+    lines.append(
+        'Delivery, current stock and retailer settlement remain unverified. '
+        'Retry Ask AI later for a model-generated comparison.'
+    )
+    return '\n'.join(lines)
+
+
 def has_eligible_offer(results, currency):
     """No model tokens are needed when there is no eligible, in-stock offer."""
     return any(_eligible_entry_offer(entry, currency) is not None

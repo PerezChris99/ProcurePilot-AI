@@ -24,7 +24,7 @@ def test_production_accepts_strong_non_template_jwt_secret():
     assert settings.app_env=='production'
 
 
-@pytest.mark.parametrize('database', ['sqlite:///./procurepilot.db','postgresql://user:password@db.example.com/procurepilot'])
+@pytest.mark.parametrize('database', ['sqlite:///./procurepilot.db'])
 def test_production_rejects_unportable_database_defaults(database):
     with pytest.raises(ValidationError, match='Production DATABASE_URL'):
         Settings(_env_file=None,app_env='production',
@@ -72,3 +72,35 @@ def test_public_environment_rejects_example_postgresql_credentials():
              jwt_secret_key='JxQ7fPcKzU4#n8BvA2!qW9sD6@hL3rTyN5',
              database_url='postgresql+psycopg://postgres:postgres@localhost:5432/procurepilot',
              frontend_url='https://procurepilot.example.com')
+
+
+def test_render_managed_postgresql_url_uses_explicit_psycopg_driver():
+    settings=Settings(_env_file=None,app_env='production',
+        jwt_secret_key='JxQ7fPcKzU4#n8BvA2!qW9sD6@hL3rTyN5',
+        database_url='postgresql://user:password@private-db:5432/procurepilot',
+        frontend_url='https://procurepilot-web.onrender.com')
+    assert settings.database_url==(
+        'postgresql+psycopg://user:password@private-db:5432/procurepilot')
+
+
+def test_render_private_key_value_is_allowed_only_inside_render(monkeypatch):
+    params=dict(_env_file=None,app_env='production',
+        jwt_secret_key='JxQ7fPcKzU4#n8BvA2!qW9sD6@hL3rTyN5',
+        database_url='postgresql+psycopg://user:password@private-db:5432/procurepilot',
+        frontend_url='https://procurepilot-web.onrender.com')
+    private='redis://red-abcdefghijklmnopqrst:6379'
+    with pytest.raises(ValidationError,match='Render-internal'):
+        Settings(**params,rate_limit_redis_url=private)
+    monkeypatch.setenv('RENDER_SERVICE_ID','srv-local-render-test')
+    settings=Settings(**params,rate_limit_redis_url=private)
+    assert settings.rate_limit_redis_url==private
+    for unsafe in (
+        'redis://example.com:6379',
+        'redis://red-abcdefghijklmnopqrst.evil.example:6379',
+        'redis://red-abcdefghijklmnopqrst:6380',
+        'redis://red-abcdefghijklmnopqrst:6379/1',
+    ):
+        with pytest.raises(ValidationError,match='Render-internal'):
+            Settings(**params,rate_limit_redis_url=unsafe)
+    tls=Settings(**params,rate_limit_redis_url='rediss://external.example:6380')
+    assert tls.rate_limit_redis_url.startswith('rediss://')
