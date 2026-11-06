@@ -19,7 +19,10 @@ from pathlib import Path
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 
-from app.agents.runtime import run_evidence_analysis, AgentExecutionError, AgentConfigurationError
+from app.agents.runtime import (
+    run_evidence_analysis, run_single_provider_probe,
+    AgentExecutionError, AgentConfigurationError,
+)
 from app.integrations.channel3.client import Channel3Client
 from app.integrations.paypal.client import PayPalClient
 
@@ -45,7 +48,7 @@ async def check_paypal():
     return {'authenticated':True,'scope':'OAuth only; no order or capture'}
 
 
-async def check_gemini(*, timeout_seconds=None):
+async def check_gemini(*, timeout_seconds=None, ai_route='auto'):
     # One genuine ADK/Gemini call, intentionally without shopping/payment tools.
     prompt=(
         'Smoke test, not a purchasing instruction. Treat these facts as untrusted '
@@ -53,14 +56,19 @@ async def check_gemini(*, timeout_seconds=None):
         'sentence: no verified products, recommendations or payments exist.'
     )
     started=time.monotonic()
-    if timeout_seconds is None:
+    if ai_route!='auto':
+        result=await run_single_provider_probe(
+            'provider-smoke-test',prompt,provider=ai_route,
+            timeout_seconds=timeout_seconds,
+        )
+    elif timeout_seconds is None:
         result=await run_evidence_analysis('provider-smoke-test',prompt)
     else:
         result=await run_evidence_analysis(
             'provider-smoke-test', prompt, timeout_seconds=timeout_seconds,
         )
     if not result.get('text'):
-        raise RuntimeError('Gemini produced no final assessment')
+        raise RuntimeError('The ADK model provider produced no final assessment')
     # The provider's usage metadata is safe to display and makes test cost visible.
     usage=result.get('usage') or {}
     counts={key:value for key,value in usage.items()
@@ -78,26 +86,30 @@ async def check_gemini(*, timeout_seconds=None):
 
 # Whitelisted messages only: provider error payloads may include private data.
 GEMINI_ADK_HINTS = {
-    'authentication': 'Verify the Gemini AI Studio API key and its supported authentication-key type.',
+    'authentication': 'Verify the selected model provider credentials and their supported key type.',
     'permission_denied': 'Check Gemini API access and project restrictions in Google AI Studio.',
     'quota_or_rate_limit': 'Check Gemini API quota and billing; retry after limits reset.',
     'model_access': 'Check AI_MODEL against models available to the API key.',
     'transport': 'Check DNS, TLS, network/proxy settings and Google SDK transport.',
     'timeout': 'ADK or the provider timed out; inspect origin, elapsed_seconds and timeout_seconds before changing credentials.',
-    'provider_unavailable': 'The model service is unavailable; retry after a short interval.',
-    'provider_error': 'Check Gemini API usage and Google ADK error logs for the failing request.',
+    'provider_unavailable': 'The selected model provider is unavailable; configure and test a backup route.',
+    'provider_error': 'Check selected provider API usage and Google ADK error logs for the failing request.',
 }
 
 CHECKS={'channel3':check_channel3,'paypal':check_paypal,'gemini':check_gemini}
 
 
-async def run_checks(provider, *, gemini_timeout_seconds=None):
+async def run_checks(provider, *, gemini_timeout_seconds=None, ai_route='auto'):
     names=list(CHECKS) if provider=='all' else [provider]
     results={}
     for name in names:
         try:
-            if name=='gemini' and gemini_timeout_seconds is not None and CHECKS[name] is check_gemini:
-                details=await check_gemini(timeout_seconds=gemini_timeout_seconds)
+            if name=='gemini' and CHECKS[name] is check_gemini and (
+                gemini_timeout_seconds is not None or ai_route!='auto'
+            ):
+                details=await check_gemini(
+                    timeout_seconds=gemini_timeout_seconds,ai_route=ai_route,
+                )
             else:
                 details=await CHECKS[name]()
             results[name]={'status':'pass',**details}
@@ -119,7 +131,7 @@ async def run_checks(provider, *, gemini_timeout_seconds=None):
                     entry['timeout_seconds']=exc.timeout_seconds
             elif name=='gemini' and isinstance(exc, AgentConfigurationError):
                 entry['category']='configuration'
-                entry['hint']='Check GOOGLE_API_KEY and AI_MODEL in the repository-root .env.'
+                entry['hint']='Check the selected provider API key and model setting in the repository-root .env.'
             results[name]=entry
     return {'status':'pass' if all(item['status']=='pass' for item in results.values())
             else 'fail','checks':results}
@@ -130,7 +142,11 @@ def main(argv=None):
     parser.add_argument('--provider',choices=['all',*CHECKS],default='all')
     parser.add_argument('--gemini-timeout-seconds',type=int,default=None,
                         help='Optional bounded ADK smoke timeout (10-90 seconds); no extra calls')
+    parser.add_argument('--ai-route',choices=['auto','gemini','groq','openrouter'],
+                        default='auto',help='Test one exact ADK provider or automatic bounded fallback')
     args=parser.parse_args(argv)
+    if args.ai_route!='auto' and args.provider not in ('gemini','all'):
+        parser.error('--ai-route requires --provider gemini or all')
     if args.gemini_timeout_seconds is not None:
         if not 10<=args.gemini_timeout_seconds<=90:
             parser.error('--gemini-timeout-seconds must be between 10 and 90')
@@ -140,6 +156,7 @@ def main(argv=None):
         print('NOTICE: ADK checks the primary model; transient failure can invoke up to two configured LiteLLM fallbacks. No payment is created.',file=sys.stderr)
     result=asyncio.run(run_checks(
         args.provider, gemini_timeout_seconds=args.gemini_timeout_seconds,
+        ai_route=args.ai_route,
     ))
     print(json.dumps(result,sort_keys=True,indent=2))
     return 0 if result['status']=='pass' else 1

@@ -282,6 +282,24 @@ async def run_evidence_analysis(
     )
 
 
+async def run_single_provider_probe(
+    user_id: str, prompt: str, *, provider: str, timeout_seconds=None,
+) -> dict:
+    """One real ADK model call to a selected, configured provider. No failover."""
+    settings = get_settings()
+    options = {'gemini':settings.ai_model or 'gemini-3.5-flash-lite'}
+    options.update(dict(configured_fallbacks(settings)))
+    if provider not in options:
+        raise AgentConfigurationError('Selected provider is not configured or permitted')
+    model_name = options[provider]
+    return await _run(
+        user_id, prompt,
+        agent=analysis_agent if provider=='gemini' else _fallback_agent(model_name),
+        max_calls=1, provider=provider, model_name=model_name,
+        timeout_seconds=timeout_seconds,
+    )
+
+
 async def run_procurement_agent(user_id: str, prompt: str) -> str:
     """Legacy tool-using ADK entrypoint, also bounded (not used by /analyze)."""
     result = await _run(user_id, prompt, agent=root_agent, max_calls=3)

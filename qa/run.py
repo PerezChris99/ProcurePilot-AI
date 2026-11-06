@@ -19,7 +19,8 @@ PYTHON = BACKEND / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/
 
 def isolated_env():
     env = os.environ.copy()
-    for name in ("GOOGLE_API_KEY", "CHANNEL3_API_KEY", "PAYPAL_CLIENT_ID",
+    for name in ("GOOGLE_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY",
+                 "CHANNEL3_API_KEY", "PAYPAL_CLIENT_ID",
                  "PAYPAL_CLIENT_SECRET", "PAYPAL_WEBHOOK_ID", "RATE_LIMIT_REDIS_URL"):
         env[name] = ""
     env.update({
@@ -28,6 +29,8 @@ def isolated_env():
         "PAYPAL_BASE_URL": "https://api-m.sandbox.paypal.com",
         "VITE_API_BASE_URL": "/api/v1",
         "PYTHONUNBUFFERED": "1",
+        "PYTHONUTF8": "1",
+        "AI_FALLBACK_ENABLED": "false",
     })
     return env
 
