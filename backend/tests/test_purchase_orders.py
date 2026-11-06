@@ -359,3 +359,47 @@ def test_create_po_persists_parent_before_item_and_audit_foreign_keys(foreign_ke
                                     headers=headers)
     assert saved.status_code == 200
     assert saved.json()['id'] == order['id']
+
+
+def test_plain_language_screen_size_blocks_wrong_display_and_accessories(client,monkeypatch):
+    headers=register(client,'requested-72in@example.com')
+    request_id=client.post('/api/v1/procurement-requests',headers=headers,json={
+        'request_text':'i need 72 inch monitors',
+        'quantity':4,'budget':'3000.00','currency':'USD',
+    }).json()['id']
+
+    async def search(self,query,*,limit=20,filters=None,user_id=None,page_token=None):
+        def product(identifier,title):
+            return Channel3Product(id=identifier,title=title,offers=[
+                Channel3Offer(url='https://retailer.example/'+identifier,
+                    domain='retailer.example',availability='InStock',
+                    price=Channel3Price(amount=Decimal('400'),currency='USD'))
+            ])
+        return Channel3SearchResponse(products=[
+            product('wrong-size','HP 24 in Monitor'),
+            product('stand','Dual Monitor Stand'),
+            product('correct','72 inch Commercial Monitor'),
+        ])
+    monkeypatch.setattr(Channel3Client,'search_products',search)
+    snapshot=client.post(f'/api/v1/procurement-requests/{request_id}/discover',
+                         headers=headers)
+    assert snapshot.status_code==200
+    entries={entry['product']['id']:entry for entry in snapshot.json()['results']}
+    assert entries['wrong-size']['policy']['eligible_offer_urls']==[]
+    assert entries['stand']['policy']['eligible_offer_urls']==[]
+    assert entries['correct']['policy']['eligible_offer_urls']==[
+        'https://retailer.example/correct']
+
+    for blocked in ('wrong-size','stand'):
+        response=client.post(
+            f'/api/v1/procurement-requests/{request_id}/purchase-orders',
+            headers=headers,json={'product_id':blocked,
+                                  'offer_url':'https://retailer.example/'+blocked})
+        assert response.status_code==422
+
+    created=client.post(
+        f'/api/v1/procurement-requests/{request_id}/purchase-orders',
+        headers=headers,json={'product_id':'correct',
+                              'offer_url':'https://retailer.example/correct'})
+    assert created.status_code==201
+    assert created.json()['total_amount']=='1600.00'

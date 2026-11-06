@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.agents import runtime
 from app.agents.budget import AiQuotaExceeded, reserve_ai_call
-from app.agents.evidence import bounded_evidence_prompt, has_eligible_offer
+from app.agents.evidence import bounded_evidence_prompt, has_eligible_offer, provider_outage_assessment
 from app.agents.runtime import AgentConfigurationError, AgentExecutionError
 from app.core.config import get_settings
 from app.core.database import get_db
@@ -208,7 +208,7 @@ async def analyze_request(
 
     # Repeated clicks and refreshes must not spend another model call on the same
     # saved evidence. Refreshing Channel3 deliberately invalidates this cache.
-    if current.get('ai_explanation'):
+    if current.get('ai_explanation') and not current.get('ai_retryable'):
         return {
             'request_id': request.id, 'explanation': current['ai_explanation'],
             'status': request.status, 'cached': True,
@@ -304,17 +304,33 @@ async def analyze_request(
     except AgentConfigurationError as exc:
         raise HTTPException(status_code=503, detail='The AI model provider is not configured') from exc
     except AgentExecutionError as exc:
+        if exc.category in ('provider_unavailable', 'timeout', 'transport',
+                            'quota_or_rate_limit'):
+            # A provider outage cannot invalidate already verified catalogue
+            # data. Surface a truthful non-AI comparison with a retry option.
+            explanation = provider_outage_assessment(request, current['results'])
+            request.analysis_json = {
+                **current, 'ai_explanation': explanation,
+                'ai_source': 'catalogue_only', 'ai_usage': None,
+                'ai_retryable': True,
+            }
+            db.add(request)
+            db.commit()
+            return {
+                'request_id': request.id, 'explanation': explanation,
+                'status': request.status, 'cached': False,
+                'source': 'catalogue_only', 'usage': None, 'retryable': True,
+            }
         raise HTTPException(
-            status_code=503 if exc.category in (
-                'provider_unavailable','timeout','transport','quota_or_rate_limit',
-            ) else 502,
-            detail='AI analysis is temporarily unavailable. Saved catalogue results remain available.',
+            status_code=502,
+            detail='AI provider authentication or model access failed. Review the integration configuration.',
         ) from exc
 
     request.analysis_json = {
         **current, 'ai_explanation': result['text'],
         'ai_source': result.get('provider','gemini'), 'ai_model': result['model'],
         'ai_usage': result['usage'], 'ai_prompt_characters': len(prompt),
+        'ai_retryable': False,
     }
     db.add(request)
     db.commit()

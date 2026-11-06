@@ -406,3 +406,27 @@ def test_real_litellm_adapter_constructs_tool_free_adk_agent(monkeypatch):
     assert agent.model.model=='groq/openai/gpt-oss-20b'
     assert agent.tools==[]
     assert agent.generate_content_config.max_output_tokens==900
+
+
+def test_primary_and_backups_are_bounded_to_fast_failover_slots(monkeypatch):
+    settings=SimpleNamespace(
+        ai_fallback_enabled=True, google_api_key='google',
+        groq_api_key='groq', openrouter_api_key='router',
+        ai_groq_model='groq/openai/gpt-oss-20b',
+        ai_openrouter_model='openrouter/google/gemma-4-26b-a4b-it:free',
+        ai_timeout_seconds=60, ai_model='gemini-3.5-flash-lite',
+    )
+    monkeypatch.setattr(runtime,'get_settings',lambda:settings)
+    monkeypatch.setattr(runtime,'_fallback_agent',lambda name:'LiteLLM:'+name)
+    slots=[]
+    async def fake_run(user_id,prompt,*,agent,max_calls,timeout_seconds,
+                       provider='gemini',model_name=None):
+        slots.append((provider,timeout_seconds))
+        if provider!='openrouter':
+            raise runtime.AgentExecutionError('temporary',category='provider_unavailable')
+        return {'text':'Evidence only','provider':provider,'model':model_name,'usage':None}
+    monkeypatch.setattr(runtime,'_run',fake_run)
+    result=asyncio.run(runtime.run_evidence_analysis('owner','Evidence',
+                  on_fallback=lambda:None))
+    assert result['provider']=='openrouter'
+    assert slots==[('gemini',12),('groq',10),('openrouter',12)]
