@@ -9,7 +9,7 @@ function money(value,currency){
     .format(Number(value))}
   catch{return String(value)+' '+(currency||'')}
 }
-export function evidenceAssessmentTitle(source){
+function evidenceAssessmentTitle(source){
   if(source==='gemini')return 'Gemini evidence assessment';
   if(source==='groq')return 'Groq evidence assessment';
   if(source==='openrouter')return 'OpenRouter evidence assessment';
