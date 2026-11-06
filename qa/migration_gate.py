@@ -5,6 +5,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+from contextlib import closing
 from pathlib import Path
 
 BACKEND = Path(__file__).resolve().parents[1] / "backend"
@@ -25,7 +26,10 @@ def upgrade(revision, env):
 
 
 def verify(database):
-    with sqlite3.connect(database) as connection:
+    # sqlite3's own context manager commits/rolls back but does NOT close the
+    # connection. On Windows an unclosed SQLite handle prevents TemporaryDirectory
+    # from deleting the fixture database (WinError 32) after successful checks.
+    with closing(sqlite3.connect(database)) as connection:
         actual = connection.execute("SELECT version_num FROM alembic_version").fetchone()
         assert actual and actual[0] == LATEST, "Wrong migration revision: " + str(actual)
         for table, expected in REQUIRED.items():

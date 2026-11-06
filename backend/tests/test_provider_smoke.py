@@ -147,3 +147,68 @@ def test_explicit_provider_probe_missing_key_returns_safe_configuration_status(m
     entry=result['checks']['gemini']
     assert entry['category']=='configuration'
     assert 'secret-key-not-to-be-shared' not in repr(result)
+
+
+def test_channel3_smoke_reports_safe_429_diagnostics_without_request_data(monkeypatch):
+    import httpx
+    from app.integrations.channel3.client import Channel3Unavailable
+
+    async def limited():
+        request = httpx.Request('POST', 'https://api.trychannel3.com/v1/search')
+        response = httpx.Response(429, request=request, text='secret-product-data')
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as failure:
+            raise Channel3Unavailable('do-not-log-this') from failure
+
+    monkeypatch.setattr(provider_smoke, 'CHECKS', {'channel3': limited})
+    result = asyncio.run(provider_smoke.run_checks('channel3'))
+    assert result['status'] == 'fail'
+    entry = result['checks']['channel3']
+    assert entry['category'] == 'rate_limited'
+    assert entry['http_status'] == 429
+    assert 'quota' in entry['hint']
+    assert 'secret-product-data' not in repr(result)
+    assert 'do-not-log-this' not in repr(result)
+
+
+def test_channel3_smoke_reports_transport_failure_without_urls(monkeypatch):
+    import httpx
+    from app.integrations.channel3.client import Channel3Unavailable
+
+    async def offline():
+        try:
+            raise httpx.ConnectError('secret-remote-address', request=httpx.Request(
+                'POST', 'https://api.trychannel3.com/v1/search'))
+        except httpx.TransportError as failure:
+            raise Channel3Unavailable('search failed') from failure
+
+    monkeypatch.setattr(provider_smoke, 'CHECKS', {'channel3': offline})
+    result = asyncio.run(provider_smoke.run_checks('channel3'))
+    entry = result['checks']['channel3']
+    assert entry['category'] == 'transport'
+    assert 'secret-remote-address' not in repr(result)
+
+
+def test_channel3_smoke_reports_invalid_response_without_dumping_catalogue(monkeypatch):
+    from app.integrations.channel3.client import Channel3Unavailable
+
+    async def invalid():
+        try:
+            raise ValueError('secret untrusted seller payload')
+        except ValueError as failure:
+            raise Channel3Unavailable('schema invalid') from failure
+
+    monkeypatch.setattr(provider_smoke, 'CHECKS', {'channel3': invalid})
+    result = asyncio.run(provider_smoke.run_checks('channel3'))
+    assert result['checks']['channel3']['category'] == 'invalid_response'
+    assert 'secret untrusted seller payload' not in repr(result)
+
+
+def test_channel3_smoke_distinguishes_zero_priced_offers_from_http_outage(monkeypatch):
+    async def empty():
+        raise RuntimeError('No usable real catalogue offers returned')
+    monkeypatch.setattr(provider_smoke, 'CHECKS', {'channel3':empty})
+    result=asyncio.run(provider_smoke.run_checks('channel3'))
+    assert result['checks']['channel3']['category']=='no_priced_offers'
+    assert 'priced offers' in result['checks']['channel3']['hint']
