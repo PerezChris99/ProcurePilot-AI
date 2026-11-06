@@ -393,3 +393,16 @@ def test_backup_only_adk_route_works_without_gemini_key(monkeypatch):
     result=asyncio.run(runtime.run_evidence_analysis('owner','Evidence'))
     assert observed==['groq']
     assert result['provider']=='groq'
+
+
+def test_real_litellm_adapter_constructs_tool_free_adk_agent(monkeypatch):
+    # This is an import/construction contract, not a paid provider call.
+    from google.adk.models.lite_llm import LiteLlm
+    monkeypatch.setattr(runtime,'get_settings',lambda:SimpleNamespace(
+        ai_max_output_tokens=900,
+    ))
+    agent=runtime._fallback_agent('groq/openai/gpt-oss-20b')
+    assert isinstance(agent.model,LiteLlm)
+    assert agent.model.model=='groq/openai/gpt-oss-20b'
+    assert agent.tools==[]
+    assert agent.generate_content_config.max_output_tokens==900

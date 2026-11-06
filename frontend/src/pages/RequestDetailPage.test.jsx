@@ -126,3 +126,22 @@ describe('RequestDetailPage - accountable product discovery',()=>{
     ));
   });
 });
+
+
+describe('LiteLLM model source attribution',()=>{
+  it('shows the provider used for a recovered model assessment',async()=>{
+    apiRequest.mockResolvedValue({
+      ...requestFixture(),
+      analysis_json:{
+        ...requestFixture().analysis_json,
+        ai_source:'groq',ai_model:'groq/openai/gpt-oss-20b',
+        ai_explanation:'This offer satisfies the saved budget; delivery unverified.',
+        ai_usage:{total_tokens:125},
+      },
+    });
+    renderRequest();
+    expect(await screen.findByText(/This offer satisfies the saved budget/)).toBeInTheDocument();
+    expect(screen.getByText(/Groq evidence assessment via ADK\/LiteLLM/))
+      .toBeInTheDocument();
+  });
+});
