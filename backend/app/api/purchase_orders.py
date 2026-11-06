@@ -163,7 +163,12 @@ def create_purchase_order(request_id:str,payload:PurchaseOrderCreate,db:Session=
     po_id=str(uuid.uuid4()); now=datetime.now(timezone.utc)
     order=PurchaseOrder(id=po_id,po_number='PP-'+now.strftime('%Y%m%d')+'-'+po_id[:8].upper(),user_id=user.id,assigned_approver_id=approver_id,request_id=request.id,status='draft',currency=request.currency,subtotal=total,total_amount=total,evidence_json=evidence_snapshot)
     po_item=PurchaseOrderItem(purchase_order_id=po_id,product_id=product['id'],product_title=product.get('title') or 'Catalogue product',merchant=offer.get('domain') or 'Retailer not specified',offer_url=payload.offer_url,quantity=request.quantity,unit_price=unit_price,line_total=total,currency=request.currency,product_snapshot=product)
-    db.add_all([order,po_item])
+    # Persist the parent first: the audit and item objects use raw FK IDs, not
+    # ORM relationships, so SQLAlchemy cannot always order their inserts.
+    # Flush stays within this transaction; any later failure rolls it all back.
+    db.add(order)
+    db.flush()
+    db.add(po_item)
     _audit(db,user.id,'purchase_order.created',order_id=po_id,request_id=request.id,details={'po_number':order.po_number,'amount':str(total),'currency':request.currency,'channel3_product_id':product['id']})
     db.commit(); db.refresh(order)
     return _serialize(order,db)

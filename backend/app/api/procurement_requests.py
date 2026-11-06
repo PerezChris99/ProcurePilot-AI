@@ -36,6 +36,18 @@ def _owned_request(request_id: str, user: User, db: Session) -> ProcurementReque
     return request
 
 
+def _release_db_for_provider_io(db: Session, request: ProcurementRequest) -> None:
+    """Do not hold a PostgreSQL transaction while an external API responds.
+
+    The database sets idle_in_transaction_session_timeout=15s. Detach the
+    fully loaded request before rolling back its read-only transaction so
+    request fields remain available to the evidence/policy calculation. The
+    endpoint re-fetches the owned row before saving the provider response.
+    """
+    db.expunge(request)
+    db.rollback()
+
+
 @router.post('', response_model=ProcurementRequestResponse, status_code=status.HTTP_201_CREATED)
 def create_request(
     payload: ProcurementRequestCreate,
@@ -165,9 +177,13 @@ async def discover_products(
     page_token = current.get('next_page_token') if next_page else None
     if next_page and not page_token:
         raise HTTPException(status_code=409, detail='There is no additional catalogue page to load')
-    request.analysis_json = await _catalogue_snapshot(
-        request, user.id, current=current if next_page else {}, page_token=page_token
+    user_id = user.id
+    _release_db_for_provider_io(db, request)
+    snapshot = await _catalogue_snapshot(
+        request, user_id, current=current if next_page else {}, page_token=page_token
     )
+    request = _owned_request(request_id, user, db)
+    request.analysis_json = snapshot
     request.status = 'products_discovered'
     db.add(request)
     db.commit()
@@ -203,7 +219,10 @@ async def analyze_request(
     # A first-time judge can press Ask AI without explicitly pressing Search.
     # Discover once, save the deterministic result, then analyze only its summary.
     if current.get('source') != 'Channel3':
-        current = await _catalogue_snapshot(request, user.id)
+        user_id = user.id
+        _release_db_for_provider_io(db, request)
+        current = await _catalogue_snapshot(request, user_id)
+        request = _owned_request(request_id, user, db)
         request.analysis_json = current
         request.status = 'products_discovered'
         db.add(request)

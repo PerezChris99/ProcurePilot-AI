@@ -350,3 +350,40 @@ def test_real_api_ai_backup_refuses_when_daily_quota_has_one_slot(client,monkeyp
     saved=client.get(f'/api/v1/procurement-requests/{request_id}',headers=headers).json()
     assert saved['analysis_json']['source']=='Channel3'
     assert len(saved['analysis_json']['results'])==1
+
+
+def test_channel3_discovery_and_implicit_ai_discovery_close_read_transactions(client, monkeypatch):
+    """Provider awaits must not outlive PostgreSQL's 15s idle transaction window."""
+    releases = []
+    original_release = procurement_api._release_db_for_provider_io
+
+    def observed_release(db, request):
+        assert db.in_transaction()
+        original_release(db, request)
+        assert not db.in_transaction()
+        releases.append(request.id)
+
+    async def empty_catalogue(self, query, *, limit=20, filters=None,
+                              user_id=None, page_token=None):
+        assert releases, 'Channel3 must not run while a read transaction is held'
+        return Channel3SearchResponse(products=[])
+
+    monkeypatch.setattr(procurement_api, '_release_db_for_provider_io', observed_release)
+    monkeypatch.setattr(Channel3Client, 'search_products', empty_catalogue)
+    headers = auth_headers(client, 'transaction-lifetime@example.com')
+    ids = []
+    for n in (1, 2):
+        created = client.post('/api/v1/procurement-requests', headers=headers,
+                              json={'request_text': f'Find office monitors number {n}',
+                                    'quantity': 1, 'currency': 'USD'})
+        assert created.status_code == 201
+        ids.append(created.json()['id'])
+
+    discovery = client.post('/api/v1/procurement-requests/' + ids[0] + '/discover',
+                            headers=headers)
+    analysis = client.post('/api/v1/procurement-requests/' + ids[1] + '/analyze',
+                          headers=headers)
+    assert discovery.status_code == 200
+    assert analysis.status_code == 200
+    assert analysis.json()['source'] == 'catalogue_only'
+    assert releases == ids
