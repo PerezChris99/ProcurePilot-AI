@@ -116,7 +116,7 @@ flowchart LR
     API --> DB[("PostgreSQL · Alembic")]
     API -->|"Product search"| C3["Channel3 Product API"]
     API -->|"Compact evidence"| ADK["Google ADK · bounded analyst"]
-    ADK -->|"One model call"| GEM["Gemini"]
+    ADK -->|"Gemini primary / LiteLLM backups"| GEM["Gemini · Groq · OpenRouter"]
     API -->|"OAuth · Orders v2"| PP["PayPal Sandbox"]
     PP -->|"Verified HTTPS webhooks"| API
     API -->|"Server-derived PO totals"| DB
@@ -153,7 +153,7 @@ sequenceDiagram
     API->>API: Validate and rank deterministically
     API->>DB: Save ranked snapshot
     opt AI requested and daily budget remains
-        API->>DB: Reserve one model call
+        API->>DB: Reserve each attempted model call
         API->>AI: Compact top-ranked evidence
         AI-->>API: Bounded assessment + usage
         API->>DB: Cache explanation
@@ -214,13 +214,13 @@ flowchart TD
     I --> J{"Daily global and user budgets available?"}
     J -->|No| K["429 · preserve catalogue results"]
     J -->|Yes| L["Reserve call atomically in PostgreSQL"]
-    L --> M["One ADK Gemini call · capped output/time"]
+    L --> M["ADK Gemini · on transient failure bounded LiteLLM fallbacks"]
     M --> N["Persist explanation + available usage metadata"]
 ~~~
 
 | Safeguard | Current default |
 | --- | --- |
-| ADK calls per normal assessment | **1 maximum** |
+| ADK calls per provider attempt | **1 maximum**; up to 2 opt-in, quota-reserved backup attempts on transient errors |
 | Model output cap | **900 tokens** |
 | Assessment timeout | **60 seconds** (validated range 10–90) |
 | Evidence shortlist | **Up to 4 products**, reduced to fit the input limit |
@@ -240,7 +240,7 @@ See [AI engineering and safeguards](docs/agent.md) and run the credential-free a
 
 ~~~dotenv
 GOOGLE_API_KEY=
-AI_MODEL=gemini-3.8-flash
+AI_MODEL=gemini-3.5-flash-lite
 CHANNEL3_API_KEY=
 CHANNEL3_BASE_URL=https://api.trychannel3.com/v1
 PAYPAL_CLIENT_ID=
@@ -365,3 +365,33 @@ The public site follows a refined, original fintech design rather than imitating
 The landing page has returned to a **calm, centered 1180px maximum-width editorial layout** with a classic text-left and photograph-right split hero. The rectangular photo carousel remains 510px tall on desktop, with accessible slideshow controls and a readable photo caption. The headline and CTAs live on the paper-white surface beside the image, not on top of it. At mobile/tablet widths, content stacks with comfortable spacing. A light paper palette, reduced font weights and restrained blue/navy accents replace the former full-width, high-contrast treatment. A subtle bounded desktop-only parallax effect and native smooth anchor scrolling remain, both respecting reduced-motion settings.
 
 The signed-in Overview prioritizes the greeting, **New procurement** action, live saved counts, recent events and actual integration status. Four metrics now share a single rectangular, neutral summary surface with fine dividers, not colored card borders or decorative rounded tiles. The extra promotional hero, duplicate explanatory sentences, and unnecessary site copy were removed; provider and PayPal Sandbox limitations are still accurately disclosed. Visual regression and runtime acceptance guidance is in [docs/testing.md](docs/testing.md).
+
+
+## Optional LiteLLM provider failover (Google ADK retained)
+
+Gemini Flash-Lite remains the native Google ADK primary. When `GROQ_API_KEY`
+or `OPENROUTER_API_KEY` is configured in the private repository-root
+`.env`, the tool-free evidence analyst can use the reviewed LiteLLM adapter
+through ADK. Groq GPT-OSS 20B runs first and an explicitly free OpenRouter
+GPT-OSS 20B endpoint is second. A fallback only occurs for transient 503,
+timeout, transport or provider quota errors, not bad credentials, denied
+permissions or payment/order operations. Each attempted provider call is
+charged against the existing daily user/global AI reservation; total analysis
+time remains capped by `AI_TIMEOUT_SECONDS` (default 60 seconds).
+
+```powershell
+.\qa\setup.bat
+.\test-all.bat
+.\smoke-providers.bat gemini 45 gemini
+.\smoke-providers.bat gemini 45 groq
+.\smoke-providers.bat gemini 45 openrouter
+.\smoke-providers.bat all 75
+```
+
+Provider-specific smoke calls each issue one real ADK assessment and report
+the actual model/provider; `all` checks Channel3 and PayPal Sandbox OAuth
+plus automatic AI routing, but **not** PayPal buyer/capture/webhooks.
+Backup routes require separate credentials and may have restrictive free-tier
+rate limits. Failing to configure them never blocks native Gemini. Do not
+share the `.env` or backend API keys. See
+[AI failover setup and acceptance](docs/AI_PROVIDER_FAILOVER.md).
