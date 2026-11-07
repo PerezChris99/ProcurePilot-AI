@@ -60,7 +60,7 @@ def test_build_requires_explicit_migration_switch(monkeypatch, capsys):
     monkeypatch.delenv('PROCUREPILOT_RUN_REVIEWED_MIGRATIONS', raising=False)
     monkeypatch.setattr(gate, 'status', lambda url: (None, set()))
     monkeypatch.setattr(gate, 'migrate', lambda url: pytest.fail('migration executed without flag'))
-    assert gate.main() == 2
+    assert gate.main() == gate.FAILURE_CODES['migration_required_but_not_enabled']
     output = capsys.readouterr()
     assert 'migration_required_but_not_enabled' in output.err
     assert 'testing-only' not in output.err
@@ -94,7 +94,7 @@ def test_connections_are_not_printed_on_failures(monkeypatch, capsys):
     def fails(url):
         raise RuntimeError('password=testing-only DSN='+url)
     monkeypatch.setattr(gate, 'status', fails)
-    assert gate.main() == 2
+    assert gate.main() == gate.FAILURE_CODES['neon_connection_failed']
     err = capsys.readouterr().err
     assert 'testing-only' not in err
     assert 'postgresql' not in err
