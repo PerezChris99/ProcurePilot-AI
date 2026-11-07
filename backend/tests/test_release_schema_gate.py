@@ -126,3 +126,17 @@ def test_config_preflight_catches_runtime_settings_errors_without_passwords(monk
     with pytest.raises(gate.ReleaseGateError, match='invalid_settings_other') as caught:
         gate.validate_fastapi_settings()
     assert 'private-secret' not in str(caught.value)
+
+
+def test_model_level_pydantic_validation_with_empty_location_is_classified(monkeypatch):
+    from pydantic import BaseModel, model_validator
+    from app.core import config
+
+    class BrokenSettings(BaseModel):
+        @model_validator(mode='after')
+        def reject(self):
+            raise ValueError('Production requires a unique JWT_SECRET_KEY of at least 32 characters')
+
+    monkeypatch.setattr(config, 'Settings', BrokenSettings)
+    with pytest.raises(gate.ReleaseGateError, match='invalid_settings_jwt'):
+        gate.validate_fastapi_settings()
