@@ -35,9 +35,7 @@ catalogue, buyer checkout, or HTTPS webhook.
 .\backend\.venv\Scripts\python.exe .\qa\initialize_neon.py
 ```
 
-Paste the **Direct** `procurepilot` PostgreSQL URL from
-[Neon Console](https://console.neon.tech/) when prompted. Input is hidden;
-no URL/password is written to source or output. The script runs
+Open [Neon Console](https://console.neon.tech/) → `procurepilot-ai` → Connect → `procurepilot` database → **Connection pooling OFF** → copy its **Direct** TLS connection string. Then run the initializer above. On Windows it reads the clipboard directly (no hidden paste prompt), clears the clipboard, and never prints the URL or writes it to a report. Alternatively pass `--input env` after privately setting `DATABASE_URL`. The script runs
 `alembic upgrade head`, verifies `0010_auth_throttles`, and writes the
 credential-free `qa/reports/neon.json` report.
 

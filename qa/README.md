@@ -76,7 +76,7 @@ See docs/INTEGRATION_ACCEPTANCE.md and docs/HACKATHON_SUBMISSION_KIT.md.
 
 To initialize the **real** Neon database, run the explicitly user-triggered
 `python qa/initialize_neon.py` with the **backend virtualenv interpreter**;
-it privately prompts for a **Direct** TLS URL, applies only `alembic upgrade
+it reads a copied **Direct** TLS URL from the Windows clipboard (no hidden paste), clears the clipboard, applies only `alembic upgrade
 head`, and writes sanitized `qa/reports/neon.json`.
 
 For a verification-only database probe, set `DATABASE_URL` privately in

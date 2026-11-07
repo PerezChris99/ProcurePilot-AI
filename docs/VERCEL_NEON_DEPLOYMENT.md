@@ -79,7 +79,7 @@ publishing it. The app normalizes `postgresql://` to
 
 The Vercel Function must **not** run Alembic on import or on every
 request. Use the reviewed **direct Neon connection** on a trusted local machine
-(one interactive command; prompts privately, never logs credentials):
+(on Windows, copy the Direct Neon URL first; the command securely reads the clipboard, then clears it):
 
 ```powershell
 .\backend\.venv\Scripts\python.exe .\qa\initialize_neon.py

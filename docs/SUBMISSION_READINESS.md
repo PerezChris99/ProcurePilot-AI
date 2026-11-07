@@ -80,7 +80,7 @@ python .\qa\live_demo_check.py --frontend https://procurepilotai.vercel.app --ap
 ```
 
 **Warning:** Running the Neon initializer applies `alembic upgrade head`
-to the **selected** actual database, with explicit interactive credentials.
+to the **selected** actual database, with the copied private Direct connection URL.
 Do not pass a production URL to a disposable test. The hosted probe is
 GET/OPTIONS only; it never tests payments. Read the
 [release playbook](RELEASE_READINESS.md) before execution.
