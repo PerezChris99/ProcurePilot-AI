@@ -9,6 +9,24 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
+SAFE_STARTUP_CATEGORIES = frozenset({
+    "missing_runtime_dependency", "runtime_import_failure",
+    "invalid_configuration", "startup_initialization_failure",
+})
+
+
+def safe_startup_category(body: bytes) -> str | None:
+    """Expose only a fixed category from our sanitized fail-closed entrypoint."""
+    try:
+        data = json.loads(body.decode("utf-8", "replace"))
+    except (UnicodeError, ValueError):
+        return None
+    if isinstance(data, dict) and data.get("code") == "BACKEND_STARTUP_FAILED":
+        category = data.get("category")
+        return category if category in SAFE_STARTUP_CATEGORIES else None
+    return None
+
+
 PATHS = (
     "/api/v1/health",
     "/api/v1/ready",
@@ -46,12 +64,16 @@ def inspect(origin: str) -> dict:
         try:
             with urlopen(req, timeout=12, context=ssl.create_default_context()) as resp:
                 code, headers = resp.status, resp.headers
+                body = resp.read(4096)
         except HTTPError as error:
             code, headers = error.code, error.headers
+            body = error.read(4096)
         except (URLError, TimeoutError, OSError) as error:
             result["checks"].append({"path": path, "transport_error": type(error).__name__})
             continue
+        startup_category = safe_startup_category(body)
         result["checks"].append({
+            **({"startup_category": startup_category} if startup_category else {}),
             "path": path,
             "status": code,
             "vercel_request_id": headers.get("x-vercel-id"),
