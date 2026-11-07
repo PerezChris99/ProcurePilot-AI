@@ -18,15 +18,22 @@ export function reservePayPalSandboxTab(openTab=()=>window.open('about:blank','_
   let tab;
   try{tab=openTab()}catch{return null}
   if(!tab||tab.closed)return null;
+  // A trusted about:blank tab initially inherits sessionStorage from this
+  // origin. This lets ProcurePilot authenticate the PayPal return page.
+  // Fail CLOSED if the browser refuses to detach window.opener: a third-party
+  // PayPal page must not be able to navigate the original workspace.
   try{
-    // A trusted about:blank tab initially inherits sessionStorage from this
-    // origin. This lets ProcurePilot authenticate the PayPal return page.
-    // Detach window.opener before navigating to untrusted external content.
     tab.opener=null;
+    if(tab.opener!==null){closePendingPayPalTab(tab);return null}
+  }catch{
+    closePendingPayPalTab(tab);
+    return null;
+  }
+  try{
     tab.document.title='Preparing PayPal Sandbox checkout';
     tab.document.body.textContent='Connecting to PayPal Sandbox…';
   }catch{
-    // Navigation can still be attempted if the browser isolates the document.
+    // Some browsers isolate the blank document; opener has already been severed.
   }
   return tab;
 }

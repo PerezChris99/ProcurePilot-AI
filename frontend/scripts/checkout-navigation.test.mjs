@@ -44,6 +44,16 @@ test('checkout reserves one blank tab before async API and detaches opener',()=>
   assert.deepEqual(actions.at(-1),['close']);
 });
 
+test('checkout fails closed when browser refuses to detach window.opener',()=>{
+  const actions=[];
+  const unsafe={closed:false,close:()=>actions.push('closed')};
+  Object.defineProperty(unsafe,'opener',{
+    get:()=>({}),set:()=>{throw new Error('opener isolation unavailable')},
+  });
+  assert.equal(reservePayPalSandboxTab(()=>unsafe),null);
+  assert.deepEqual(actions,['closed']);
+});
+
 test('popup blockers or closed tabs do not navigate the current application tab',()=>{
   const checkout='https://www.sandbox.paypal.com/checkoutnow?token=123';
   assert.equal(reservePayPalSandboxTab(()=>null),null);
