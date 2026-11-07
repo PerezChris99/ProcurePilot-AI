@@ -6,10 +6,8 @@ from pydantic import ValidationError
 from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import Session
 
-from app.agents import runtime
 from app.agents.budget import AiQuotaExceeded, reserve_ai_call
 from app.agents.evidence import bounded_evidence_prompt, has_eligible_offer, provider_outage_assessment
-from app.agents.runtime import AgentConfigurationError, AgentExecutionError
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.integrations.channel3.client import (
@@ -299,7 +297,7 @@ async def analyze_request(
             'cached': False, 'source': 'catalogue_only', 'usage': None,
         }
 
-    settings = get_settings()
+    # The AI SDK is deliberately imported only on the analysis route. Health,\n    # registration, login, catalog search, and payments do not need ADK.\n    # A broken AI SDK must not prevent authentication API startup.\n    from app.agents import runtime\n    from app.agents.runtime import AgentConfigurationError, AgentExecutionError\n\n    settings = get_settings()
     if not settings.google_api_key and not runtime.configured_fallbacks(settings):
         raise HTTPException(
             status_code=503,
