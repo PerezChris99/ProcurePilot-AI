@@ -153,13 +153,22 @@ def validate_fastapi_settings() -> None:
     try:
         Settings()
     except ValidationError as exc:
-        fields = {str(problem.get('loc', [''])[0]).lower()
-                  for problem in exc.errors(include_input=False)}
-        if 'jwt_secret_key' in fields or any('jwt' in f for f in fields):
+        # Settings' model_validator reports loc=(), not a field path. Do not
+        # accidentally raise IndexError while classifying the original error.
+        # Messages are inspected privately but NEVER printed.
+        issues = exc.errors(include_input=False)
+        fields = {
+            str(problem['loc'][0]).lower()
+            for problem in issues if problem.get('loc')
+        }
+        fixed_messages = ' '.join(str(p.get('msg', '')).lower() for p in issues)
+        if ('jwt_secret_key' in fields or
+                'jwt_secret_key' in fixed_messages or
+                'unique jwt' in fixed_messages):
             code = 'invalid_settings_jwt'
-        elif 'frontend_url' in fields:
+        elif 'frontend_url' in fields or 'frontend_url' in fixed_messages:
             code = 'invalid_settings_frontend'
-        elif 'database_url' in fields:
+        elif 'database_url' in fields or 'database_url' in fixed_messages:
             code = 'invalid_settings_database'
         else:
             code = 'invalid_settings_other'
