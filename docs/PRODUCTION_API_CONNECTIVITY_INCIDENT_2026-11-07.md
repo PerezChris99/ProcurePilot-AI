@@ -73,3 +73,31 @@
 ### External reference
 
 Neon connection troubleshooting: https://neon.tech/docs/connect/connection-errors — transaction PgBouncer may reject unsupported PostgreSQL startup parameters. This is the documented reason for moving connection timeouts to transaction-local SQL on Neon pooled hosts.
+
+
+## 7. Forensic root cause and recovery — 7 November 2026 (follow-up)
+
+### Confirmed startup blocker, isolated on live Vercel Preview build
+
+- The backend's own Pydantic `Settings` validation failed with the deterministic release-gate category **`invalid_settings_jwt` (exit code 40)**. The public-production configuration rejects weak, empty, or templated `JWT_SECRET_KEY` values. This prevented FastAPI startup independently of database connectivity. The previous READY Vercel deployments did not execute this validation as a build gate.
+- Rotated the Vercel **sensitive** `JWT_SECRET_KEY` environment variable for Production and Preview to a cryptographically random, high-entropy value (never logged, stored, or committed). This invalidates older tokens, intentionally requiring reauthentication.
+- The first Alembic deployment-time gate reported exit 25; follow-up diagnostics exposed a bug in its own Pydantic model-error classification (empty `loc=()`). That diagnostic bug was corrected before proceeding. This chain is recorded to distinguish the underlying JWT error from instrumentation issues.
+
+### Verified repair on isolated staging Neon and Vercel Preview
+
+- Staging Neon SQL access works under its native `owner` role. A known-target, TLS-only, direct-connection build gate successfully upgraded the isolated staging schema from empty to the reviewed Alembic head `0010_auth_throttles`.
+- Independent Neon queries verified `0010_auth_throttles` and all **11** required app tables.
+- Vercel Preview build `dpl_HdCCwubyn2eUuTemDQ1d193KWZJS` finished **READY** with in-process FastAPI checks: `GET /api/v1/health = 200`, `GET /api/v1/ready = 200`, `GET /api/v1/auth/me = 401`, production-equivalent CORS, **POST registration = 201**, **POST login = 200**, JWT-authenticated user read = 200, and authenticated procurement request creation = 201. These are actual SQL-backed staging operations, not provider mocks.
+- The disposable staging user and procurement request were removed in `finally`; independent staging SQL queries showed **0** matching residual users and **0** matching requests.
+- The Vercel build validates the exact production vs staging Neon hostname, database and role, requires TLS, and refuses unknown or unversioned existing schemas. Forward migrations need the explicit `PROCUREPILOT_RUN_REVIEWED_MIGRATIONS=1` environment gate. No migration runs on a public API request.
+- Existing Production was intentionally left unchanged while Preview diagnostics failed. `main` deployment and production schema verification are separate steps.
+
+### Production release requirements
+
+1. Production Vercel backend must have the intended `DATABASE_URL` for `ep-blue-band-bcjqtqrc.c-16.us-east-1.aws.neon.tech` (direct or pooled), role `procurepilot_owner`, database `procurepilot`, and `sslmode=require`. Do not log the full URI. **Do not use the staging database for production.**
+2. A reviewed one-time migration gate (`PROCUREPILOT_RUN_REVIEWED_MIGRATIONS=1`) is enabled only during the release. The backend build must check the actual schema revision and run only known forward Alembic upgrades if needed; it then asserts live SQL and FastAPI health/readiness without creating production test users.
+3. On successful deployment, set `PROCUREPILOT_RUN_REVIEWED_MIGRATIONS=0` in both environments so future deployment builds verify schema rather than silently applying future migrations. Likewise disable the Preview-only disposable auth smoke.
+4. Confirm real public HTTP responses with `python qa/live_demo_check.py --frontend https://procurepilotai.vercel.app --api https://procurepilotai.vercel.app`, then register and sign in from the browser. In-process build checks are **not a substitute for external Vercel routing, DNS or browser verification**.
+5. If the production build gate fails, its fixed exit code identifies the safe category (e.g., 22 wrong Neon target/role, 24 database connection, 40 weak JWT, 25 migration failure, 60 API import, 62 readiness). Investigate without weakening authentication or changing DB identities arbitrarily.
+
+**External HTTP and production registration remain unverified until independently observed.**
