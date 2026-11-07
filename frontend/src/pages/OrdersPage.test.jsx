@@ -57,7 +57,7 @@ describe('OrdersPage',()=>{
       payment:{status:'created',approval_url:'https://www.sandbox.paypal.com/checkout'},
     }]);
     renderPage();
-    const checkout=await screen.findByRole('link',{name:/continue to paypal/i});
+    const checkout=await screen.findByRole('link',{name:/open paypal in new tab/i});
     expect(checkout).toHaveAttribute('href','https://www.sandbox.paypal.com/checkout');
     expect(screen.queryByRole('button',{name:/confirm buyer approval/i})).not.toBeInTheDocument();
   });
@@ -68,7 +68,7 @@ describe('OrdersPage',()=>{
       payment:{status:'created',approval_url:'https://www.sandbox.paypal.com/checkout'},
     }]);
     renderPage();
-    const checkout=await screen.findByRole('link',{name:/continue to paypal/i});
+    const checkout=await screen.findByRole('link',{name:/open paypal in new tab/i});
     expect(checkout).toHaveAttribute('href','https://www.sandbox.paypal.com/checkout');
     expect(checkout).toHaveAttribute('target','_blank');
     expect(checkout).toHaveAttribute('rel','noopener noreferrer');
