@@ -49,7 +49,7 @@ environments when using a separate, safe preview DB):
 | Variable | Value or source |
 | --- | --- |
 | `APP_ENV` | `production` |
-| `FRONTEND_URL` | Actual Vercel public origin, e.g. `https://YOUR-SITE.vercel.app` |
+| `FRONTEND_URL` | `https://procurepilotai.vercel.app` (canonical production origin) |
 | `VITE_API_BASE_URL` | `/api/v1` (same-origin; safe to expose in JS) |
 | `DATABASE_URL` | **Secret**: Neon Postgres connection URI, with TLS; use a pooled URL at runtime and ensure psycopg 3 compatibility |
 | `JWT_SECRET_KEY` | **Secret**: random, unique, at least 32 characters, not any development secret |
@@ -101,7 +101,7 @@ Sandbox buyer signs in at checkout. After production domain exists,
 register the webhook URL:
 
 ```text
-https://YOUR-SITE.vercel.app/api/v1/webhooks/paypal
+https://procurepilotai.vercel.app/api/v1/webhooks/paypal
 ```
 
 Subscribe to `CHECKOUT.ORDER.APPROVED`,
