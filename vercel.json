@@ -17,7 +17,7 @@
       "root": "backend/",
       "framework": "fastapi",
       "entrypoint": "main:app",
-      "buildCommand": "python scripts/release_schema_gate.py"
+      "buildCommand": "python -m scripts.release_schema_gate"
     }
   },
   "rewrites": [
