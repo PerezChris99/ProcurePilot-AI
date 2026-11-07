@@ -60,3 +60,16 @@
 - Auth 401 after refresh: confirm that server JWT keys are stable across the same deployment and that session storage/expired token handling is not reusing an old token.
 
 **Do not mark resolved until the live checks and account workflow pass.** Vercel project READY means only that its build/deployment was accepted. Existing user data and PayPal Sandbox state must be preserved.
+
+
+## 6. Execution evidence acquired during the incident
+
+- **Staging PostgreSQL execution (PASS):** On the isolated Neon staging project, ran a single SELECT using `set_config('statement_timeout','9000',true)`, `set_config('lock_timeout','2500',true)`, and `set_config('idle_in_transaction_session_timeout','10000',true)`. PostgreSQL returned `9s`, `2500ms`, and `10s` respectively. The exact parameterized SQL is tested by unit assertions; this staging query was executed with literals only and made no durable changes.
+- **SQLAlchemy BEGIN hook lifecycle (PASS):** A local SQLite-engine experiment confirmed an event listener can execute one SQL command on transaction begin without recursive begin; the committed backend test similarly verifies the application listener wiring.
+- **Node deployment gate (PASS):** Twelve standalone Node tests of the committed same-origin URL validation logic passed; a non-same-origin URL was rejected with exit code 1. This was an isolated reproduction, **not** the full frontend `npm test` suite against an installed checkout.
+- **Vercel Services Preview (READY):** New `perez` deployment `dpl_529NgvrXDkCnvpN8gK5qoLV6ZXZA` completed on commit `ab474436c79baa0d7aecf606dbe9104e9c008087`, and the preview alias was attached. READY is build/deploy evidence only. Later test-only commit(s) must be verified before final release.
+- **Production HTTP and user transaction checks:** Still **NOT VERIFIED**. This environment's outbound public DNS/Web fetch fails, Vercel team-scoped runtime logs are denied pending authorization, and production Neon SQL queries are blocked by a role-pinned connector. No claim of 200/201/7-of-7 or working public sign-in is supported by the evidence.
+
+### External reference
+
+Neon connection troubleshooting: https://neon.tech/docs/connect/connection-errors — transaction PgBouncer may reject unsupported PostgreSQL startup parameters. This is the documented reason for moving connection timeouts to transaction-local SQL on Neon pooled hosts.
