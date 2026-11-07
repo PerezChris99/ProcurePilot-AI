@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Read-only, credential-free acceptance of the public judging deployment.
+"""Read-only acceptance of public or authenticated automated-preview deployment.
 
-This tool never logs in, sends payment requests, reads secret environment
-variables, or calls Channel3/Gemini/PayPal. A PASS is infrastructure/access
+This tool never logs in, sends payment requests, or calls Channel3/Gemini/PayPal.
+It optionally reads a protected-preview automation secret from process env. A PASS is infrastructure/access
 proof only, not live provider-transaction proof.
 """
 from __future__ import annotations

@@ -60,5 +60,16 @@ def test_preview_automation_secret_is_never_sent_to_production(monkeypatch):
     assert headers("https://procurepilotai.vercel.app/api/v1/health")=={}
     assert headers("https://untrusted.example.com/api/v1/health")=={}
     assert headers("https://fake-procurepilotai-preview.vercel.app/")=={}
-    monkeypatch.setenv("VERCEL_AUTOMATION_BYPASS_SECRET", "bad\\ntoken")
+    monkeypatch.setenv("VERCEL_AUTOMATION_BYPASS_SECRET", "bad" + chr(10) + "token")
     assert headers("https://procurepilotai-preview.vercel.app/")=={}
+
+
+def test_protected_preview_redirect_cannot_forward_secret(monkeypatch):
+    from urllib.request import Request
+    monkeypatch.setenv("VERCEL_AUTOMATION_BYPASS_SECRET","private-staging-value")
+    req=Request("https://procurepilotai-preview.vercel.app/api/v1/health",
+                headers=checker["_protection_headers"](
+                    "https://procurepilotai-preview.vercel.app/api/v1/health"))
+    handler=checker["_NoCrossOriginRedirect"]()
+    assert handler.redirect_request(req,None,302,"Redirect",{},
+                    "https://attacker.example/capture") is None
