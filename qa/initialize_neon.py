@@ -65,6 +65,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--input", choices=("clipboard", "env", "prompt"),
                         default="clipboard" if sys.platform == "win32" else "prompt",
                         help="Windows default: clipboard; other systems: hidden prompt")
+    parser.add_argument("--smoke", action="store_true", help="After migration test the isolated staging FastAPI/Neon workflows")
     args = parser.parse_args(argv)
     try:
         if args.input == "clipboard":
@@ -83,6 +84,9 @@ def main(argv: list[str] | None = None) -> int:
         print("[FAIL] Expected database name: procurepilot.")
         return 2
 
+    if args.smoke and host != "ep-spring-silence-bc8oxuii.c-16.us-east-1.aws.neon.tech":
+        print("[FAIL] --smoke is limited to the isolated staging Neon project.")
+        return 2
     env = os.environ.copy()
     env["DATABASE_URL"] = raw
     try:
@@ -103,6 +107,14 @@ def main(argv: list[str] | None = None) -> int:
             print("[FAIL] Database connected but schema is not ready.")
             return 1
         print("[PASS] Neon connected, schema at 0010, required tables exist.")
+        if args.smoke:
+            check = subprocess.run([sys.executable, str(ROOT / "qa" / "staging_e2e.py")],
+                cwd=ROOT, env=env, capture_output=True, text=True,
+                timeout=150, check=False)
+            if check.returncode:
+                print("[FAIL] Staging API/Neon workflow; see qa/reports/staging-e2e.json")
+                return 1
+            print("[PASS] Real staging registration, JWT, procurement, policy and isolation.")
         print("Evidence: qa/reports/neon.json (credential-free and ignored by Git)")
         return 0
     except Exception as exc:
