@@ -129,7 +129,9 @@ def test_approval_url_only_allows_paypal_checkout_hosts():
     assert PayPalClient.is_approval_url(
         "https://www.sandbox.paypal.com/checkoutnow?token=abc"
     )
-    assert PayPalClient.is_approval_url("https://www.paypal.com/checkoutnow?token=abc")
+    # This application is deliberately Sandbox-only: never allow live approval URLs.
+    assert not PayPalClient.is_approval_url("https://www.paypal.com/checkoutnow?token=abc")
+    assert PayPalClient.is_approval_url("https://sandbox.paypal.com/checkoutnow?token=abc")
     assert not PayPalClient.is_approval_url("https://evil.example/checkout")
     assert not PayPalClient.is_approval_url("http://www.sandbox.paypal.com/checkoutnow")
     assert not PayPalClient.is_approval_url(

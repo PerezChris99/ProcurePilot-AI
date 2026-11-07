@@ -50,5 +50,5 @@ export function navigatePayPalSandboxTab(rawUrl,tab){
 
 export function closePendingPayPalTab(tab){
   if(!tab||tab.closed)return;
-  try{tab.close()}catch{}
+  try{tab.close()}catch{return}
 }
