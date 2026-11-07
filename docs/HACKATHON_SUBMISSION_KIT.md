@@ -4,7 +4,7 @@
 [Official rules](https://paypalaihackathon.devpost.com/rules) ·
 **Submission cutoff:** November 12, 2026, **12:00 PST / 23:00 EAT**.
 
-**Prepared:** November 6, 2026. **State:** copy-ready draft.
+**Updated:** November 7, 2026. **State:** copy-ready draft; real hosted acceptance and payment proof outstanding.
 The entrant must verify the hosted URL, live transaction evidence, video and
 submission before replacing any `[REQUIRES VERIFICATION]` field. Never
 invent a provider response, demonstration result, payment capture, sponsor use,
@@ -23,7 +23,7 @@ user testimonial or savings percentage.
 - **Code:** https://github.com/PerezChris99/ProcurePilot-AI
 - **License:** https://github.com/PerezChris99/ProcurePilot-AI/blob/main/LICENSE
   (GitHub detects MIT).
-- **Hosted application:** `[REQUIRES VERIFICATION — exact HTTPS URL]`
+- **Hosted application:** https://procurepilotai.vercel.app — public frontend verified; live API and database acceptance NOT YET VERIFIED (last reported 2/7).
 - **Public YouTube demo:** `[REQUIRES VERIFICATION — actual public video URL]`
 - **Judge access:** `[REQUIRES VERIFICATION — clear signup/test account route]`
 - **Offline source walkthrough:** [Judges start here](JUDGES_START_HERE.md)
@@ -101,8 +101,8 @@ The working source includes policy-checked catalogue discovery, a grounded
 ADK analyst with bounded fallback, authenticated buyer/approver workflows,
 Sandbox checkout/capture integrations, signed webhook handling, an auditable
 Decision Passport with PDF export and a nine-gate offline QA runner.
-The maintainer reported **all nine offline gates passing on November 6,
-2026**. Live hosted payments, public webhook delivery and judge access still
+The maintainer reported **9/9 offline gates passing on November 7,
+2026**, at commit `d6e61cd`; any subsequent candidate changes must be retested. Live hosted payments, public webhook delivery and judge access still
 require separate confirmation and should not be claimed as complete until
 actually recorded.
 
@@ -174,11 +174,16 @@ technical explanation; never substitute it for actual working footage.
 - **Channel3**: actual product/offer retrieval and timestamped policy evidence.
 - FastAPI/Python, React/JSX/Vite, SQLAlchemy/Alembic/PostgreSQL, PDF exports.
 
-**Not yet verified as deployed:** Render Web Service/Static Site, persistent
-database and private Key Value. Mark Render as "used" and enter a Render
-sponsor category **only when the real deployment exists and is exercised**.
-Do not claim AG Grid, APIMatic, Bryntum or other sponsor tools unless they
-are genuinely integrated and tested.
+**Current hosting direction:** Vercel Services for React and FastAPI at
+https://procurepilotai.vercel.app; Neon PostgreSQL 17 is provisioned and its
+secret DATABASE_URL is configured. The hosting API and Neon migration are
+**not yet certified** (last 7-check probe was 2/7). This project is **not
+hosted on Render** and does not claim eligibility for Render's sponsor prize.
+Neon-backed auth rate limits are available without a separate Redis account.
+
+Do not claim AG Grid, APIMatic, Bryntum or any other sponsor tool that is
+not demonstrably integrated and tested. Channel3 sponsor usage must be
+supported by a real provider walkthrough.
 
 **Prize limit:** the official rules permit **one Grand Prize plus one Sponsor
 Prize OR one Honorable Mention plus one Sponsor Prize**. Multiple honorable
@@ -191,7 +196,7 @@ integration is the most defensible sponsor entry today.
 - [ ] Eligibility/ownership and third-party content rights personally verified.
 - [x] Public GitHub repo with recognized MIT license.
 - [x] Complete source, documentation and offline QA scripts committed.
-- [x] Maintainer reported 9/9 offline QA gates green on 2026-11-06.
+- [x] Maintainer reported 9/9 offline QA gates green on 2026-11-07 at `d6e61cd` (new changes require rerun).
 - [ ] Rotate provider credentials exposed outside secure secret managers.
 - [ ] Add **verified live HTTPS demo URL**, or fully reproducible external
       provider test access; do not insert a placeholder as a real URL.

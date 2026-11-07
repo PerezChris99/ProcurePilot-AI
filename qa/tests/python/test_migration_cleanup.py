@@ -28,6 +28,9 @@ def _make_database(path, revision):
             CREATE INDEX ix_purchase_orders_assigned_approver_id
                 ON purchase_orders(assigned_approver_id);
             CREATE TABLE payments (paypal_order_id TEXT, capture_id TEXT);
+            CREATE TABLE auth_rate_limit_counters (
+                bucket_key TEXT PRIMARY KEY, hits INTEGER, expires_at TEXT
+            );
         """)
         db.execute("INSERT INTO alembic_version (version_num) VALUES (?)", (revision,))
         db.commit()

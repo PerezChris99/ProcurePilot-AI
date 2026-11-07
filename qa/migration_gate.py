@@ -13,8 +13,9 @@ REQUIRED = {
     "procurement_requests": {"policy_json"},
     "purchase_orders": {"evidence_json", "offer_verification_json", "assigned_approver_id"},
     "payments": {"paypal_order_id", "capture_id"},
+    "auth_rate_limit_counters": {"bucket_key", "hits", "expires_at"},
 }
-LATEST = "0009_delegated_approver"
+LATEST = "0010_auth_throttles"
 
 
 def upgrade(revision, env):

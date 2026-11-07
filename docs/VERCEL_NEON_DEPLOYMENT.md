@@ -15,12 +15,11 @@ the Vercel multi-service build. No GitHub Actions workflows are needed.
   Connect it to the Vercel project. Run the database in a region near the
   Vercel Functions region; enable pooled connections for runtime and use
   a direct connection for migrations if required.
-- Preserve public authentication throttling. The current FastAPI code
-  fails closed when `RATE_LIMIT_REDIS_URL` is missing in `APP_ENV=production`.
-  Provision a **TLS Redis-compatible service** (e.g. Upstash on Vercel
-  Marketplace) for distributed auth limiting. Neon is the authoritative
-  relational database; Redis is only for temporary auth throttling.
-  Do not change `APP_ENV` to `development` to bypass this requirement.
+- Preserve public authentication throttling. After migration
+  `0010_auth_throttles`, the API uses **atomic Neon PostgreSQL counters**
+  when `RATE_LIMIT_REDIS_URL` is absent. Configured Redis (TLS `rediss://`)
+  remains supported for higher traffic. Both paths fail closed if they cannot
+  provide protection. Do not set `APP_ENV=development` to bypass safeguards.
 - Configure all secrets **in the Vercel dashboard**, never in Git, logs,
   frontend `VITE_*` variables, or chat messages. Rotate any old leaked keys.
 - The host must remain available for judging. Monitor credit/usage limits.
@@ -79,15 +78,18 @@ publishing it. The app normalizes `postgresql://` to
 ## Migrations (must happen before user traffic)
 
 The Vercel Function must **not** run Alembic on import or on every
-request. Use a one-off migration job with the **direct Neon connection**
-and the same reviewed source revision:
+request. Use the reviewed **direct Neon connection** on a trusted local machine
+(on Windows, copy the Direct Neon URL first; the command securely reads the clipboard, then clears it):
 
 ```powershell
-cd "D:\NEW PROJECTS\ProcurePilot-AI\backend"
-# Set DATABASE_URL securely in this terminal through your secrets manager.
-python -m alembic -c alembic.ini upgrade head
-python -m alembic -c alembic.ini current
+.\backend\.venv\Scripts\python.exe .\qa\initialize_neon.py
 ```
+
+This applies `alembic upgrade head` without downgrading or resetting data,
+then verifies database access, revision `0010_auth_throttles`, and all
+required tables. Sanitized evidence is saved to ignored
+`qa/reports/neon.json`. It is not a Vercel app-connectivity proof:
+`/api/v1/ready` must also report 200 from the public domain.
 
 Avoid committing a production connection URL or echoing it in logs.
 The existing `/api/v1/ready` verifies database connectivity, the authentication counter migration and
@@ -115,7 +117,7 @@ An OAuth smoke PASS does not prove buyer approval or capture, and
 From repo root, once the site is online, execute:
 
 ```powershell
-python .\qa\live_demo_check.py --frontend https://YOUR-SITE.vercel.app --api https://YOUR-SITE.vercel.app
+python .\qa\live_demo_check.py --frontend https://procurepilotai.vercel.app --api https://procurepilotai.vercel.app
 ```
 
 All seven read-only checks must PASS. Then test registration/login,

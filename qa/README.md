@@ -71,3 +71,20 @@ All QA subprocesses are given APP_ENV=test, an isolated SQLite URL and cleared p
 Do not describe mocked tests, isolated SQLite migrations or a compiled build as proof that real third-party APIs or public deployment are working.
 
 See docs/INTEGRATION_ACCEPTANCE.md and docs/HACKATHON_SUBMISSION_KIT.md.
+
+## Neon / release evidence (read-only except explicit migration)
+
+To initialize the **real** Neon database, run the explicitly user-triggered
+`python qa/initialize_neon.py` with the **backend virtualenv interpreter**;
+it reads a copied **Direct** TLS URL from the Windows clipboard (no hidden paste), clears the clipboard, applies only `alembic upgrade
+head`, and writes sanitized `qa/reports/neon.json`.
+
+For a verification-only database probe, set `DATABASE_URL` privately in
+your terminal and run `python qa/verify_neon.py --output qa/reports/neon.json`.
+Never paste a URL into arguments, logs, commits, or the frontend.
+
+For public hosted acceptance, save the seven read-only checks as
+`qa/reports/hosted.json`. Then invoke `python qa/report_release.py`.
+It requires 9/9 offline checks, a real Neon 0010 schema PASS, 7/7 hosted
+checks, a clean `perez` tree, and refuses to treat these as PayPal capture
+or provider certification. It **never merges or deploys**.

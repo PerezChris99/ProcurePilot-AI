@@ -25,7 +25,8 @@ def test_deploy_runtime_has_health_and_auth_security_modules():
     # This catches missing dependencies locally; Vercel's build still needs
     # a real hosted health check and log inspection before release acceptance.
     from app.main import app
-    paths = {route.path for route in app.routes}
+    # OpenAPI resolves included routers without assuming every wrapper has .path.
+    paths = set(app.openapi()['paths'])
     assert '/api/v1/health' in paths
     assert '/api/v1/ready' in paths
     assert '/api/v1/auth/login' in paths
