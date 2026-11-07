@@ -16,6 +16,7 @@ function renderPublic(path){
   </MemoryRouter>);
 }
 
+// A full public layout mounts navigation and the mobile dock under jsdom.
 describe('Public legal pages',()=>{
   it('exposes legal navigation and real privacy disclosure without requiring authentication',()=>{
     renderPublic('/privacy');
