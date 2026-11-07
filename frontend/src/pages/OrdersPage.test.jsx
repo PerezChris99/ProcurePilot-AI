@@ -4,10 +4,10 @@ import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {MemoryRouter} from 'react-router-dom';
 import OrdersPage from './OrdersPage.jsx';
 import {apiRequest} from '../services/api.js';
-import {redirectToPayPalSandbox} from '../services/paypalCheckout.js';
+import {reservePayPalSandboxTab,navigatePayPalSandboxTab,closePendingPayPalTab} from '../services/paypalCheckout.js';
 
 vi.mock('../services/api.js',()=>({apiRequest:vi.fn(),downloadAuthorizedFile:vi.fn()}));
-vi.mock('../services/paypalCheckout.js',()=>({redirectToPayPalSandbox:vi.fn()}));
+vi.mock('../services/paypalCheckout.js',()=>({reservePayPalSandboxTab:vi.fn(),navigatePayPalSandboxTab:vi.fn(),closePendingPayPalTab:vi.fn(),verifiedSandboxApprovalUrl:vi.fn(raw=>raw)}));
 
 const pendingOrder={
   id:'po-1',
@@ -62,7 +62,7 @@ describe('OrdersPage',()=>{
     expect(screen.queryByRole('button',{name:/confirm buyer approval/i})).not.toBeInTheDocument();
   });
 
-  it('uses the current tab for PayPal approval so the session survives the return',async()=>{
+  it('opens the saved PayPal approval link in a separate, opener-safe tab',async()=>{
     apiRequest.mockResolvedValue([{
       ...pendingOrder,status:'payment_pending',
       payment:{status:'created',approval_url:'https://www.sandbox.paypal.com/checkout'},
@@ -70,7 +70,8 @@ describe('OrdersPage',()=>{
     renderPage();
     const checkout=await screen.findByRole('link',{name:/continue to paypal/i});
     expect(checkout).toHaveAttribute('href','https://www.sandbox.paypal.com/checkout');
-    expect(checkout).not.toHaveAttribute('target','_blank');
+    expect(checkout).toHaveAttribute('target','_blank');
+    expect(checkout).toHaveAttribute('rel','noopener noreferrer');
   });
 });
 
@@ -102,11 +103,14 @@ describe('Decision Passport disclosure',()=>{
 });
 
 
-describe('Instant PayPal Sandbox checkout navigation',()=>{
-  beforeEach(()=>{apiRequest.mockReset();redirectToPayPalSandbox.mockReset();});
+describe('New-tab PayPal Sandbox checkout navigation',()=>{
+  beforeEach(()=>{apiRequest.mockReset();reservePayPalSandboxTab.mockReset();navigatePayPalSandboxTab.mockReset();closePendingPayPalTab.mockReset();});
 
-  it('redirects to the verified PayPal approval URL when checkout creation succeeds',async()=>{
+  it('reserves a new tab on click before the async API call then redirects only that tab',async()=>{
     const checkout='https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL-123';
+    const tab={closed:false};
+    reservePayPalSandboxTab.mockReturnValue(tab);
+    navigatePayPalSandboxTab.mockReturnValue(true);
     apiRequest.mockImplementation(path=>{
       if(path==='/purchase-orders')return Promise.resolve([
         {...pendingOrder,status:'approved'},
@@ -119,8 +123,83 @@ describe('Instant PayPal Sandbox checkout navigation',()=>{
     fireEvent.click(await screen.findByRole('button',{
       name:/create paypal sandbox checkout/i,
     }));
-    await waitFor(()=>expect(redirectToPayPalSandbox).toHaveBeenCalledWith(checkout));
+    await waitFor(()=>expect(navigatePayPalSandboxTab).toHaveBeenCalledWith(checkout,tab));
+    expect(reservePayPalSandboxTab).toHaveBeenCalledTimes(1);
+    const post=apiRequest.mock.calls.findIndex(call=>call[0]==='/purchase-orders/po-1/payments/paypal/create');
+    expect(reservePayPalSandboxTab.mock.invocationCallOrder[0])
+      .toBeLessThan(apiRequest.mock.invocationCallOrder[post]);
+    expect(closePendingPayPalTab).not.toHaveBeenCalled();
     expect(apiRequest).toHaveBeenCalledWith(
       '/purchase-orders/po-1/payments/paypal/create',{method:'POST'});
   });
+
+  it('shows a secure manual new-tab link when a popup blocker prevents automatic opening',async()=>{
+    const checkout='https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL-123';
+    let checkoutCreated=false;
+    reservePayPalSandboxTab.mockReturnValue(null);
+    navigatePayPalSandboxTab.mockReturnValue(false);
+    apiRequest.mockImplementation(path=>{
+      if(path==='/purchase-orders')return Promise.resolve([
+        {...pendingOrder,status:checkoutCreated?'payment_pending':'approved',
+          payment:checkoutCreated?{status:'created',approval_url:checkout}:null},
+      ]);
+      if(path==='/purchase-orders/po-1/payments/paypal/create'){
+        checkoutCreated=true;
+        return Promise.resolve({approval_url:checkout});
+      }
+      return Promise.resolve([]);
+    });
+    renderPage();
+    fireEvent.click(await screen.findByRole('button',{name:/create paypal sandbox checkout/i}));
+    expect(await screen.findByText(/browser blocked the separate PayPal tab/i)).toBeInTheDocument();
+    const link=await screen.findByRole('link',{name:/open paypal in new tab/i});
+    expect(link).toHaveAttribute('href',checkout);
+    expect(link).toHaveAttribute('target','_blank');
+    expect(link).toHaveAttribute('rel','noopener noreferrer');
+    expect(navigatePayPalSandboxTab).toHaveBeenCalledWith(checkout,null);
+    expect(apiRequest).toHaveBeenCalledWith('/purchase-orders/po-1/payments/paypal/create',{method:'POST'});
+  });
+
+  it('closes a reserved blank tab when the backend fails before returning a link',async()=>{
+    const tab={closed:false};
+    reservePayPalSandboxTab.mockReturnValue(tab);
+    apiRequest.mockImplementation(path=>{
+      if(path==='/purchase-orders')return Promise.resolve([{...pendingOrder,status:'approved'}]);
+      if(path==='/purchase-orders/po-1/payments/paypal/create')
+        return Promise.reject(new Error('PayPal Sandbox unavailable'));
+      return Promise.resolve([]);
+    });
+    renderPage();
+    fireEvent.click(await screen.findByRole('button',{name:/create paypal sandbox checkout/i}));
+    expect(await screen.findByRole('alert')).toHaveTextContent('PayPal Sandbox unavailable');
+    expect(closePendingPayPalTab).toHaveBeenCalledWith(tab);
+    expect(navigatePayPalSandboxTab).not.toHaveBeenCalled();
+  });
+
+  it('keeps failed URL validation from navigating the tab or the application',async()=>{
+    const tab={closed:false};
+    reservePayPalSandboxTab.mockReturnValue(tab);
+    navigatePayPalSandboxTab.mockImplementation(()=>{throw new Error('invalid sandbox link')});
+    apiRequest.mockImplementation(path=>{
+      if(path==='/purchase-orders')return Promise.resolve([{...pendingOrder,status:'approved'}]);
+      if(path==='/purchase-orders/po-1/payments/paypal/create')
+        return Promise.resolve({approval_url:'https://www.paypal.com/checkoutnow?token=live'});
+      return Promise.resolve([]);
+    });
+    renderPage();
+    fireEvent.click(await screen.findByRole('button',{name:/create paypal sandbox checkout/i}));
+    expect(await screen.findByText(/unexpected checkout address/i)).toBeInTheDocument();
+    expect(closePendingPayPalTab).toHaveBeenCalledWith(tab);
+  });
+
+  it('shows explicit capture only after an approved buyer returns in another tab',async()=>{
+    apiRequest.mockResolvedValue([{
+      ...pendingOrder,status:'payment_pending',
+      payment:{status:'created',approval_url:'https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL-123'},
+    }]);
+    renderPage('/orders?paypal=return&po=po-1');
+    expect(await screen.findByRole('button',{name:/confirm buyer approval & capture/i})).toBeInTheDocument();
+    expect(screen.getByText(/return alone never captures payment/i)).toBeInTheDocument();
+  });
+
 });
