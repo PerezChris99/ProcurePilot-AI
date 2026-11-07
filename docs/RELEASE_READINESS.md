@@ -60,6 +60,16 @@ a passing preview.
 python .\qa\live_demo_check.py --frontend https://procurepilotai.vercel.app --api https://procurepilotai.vercel.app | Tee-Object -FilePath .\qa\reports\hosted.json
 ```
 
+For a protected Vercel `perez` Preview, open Settings → Deployment
+Protection → **Protection Bypass for Automation** and create a temporary,
+revocable token. Set `VERCEL_AUTOMATION_BYPASS_SECRET` privately in your
+Windows PowerShell session. Then run the same seven checks with both
+`--frontend` and `--api` pointing to
+`https://procurepilotai-preview.vercel.app`. The script sends the secret
+only to this exact preview host, never production or an arbitrary URL,
+and refuses redirects to avoid credential leakage. Do not paste the
+secret into GitHub, chat, logs or Devpost. Revoke it after preview QA.
+
 For raw HTTP 500 diagnostics, use `python qa/hosted_readonly_check.py`.
 The Vercel `backend/main.py` entrypoint now fails closed with HTTP 503 and
 a **safe startup category** if an application import fails. Categories
