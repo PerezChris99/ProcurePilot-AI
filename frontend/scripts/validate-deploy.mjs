@@ -6,7 +6,7 @@ export function validateApiBaseUrl(value) {
   // ProcurePilot's Vercel Services host both FastAPI and Vite on one origin.
   // Reject absolute URLs here: a stale API hostname in a production bundle
   // makes fetch fail via DNS, CORS, or deployment protection.
-  if (String(value ?? '').trim() !== '/api/v1') {
+  if (String(value ?? '') !== '/api/v1') {
     throw new Error('VITE_API_BASE_URL must be exactly /api/v1 for Vercel Services production and preview deployments');
   }
   return '/api/v1';
