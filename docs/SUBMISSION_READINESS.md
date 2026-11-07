@@ -6,8 +6,10 @@
 · Repository: https://github.com/PerezChris99/ProcurePilot-AI
 · Intended website: https://procurepilotai.vercel.app
 
-**Verified count: 10/36**, including source implementations and maintainer-confirmed
-offline tests—not live third-party certification. New candidate changes must
+**Current verified count: 9/36**, counting only evidence for the latest candidate.
+The prior `d6e61cd` had a maintainer-confirmed 9/9 offline PASS, but the
+subsequent November 7 report is **8/9** with two Vitest timeouts; the updated
+candidate has not yet been rerun in Windows. No third-party certification. New candidate changes must
 be retested. Do not check a box without a real artifact or trace. No
 automatic Git merge or Devpost submission.
 
@@ -25,8 +27,9 @@ automatic Git merge or Devpost submission.
 
 ## B. Release quality
 
-- [x] **S09** — Maintainer confirmed 9/9 offline gates on `perez` at `d6e61cd`;
-      **rerun for latest source** before the release.
+- [ ] **S09** — Reconfirm 9/9 for the CURRENT `perez` commit. Latest attached
+      report: 8/9, with Trust Lab and public legal-page Vitest timeouts.
+      Tests and worker scheduling were corrected, but not yet rerun locally.
 - [x] **S10** — Judge README, flow diagrams, local preview and run instructions.
 - [ ] **S11** — Latest candidate passes clean-room 9/9, source/diff/secret review.
 - [ ] **S12** — User approves after online tests, then one `perez`→`main` PR/merge.
@@ -36,9 +39,13 @@ automatic Git merge or Devpost submission.
 
 - [x] **S14** — `procurepilotai.vercel.app` attached; frontend/deep links returned 200.
 - [ ] **S15** — Production FastAPI `/api/v1/health` returns 200 JSON; logs clear.
-- [ ] **S16** — Actual Neon `procurepilot` schema at 0010; Vercel DB connectivity,
-      registration and login verified. Database exists, SQL verification blocked.
-- [ ] **S17** — All seven hosted read-only checks PASS (last result 2/7).
+- [ ] **S16** — Production Neon migration 0010 was confirmed by the maintainer;
+      Vercel production DB connection and hosted registration remain unverified.
+      A separate **empty** Neon staging project is linked to Vercel `perez` Preview;
+      run `qa/initialize_neon.py --smoke` on its Direct TLS URL.
+- [ ] **S17** — All seven hosted read-only checks PASS. Last supplied result was
+      2/7 on the prior production release. PR #50 has since changed production;
+      a new probe is required. The `perez` Preview is still protected.
 - [ ] **S18** — Actual hosted Channel3 search and Gemini/ADK response.
 - [ ] **S19** — Fresh-account browser sign-in, expired-session and per-user isolation.
 
