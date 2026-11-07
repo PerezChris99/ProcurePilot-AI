@@ -45,7 +45,19 @@ describe('Authenticated API client',()=>{
     vi.stubGlobal('fetch',vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
     await expect(apiRequest('/procurement-requests/test/analyze',{
       method:'POST',
-    })).rejects.toThrow(/Cannot reach the ProcurePilot API/);
+    })).rejects.toThrow(/API connection failed before receiving an HTTP response/);
+  });
+
+  it('reports a backend routing fault when the API returns HTML instead of JSON',async()=>{
+    vi.stubGlobal('fetch',vi.fn().mockResolvedValue({
+      ok:true,status:200,
+      headers:{get:()=> 'text/html; charset=utf-8'},
+      json:async()=>{throw new SyntaxError('Unexpected token <');},
+    }));
+    await expect(apiRequest('/health')).rejects.toMatchObject({
+      code:'API_ROUTE_MISMATCH',
+      status:200,
+    });
   });
 
   it('does not send authorization after logout',async()=>{

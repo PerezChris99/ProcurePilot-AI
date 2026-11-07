@@ -1,7 +1,11 @@
 from urllib.parse import urlsplit
 
-from fastapi import FastAPI
+import logging
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.auth import router as auth_router
 from app.api.dashboard import router as dashboard_router
@@ -54,6 +58,21 @@ app = FastAPI(
     docs_url="/docs" if settings.app_env != "production" else None,
     redoc_url="/redoc" if settings.app_env != "production" else None,
 )
+# Central guard for database exceptions outside the auth-specific handlers:
+# missing relations, lost Neon sessions, and failed connection acquisitions must
+# never become opaque 500 responses or expose a driver connection URL to clients.
+@app.exception_handler(SQLAlchemyError)
+async def database_exception_handler(_request: Request, exc: SQLAlchemyError):
+    logging.getLogger('procurepilot.database').error(
+        'Database request failed; class=%s', type(exc).__name__
+    )
+    return JSONResponse(
+        status_code=503,
+        content={'detail': 'Database is temporarily unavailable. Please retry shortly.'},
+        headers={'Retry-After': '15', 'Cache-Control': 'no-store'},
+    )
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_frontend_origins(settings.frontend_url, settings.app_env),

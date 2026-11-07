@@ -3,21 +3,13 @@ import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 export function validateApiBaseUrl(value) {
-  const raw=String(value??'').trim();
-  if(!raw) throw new Error('VITE_API_BASE_URL must be configured for deployment');
-  if(raw==='/api/v1') return raw;
-  let url;
-  try {url=new URL(raw)} catch {
-    throw new Error('VITE_API_BASE_URL must be /api/v1 or an absolute HTTPS API URL');
+  // ProcurePilot's Vercel Services host both FastAPI and Vite on one origin.
+  // Reject absolute URLs here: a stale API hostname in a production bundle
+  // makes fetch fail via DNS, CORS, or deployment protection.
+  if (String(value ?? '') !== '/api/v1') {
+    throw new Error('VITE_API_BASE_URL must be exactly /api/v1 for Vercel Services production and preview deployments');
   }
-  const host=url.hostname.toLowerCase();
-  if(url.protocol!=='https:' || !host ||
-      ['localhost','127.0.0.1','::1','[::1]'].includes(host) ||
-      url.username || url.password || url.search || url.hash ||
-      url.pathname.replace(/\/$/,'')!=='/api/v1'){
-    throw new Error('VITE_API_BASE_URL must be /api/v1 or a public HTTPS URL ending in /api/v1');
-  }
-  return url.href.replace(/\/$/,'');
+  return '/api/v1';
 }
 
 function readValue(file){
@@ -47,7 +39,7 @@ if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url))
     console.log('[OK] Deployment API URL:',validateApiBaseUrl(configuredValue()));
   }catch(err){
     console.error('[ERROR] Deployment build blocked:',err.message);
-    console.error('Set VITE_API_BASE_URL=https://YOUR-API-HOST/api/v1 or /api/v1 behind a same-origin HTTPS proxy.');
+    console.error('Set VITE_API_BASE_URL=/api/v1 in Vercel Production and Preview.');
     process.exitCode=1;
   }
 }
