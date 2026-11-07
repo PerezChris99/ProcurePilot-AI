@@ -109,8 +109,8 @@ Its webhook HTTPS listener is:
 Register the appropriate checkout/order/capture event types and enter the
 **actual** webhook ID. A webhook placeholder such as `value` is not valid.
 Use a separate Sandbox Personal buyer to approve. Only the backend can create
-and capture the Sandbox order; the browser redirects to PayPal only after
-backend approval and a verified HTTPS checkout link.
+and capture the Sandbox order; the browser opens the PayPal Sandbox checkout
+in a separate tab only after backend approval and a verified HTTPS checkout link.
 
 ## 5. Required acceptance before sharing Devpost URL
 
@@ -124,9 +124,12 @@ backend approval and a verified HTTPS checkout link.
    with a retry action. No non-AI response should be labelled a Gemini run.
 6. Create one valid PO: only that offer's button should show Creating. Submit
    and record human approval before any PayPal checkout action.
-7. Select Create PayPal Sandbox checkout. Verify same-tab redirect, approve
-   with Sandbox Personal buyer, return, confirm capture and inspect the audit
-   event and Decision Passport.
+7. Select Create PayPal Sandbox checkout. Verify an external new tab opens
+   while the original app remains visible. Sign in with a Sandbox **Personal**
+   buyer (not Developer Dashboard, real PayPal, or Business seller login).
+   On return in the checkout tab, explicitly confirm capture, then inspect
+   the audit event and Decision Passport. If blocked, use the saved safe
+   **Open PayPal in new tab** link. A return alone never records payment.
 8. Verify signed webhook handling (including duplicate delivery), rejected
    checkout, invalid currency and missing provider credentials.
 9. Test desktop/mobile browsers, page refresh on /dashboard and /orders,
