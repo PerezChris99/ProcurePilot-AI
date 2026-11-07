@@ -1,4 +1,10 @@
-const API_BASE_URL=(import.meta.env.VITE_API_BASE_URL||'http://localhost:8000/api/v1').replace(/\/+$/,'');
+// This project deploys FastAPI and Vite under the same Vercel Services origin.
+// A Vite build must never bake a localhost or unrelated API host into prod JS.
+// The development server still supports a standalone backend on port 8000.
+const API_BASE_URL=(import.meta.env.PROD
+  ? '/api/v1'
+  : (import.meta.env.VITE_API_BASE_URL||'http://localhost:8000/api/v1')
+).replace(/\/+$/,'');
 function checkRemoteApiConfiguration(){
   if(typeof window==='undefined')return;
   const local=['localhost','127.0.0.1','::1','[::1]'];
@@ -27,7 +33,10 @@ export async function apiRequest(path,options={}){
     });
   }catch(error){
     if(error instanceof TypeError){
-      throw new Error('Cannot reach the ProcurePilot API. Check the backend and database connection; review existing orders before retrying any purchase action.',{cause:error});
+      const failure=new Error('ProcurePilot API connection failed before receiving an HTTP response. Check /api/v1/health and /api/v1/ready on this site; avoid retrying payments until an order is checked.',{cause:error});
+      failure.code='API_NETWORK_FAILURE';
+      failure.requestPath=path;
+      throw failure;
     }
     throw error;
   }
@@ -47,7 +56,15 @@ export async function apiRequest(path,options={}){
     }
     throw error;
   }
-  return response.status===204?null:response.json();
+  if(response.status===204)return null;
+  const contentType=response.headers?.get?.('content-type');
+  if(contentType && !contentType.toLowerCase().includes('application/json')){
+    const error=new Error('The /api/v1 route returned a non-JSON response. Verify the Vercel Services backend route rather than signing in again.');
+    error.code='API_ROUTE_MISMATCH';
+    error.status=response.status;
+    throw error;
+  }
+  return response.json();
 }
 export function getHealth(){return apiRequest('/health')}
 export function getIntegrationStatus(){return apiRequest('/integrations/status')}
