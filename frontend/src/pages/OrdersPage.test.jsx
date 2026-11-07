@@ -70,6 +70,7 @@ describe('OrdersPage',()=>{
     renderPage();
     const checkout=await screen.findByRole('link',{name:/open paypal in new tab/i});
     expect(checkout).toHaveAttribute('href','https://www.sandbox.paypal.com/checkout');
+    expect(checkout).toHaveTextContent(/^Open PayPal\s*$/);
     expect(checkout).toHaveAttribute('target','_blank');
     expect(checkout).toHaveAttribute('rel','noopener noreferrer');
   });

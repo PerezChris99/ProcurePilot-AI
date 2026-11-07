@@ -28,7 +28,7 @@ flowchart TB
 5. An allowlisted evidence packet of at most four candidates is passed to the ADK analysis_agent with one-call and output/time limits. A global+user call reservation in ai_daily_budgets prevents unbounded call volume. The normal analyst has NO order/payment tools.
 6. The buyer selects a saved real Channel3 offer. Server code verifies its exact product and offer URL, price, currency, stock, mandatory attributes and budget; it derives quantity*unit price, then freezes a PO and item snapshot.
 7. Submission moves a draft PO to pending_approval. The dedicated Approvals route loads owner-scoped pending items and records approve/reject actions. **The owner may self-approve when no reviewer is assigned. A distinct registered reviewer can instead be assigned to decide a specific order without operating its payment; organization-wide RBAC/invitations are not implemented.**
-8. Approved orders may create a separate PayPal Sandbox checkout. Buyer approves in the SAME browser tab to preserve the session on return. Capture validates remote order/custom IDs, currency, amounts and final completed capture evidence.
+8. Approved orders may create a separate PayPal Sandbox checkout. Buyer approves in a separate, opener-safe PayPal Sandbox tab; the original ProcurePilot tab stays open. Reauthentication may be required if the short-lived session expires, and the return URL parameters must be preserved. Capture validates remote order/custom IDs, currency, amounts and final completed capture evidence.
 9. PayPal webhooks are validated through PayPal's signature endpoint. Event IDs and capture matching reduce duplicates and mismatch risk; a real HTTPS webhook still needs environment configuration.
 10. The dashboard reads user-scoped SQL counts and recent order audit history. Provider status displays configuration flags, not proof of live connectivity.
 
@@ -75,8 +75,9 @@ tax, inventory truth, and retailer settlement remain unverified.
 | webhook_events | Unique verified event ID, minimal payload and processed time |
 | audit_events | User/order/request actions and time |
 | ai_daily_budgets | Atomic per-scope UTC-day call count; no prompts or secrets |
+| auth_rate_limit_counters | HMAC-keyed shared public auth throttle windows; no email or IP in plaintext |
 
-Migration chain: 0001_users → 0002_requests → 0003_orders → 0004_ai_budget → 0005_read_indexes → 0006_purchase_policy → 0007_decision_evidence → 0008_offer_verification → 0009_delegated_approver. Windows startup automatically runs Alembic upgrade head before serving the app.
+Migration chain: 0001_users → 0002_requests → 0003_orders → 0004_ai_budget → 0005_read_indexes → 0006_purchase_policy → 0007_decision_evidence → 0008_offer_verification → 0009_delegated_approver → 0010_auth_throttles. Windows startup automatically runs Alembic upgrade head before serving the app.
 
 ## API surface
 
@@ -96,4 +97,4 @@ Browser controls and catalogue content are untrusted. Amounts and transitions ar
 
 ## Outstanding engineering work
 
-No organization-wide RBAC/invitations, reconciliation worker, distributed discovery/checkout rate limiter, session revocation, live provider acceptance tests, end-to-end browser suite, independently anchored audit ledger or proven production monitoring/recovery. Public login/register use Redis-backed throttling, and per-order registered delegated reviewers are supported. Channel3 merchant checkout is separate from PayPal Sandbox and is not implemented. The project is a demonstration, not a live multi-merchant payment processor.
+No organization-wide RBAC/invitations, reconciliation worker, distributed discovery/checkout rate limiter, session revocation, live provider acceptance tests, end-to-end browser suite, independently anchored audit ledger or proven production monitoring/recovery. Public login/register use shared Redis throttling when configured, otherwise Neon/PostgreSQL-backed atomic counters, and per-order registered delegated reviewers are supported. Channel3 merchant checkout is separate from PayPal Sandbox and is not implemented. The project is a demonstration, not a live multi-merchant payment processor.

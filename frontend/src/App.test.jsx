@@ -1,16 +1,16 @@
 import {beforeEach,describe,expect,it,vi} from 'vitest';
-import {render,screen} from '@testing-library/react';
+import {fireEvent,render,screen,waitFor} from '@testing-library/react';
 import {MemoryRouter} from 'react-router-dom';
 import App from './App.jsx';
 
-const {auth}=vi.hoisted(()=>({auth:{user:null,initializing:false,busy:false}}));
+const {auth}=vi.hoisted(()=>({auth:{user:null,initializing:false,busy:false,sessionExpired:false,login:vi.fn()}}));
 vi.mock('./context/useAuth.js',()=>({useAuth:()=>auth}));
 vi.mock('./components/layout/AppShell.jsx',async()=>{
   const {Outlet}=await vi.importActual('react-router-dom');
   return {default:()=> <Outlet/>};
 });
 vi.mock('./pages/DashboardPage.jsx',()=>({default:()=> <h1>Signed-in dashboard</h1>}));
-vi.mock('./pages/OrdersPage.jsx',()=>({default:()=> <h1>Orders checkout return</h1>}));
+vi.mock('./pages/OrdersPage.jsx',async()=>{const {useLocation}=await vi.importActual('react-router-dom');return {default:()=>{const location=useLocation();return <><h1>Orders checkout return</h1><p data-testid="checkout-query">{location.search}</p></>}}});
 
 function renderAt(path){return render(<MemoryRouter initialEntries={[path]}><App/></MemoryRouter>)}
 
@@ -33,6 +33,18 @@ describe('Public landing and protected workspace routing',()=>{
     auth.user={id:'person-1',full_name:'Procurement Judge'};
     renderAt('/dashboard');
     expect(screen.getByRole('heading',{name:'Signed-in dashboard'})).toBeInTheDocument();
+  });
+
+  it('returns to the original PayPal callback and PO after a required sign-in',async()=>{
+    auth.login=vi.fn(async()=>{auth.user={id:'person-1',full_name:'Procurement Judge'}});
+    renderAt('/orders?paypal=return&po=po-123');
+    expect(screen.getByRole('heading',{name:'Sign in to ProcurePilot'})).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Email address'),{target:{value:'judge@example.com'}});
+    fireEvent.change(screen.getByLabelText('Password'),{target:{value:'sample-sign-in'}});
+    fireEvent.click(screen.getByRole('button',{name:'Sign in'}));
+    await waitFor(()=>expect(screen.getByRole('heading',{name:'Orders checkout return'})).toBeInTheDocument());
+    expect(screen.getByTestId('checkout-query')).toHaveTextContent('?paypal=return&po=po-123');
+    expect(auth.login).toHaveBeenCalledTimes(1);
   });
 
   it('retains the /orders path used by PayPal Sandbox return',()=>{

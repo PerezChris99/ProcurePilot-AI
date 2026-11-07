@@ -14,3 +14,22 @@
 .discovery-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px}.discovery-heading h2{display:flex;align-items:center;gap:8px;font-size:14px;color:#1c2d49;margin:0}.discovery-heading h2 svg{color:#1688b6}.discovery-heading p{font-size:10px;line-height:1.6;color:#8793a5;margin:5px 0 0;max-width:580px}
 .products-list{display:grid;gap:12px}.product-card{display:grid;grid-template-columns:170px minmax(0,1fr);background:#fff;border:1px solid var(--line);border-radius:11px;overflow:hidden}.product-image{background:#f5f7fa;display:grid;place-items:center;min-height:180px;color:#9aa8b8}.product-image img{width:100%;height:100%;max-height:230px;object-fit:contain;padding:13px}.product-content{padding:17px 19px;min-width:0}.product-title-row{display:flex;justify-content:space-between;gap:14px}.product-brand{font-size:9px;color:#8996a8;margin:0 0 4px}.product-title-row h3{font-size:14px;color:#1b2b48;margin:0}.match-score{font-size:10px;font-weight:800;white-space:nowrap}.match-eligible{color:#20865f}.match-unverified{color:#b27a25}.eligibility-badge{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:9px;font-weight:750}.eligibility-yes{background:#eaf8f1;color:#21845f}.eligibility-no{background:#fff5e5;color:#a76a13}.product-description{font-size:10px;line-height:1.6;color:#7c899c;margin:9px 0}.product-meta{display:flex;align-items:center;gap:9px;font-size:9px;color:#8995a7}.product-reasons{margin:10px 0;padding-left:16px;color:#718096;font-size:9px;line-height:1.6}.offer-list{border-top:1px solid #eef0f4;margin-top:11px}.offer-row{display:grid;grid-template-columns:minmax(0,1fr) max-content max-content;align-items:center;gap:13px;padding:9px 0;border-bottom:1px solid #f1f3f6}.offer-row:last-child{border-bottom:0}.offer-row span{min-width:0}.offer-row strong{font-size:10px;color:#2b3a54}.offer-row small{display:block;font-size:9px;color:#929eae;margin-top:3px}.offer-row>a{color:#1688b6;display:grid;place-items:center}.discovery-empty{min-height:260px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.discovery-empty h2{font-size:13px;margin:13px 0 5px}.discovery-empty p{font-size:10px;line-height:1.7;color:#8793a5;max-width:390px;margin:0 0 15px}.discovery-disclaimer,.muted-note{font-size:9px;color:#929eae;line-height:1.6;margin-top:14px}.loading-panel,.error-panel{padding:25px}.error-panel h2{font-size:14px}.spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:760px){.auth-card{padding:23px 19px}.request-summary{flex-direction:column}.summary-stats{justify-content:space-between;gap:8px}.discovery-heading{align-items:flex-start;flex-direction:column}.discovery-heading .button{width:100%}.product-card{grid-template-columns:1fr}.product-image{min-height:140px;max-height:170px}.product-image img{max-height:170px}.product-content{padding:14px}.product-title-row{align-items:flex-start}.request-detail-heading{align-items:flex-start;flex-direction:column}}
+
+/* Procurement form: complete currency labels at every width, including narrow screens. */
+.form-grid.three-fields{grid-template-columns:repeat(3,minmax(0,1fr))}
+.form-grid.three-fields>div{min-width:0}
+.form-grid.three-fields input,.form-grid.three-fields select{
+  box-sizing:border-box;min-width:0;width:100%;height:46px;font-size:14px
+}
+.form-grid.three-fields select{
+  display:block;padding:0 28px 0 12px;line-height:normal;
+  white-space:nowrap;background-color:#fff
+}
+@media(max-width:980px){
+  .form-grid.three-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .form-grid.three-fields>div:last-child{grid-column:1/-1}
+}
+@media(max-width:760px){
+  .form-grid.three-fields{grid-template-columns:minmax(0,1fr)}
+  .form-grid.three-fields>div:last-child{grid-column:auto}
+}

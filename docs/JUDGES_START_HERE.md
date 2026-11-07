@@ -6,12 +6,15 @@ This page is an honest route to inspecting or exercising the application in the
 [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/). It distinguishes
 the no-credentials **offline preview** from a **real integrated Sandbox run**.
 
-## Route A: Hosted end-to-end experience (preferred for judging)
+## Route A: Hosted experience (preferred after 7/7 acceptance)
 
-The deployment URL is **not yet verified or published**. The entrant must add
-the actual public HTTPS frontend URL to the Devpost submission and to the
-README after testing it, and provide any required judge login/test-buyer access
-through appropriate Devpost testing instructions (not a public source file).
+The configured frontend URL is **https://procurepilotai.vercel.app** (Vercel
+Services frontend and FastAPI; Neon PostgreSQL). The landing page and SPA
+routing passed a public HTTP probe, but the last maintainer-reported probe
+still showed **HTTP 500 on five API checks**. A successful Vercel build is not
+proof of full end-to-end availability. Re-run the seven-check public HTTPS probe
+and publish judge credentials through secure submission instructions only
+after **7/7 PASS** and successful provider acceptance.
 
 A suitable hosted run must support registration/login, live Channel3
 discovery, a real Google ADK Gemini analysis or disclosed model fallback,
@@ -162,7 +165,7 @@ authorization gates. It does not prove external integration acceptance.
 
 Documentation: [Architecture](architecture.md) · [Threat model](security.md) ·
 [API](api.md) · [Devpost submission kit](HACKATHON_SUBMISSION_KIT.md) ·
-[Render deployment](RENDER_DEPLOYMENT.md).
+[Vercel + Neon deployment](VERCEL_NEON_DEPLOYMENT.md).
 
 ## Access through judging
 

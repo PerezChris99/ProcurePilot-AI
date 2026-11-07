@@ -7,18 +7,21 @@ function checkRemoteApiConfiguration(){
     throw new Error('This deployment targets a localhost API. Set VITE_API_BASE_URL to a public HTTPS backend and rebuild.');
   }
 }
+const TOKEN_KEY='procurepilot_access_token';
+export const SESSION_EXPIRED_EVENT='procurepilot:session-expired';
 let accessToken=null;
 export function setAuthToken(token){accessToken=token||null}
 export async function apiRequest(path,options={}){
   checkRemoteApiConfiguration();
   let response;
+  const tokenForRequest=accessToken;
   try{
     response=await fetch(API_BASE_URL+path,{
       ...options,
       headers:{
         Accept:'application/json',
         ...(options.body?{'Content-Type':'application/json'}:{}),
-        ...(accessToken?{Authorization:'Bearer '+accessToken}:{}),
+        ...(tokenForRequest?{Authorization:'Bearer '+tokenForRequest}:{}),
         ...options.headers,
       },
     });
@@ -30,9 +33,19 @@ export async function apiRequest(path,options={}){
   }
   if(!response.ok){
     const payload=await response.json().catch(()=>({}));
-    throw new Error(typeof payload.detail==='string'?payload.detail:
-      Array.isArray(payload.detail)?payload.detail.map(error=>error.msg||'Invalid input').join('; '):
+    const error=new Error(typeof payload.detail==='string'?payload.detail:
+      Array.isArray(payload.detail)?payload.detail.map(item=>item.msg||'Invalid input').join('; '):
       'Request failed with status '+response.status);
+    error.status=response.status;
+    // Only a protected request made with the CURRENT token can invalidate
+    // the workspace session. An incorrect login must never sign out a user.
+    const isAuthEntry=path==='/auth/login'||path==='/auth/register';
+    if(response.status===401&&accessToken&&tokenForRequest===accessToken&&!isAuthEntry){
+      setAuthToken(null);
+      sessionStorage.removeItem(TOKEN_KEY);
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+    }
+    throw error;
   }
   return response.status===204?null:response.json();
 }

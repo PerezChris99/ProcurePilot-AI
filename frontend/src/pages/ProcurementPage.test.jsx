@@ -19,6 +19,25 @@ function renderPage(){
 describe('ProcurementPage',()=>{
   beforeEach(()=>apiRequest.mockReset());
 
+  it('shows complete accessible currency choices and persists selected currency',async()=>{
+    apiRequest.mockResolvedValue({id:'currency-request'});
+    renderPage();
+    const currency=screen.getByRole('combobox',{name:'Currency'});
+    expect(currency).toHaveValue('USD');
+    expect([...currency.options].map(option=>option.textContent)).toEqual([
+      'USD — US Dollar','EUR — Euro','GBP — Pound Sterling'
+    ]);
+    fireEvent.change(currency,{target:{value:'EUR'}});
+    expect(currency).toHaveValue('EUR');
+    fireEvent.change(screen.getByLabelText(/what are you looking to purchase/i),{
+      target:{value:'Office monitors with European supply quote'},
+    });
+    fireEvent.click(screen.getByRole('button',{name:/save and discover products/i}));
+    await waitFor(()=>expect(apiRequest).toHaveBeenCalledWith('/procurement-requests',
+      expect.objectContaining({body:expect.stringContaining('"currency":"EUR"')})
+    ));
+  });
+
   it('requires a meaningful request before enabling submit',()=>{
     renderPage();
     const submit=screen.getByRole('button',{name:/save and discover products/i});
