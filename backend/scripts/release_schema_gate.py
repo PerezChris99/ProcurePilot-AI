@@ -56,6 +56,16 @@ FAILURE_CODES = {
     'alembic_schema_conflict': 48,
     'alembic_revision_conflict': 49,
     'alembic_schema_sql_failed': 50,
+    'api_import_failed': 60,
+    'api_health_failed': 61,
+    'api_readiness_failed': 62,
+    'api_auth_guard_failed': 63,
+    'api_cors_failed': 64,
+    'staging_registration_failed': 65,
+    'staging_login_failed': 66,
+    'staging_authenticated_read_failed': 67,
+    'staging_request_creation_failed': 68,
+    'staging_cleanup_failed': 69,
 }
 EXPECTED = {
     'production': (
@@ -213,6 +223,81 @@ def migrate(direct_url: str) -> None:
         raise ReleaseGateError(classify_alembic_failure(proc.stderr, proc.stdout))
 
 
+def smoke_fastapi(environment: str) -> None:
+    """Exercise the actual ASGI application with Vercel's resolved environment.
+
+    Production probes are read-only. Staging may exercise disposable writes
+    when explicitly enabled and cleans up its user and request records.
+    """
+    try:
+        from fastapi.testclient import TestClient
+        from app.main import app
+        from app.core.config import get_settings
+    except Exception as exc:
+        raise ReleaseGateError('api_import_failed') from exc
+
+    with TestClient(app) as client:
+        if client.get('/api/v1/health').status_code != 200:
+            raise ReleaseGateError('api_health_failed')
+        if client.get('/api/v1/ready').status_code != 200:
+            raise ReleaseGateError('api_readiness_failed')
+        if client.get('/api/v1/auth/me').status_code != 401:
+            raise ReleaseGateError('api_auth_guard_failed')
+        origin = get_settings().frontend_url
+        cors = client.options('/api/v1/auth/login', headers={
+            'Origin': origin, 'Access-Control-Request-Method': 'POST',
+        })
+        if cors.status_code not in (200, 204) or cors.headers.get('access-control-allow-origin') != origin:
+            raise ReleaseGateError('api_cors_failed')
+
+        if environment != 'preview' or os.environ.get('PROCUREPILOT_STAGING_AUTH_SMOKE') != '1':
+            return
+
+        from secrets import token_hex, token_urlsafe
+        from sqlalchemy import delete
+        from app.core.database import SessionLocal
+        from app.models import ProcurementRequest, User
+
+        email = 'pp-staging-check-' + token_hex(12) + '@example.com'
+        password = token_urlsafe(24)
+        user_id = None
+        try:
+            created = client.post('/api/v1/auth/register', json={
+                'email': email, 'password': password,
+                'full_name': 'Staging Verification',
+            })
+            if created.status_code != 201:
+                raise ReleaseGateError('staging_registration_failed')
+            user_id = created.json()['user']['id']
+            token = created.json()['access_token']
+            logged_in = client.post('/api/v1/auth/login', json={
+                'email': email, 'password': password,
+            })
+            if logged_in.status_code != 200:
+                raise ReleaseGateError('staging_login_failed')
+            headers = {'Authorization': 'Bearer ' + token}
+            me = client.get('/api/v1/auth/me', headers=headers)
+            if me.status_code != 200 or me.json().get('id') != user_id:
+                raise ReleaseGateError('staging_authenticated_read_failed')
+            request = client.post('/api/v1/procurement-requests',
+                headers=headers, json={
+                    'request_text': 'Staging API connectivity smoke test only',
+                    'quantity': 1, 'budget': '100.00', 'currency': 'USD',
+                })
+            if request.status_code != 201:
+                raise ReleaseGateError('staging_request_creation_failed')
+        finally:
+            if user_id:
+                try:
+                    with SessionLocal() as db:
+                        db.execute(delete(ProcurementRequest).where(
+                            ProcurementRequest.user_id == user_id))
+                        db.execute(delete(User).where(User.id == user_id))
+                        db.commit()
+                except Exception as exc:
+                    raise ReleaseGateError('staging_cleanup_failed') from exc
+
+
 def main() -> int:
     environment = os.environ.get('VERCEL_ENV', '')
     if not os.environ.get('VERCEL') and not environment:
@@ -238,7 +323,8 @@ def main() -> int:
             except Exception as exc:
                 raise ReleaseGateError('post_migration_db_connect_failed') from exc
         verify(revision, tables)
-        print('[release-db] PASS Neon target, SQL connectivity, Alembic 0010 and required tables')
+        smoke_fastapi(environment)
+        print('[release-db] PASS FastAPI health/readiness/auth guards, Neon and Alembic 0010')
         return 0
     except ReleaseGateError as exc:
         print('[release-db] FAIL category=' + exc.category, file=sys.stderr)
