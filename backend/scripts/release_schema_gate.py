@@ -45,6 +45,17 @@ FAILURE_CODES = {
     'unversioned_existing_tables': 30,
     'migration_required_but_not_enabled': 31,
     'database_name_mismatch': 32,
+    'invalid_settings_jwt': 40,
+    'invalid_settings_frontend': 41,
+    'invalid_settings_database': 42,
+    'invalid_settings_other': 43,
+    'alembic_settings_invalid': 44,
+    'alembic_runtime_dependency_missing': 45,
+    'alembic_database_permission_denied': 46,
+    'alembic_database_connect_failed': 47,
+    'alembic_schema_conflict': 48,
+    'alembic_revision_conflict': 49,
+    'alembic_schema_sql_failed': 50,
 }
 EXPECTED = {
     'production': (
@@ -135,6 +146,51 @@ def plan(revision: str | None, tables: set[str]) -> bool:
     return True
 
 
+def validate_fastapi_settings() -> None:
+    """Exercise the identical Pydantic config path that FastAPI startup needs."""
+    from pydantic import ValidationError
+    from app.core.config import Settings
+    try:
+        Settings()
+    except ValidationError as exc:
+        fields = {str(problem.get('loc', [''])[0]).lower()
+                  for problem in exc.errors(include_input=False)}
+        if 'jwt_secret_key' in fields or any('jwt' in f for f in fields):
+            code = 'invalid_settings_jwt'
+        elif 'frontend_url' in fields:
+            code = 'invalid_settings_frontend'
+        elif 'database_url' in fields:
+            code = 'invalid_settings_database'
+        else:
+            code = 'invalid_settings_other'
+        raise ReleaseGateError(code) from exc
+    except (ValueError, TypeError) as exc:
+        raise ReleaseGateError('invalid_settings_other') from exc
+
+
+def classify_alembic_failure(stderr: str, stdout: str) -> str:
+    """Inspect errors privately and return only a safe allowlisted category."""
+    combined = (stderr + '\n' + stdout).lower()
+    if 'validation error for settings' in combined or 'pydantic' in combined and 'validationerror' in combined:
+        return 'alembic_settings_invalid'
+    if 'modulenotfounderror' in combined or 'no module named' in combined:
+        return 'alembic_runtime_dependency_missing'
+    if 'insufficientprivilege' in combined or 'permission denied for' in combined:
+        return 'alembic_database_permission_denied'
+    if any(term in combined for term in (
+        'could not connect', 'connection refused', 'connection timed out',
+        'operationalerror', 'password authentication failed', 'ssl error',
+    )):
+        return 'alembic_database_connect_failed'
+    if 'duplicatetable' in combined or 'duplicateobject' in combined or 'already exists' in combined:
+        return 'alembic_schema_conflict'
+    if "can't locate revision" in combined or 'revisionerror' in combined:
+        return 'alembic_revision_conflict'
+    if 'programmingerror' in combined or 'syntaxerror' in combined or 'invalidforeignkey' in combined:
+        return 'alembic_schema_sql_failed'
+    return 'alembic_upgrade_failed'
+
+
 def migrate(direct_url: str) -> None:
     env = os.environ.copy()
     env['DATABASE_URL'] = direct_url
@@ -145,7 +201,7 @@ def migrate(direct_url: str) -> None:
     )
     if proc.returncode:
         # stderr and stdout can contain driver-specific DSN parts.
-        raise ReleaseGateError('alembic_upgrade_failed')
+        raise ReleaseGateError(classify_alembic_failure(proc.stderr, proc.stdout))
 
 
 def main() -> int:
@@ -155,6 +211,7 @@ def main() -> int:
         return 0
     try:
         direct_url = checked_direct_url(os.environ.get('DATABASE_URL', ''), environment)
+        validate_fastapi_settings()
         try:
             revision, tables = status(direct_url)
         except ReleaseGateError:
