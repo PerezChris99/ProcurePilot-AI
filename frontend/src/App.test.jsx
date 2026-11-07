@@ -10,7 +10,14 @@ vi.mock('./components/layout/AppShell.jsx',async()=>{
   return {default:()=> <Outlet/>};
 });
 vi.mock('./pages/DashboardPage.jsx',()=>({default:()=> <h1>Signed-in dashboard</h1>}));
-vi.mock('./pages/OrdersPage.jsx',async()=>{const {useLocation}=await vi.importActual('react-router-dom');return {default:()=>{const location=useLocation();return <><h1>Orders checkout return</h1><p data-testid="checkout-query">{location.search}</p></>}}});
+vi.mock('./pages/OrdersPage.jsx',async()=>{
+  const {useLocation}=await vi.importActual('react-router-dom');
+  function OrdersPageStub(){
+    const location=useLocation();
+    return <><h1>Orders checkout return</h1><p data-testid="checkout-query">{location.search}</p></>;
+  }
+  return {default:OrdersPageStub};
+});
 
 function renderAt(path){return render(<MemoryRouter initialEntries={[path]}><App/></MemoryRouter>)}
 

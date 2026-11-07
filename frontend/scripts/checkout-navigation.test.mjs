@@ -68,7 +68,7 @@ test('purchase order action uses completed create response and home logo scrolls
   const publicLayout=readFileSync(resolve(root,'src/components/layout/PublicLayout.jsx'),'utf8');
   assert.match(orders,/checkoutTab\.current=reservePayPalSandboxTab\(\)/);
   assert.match(orders,/navigatePayPalSandboxTab\(result\.approval_url,tab\)/);
-  assert.match(orders,/target="_blank" rel="noopener noreferrer">Open PayPal in new tab/);
+  assert.match(orders,/target="_blank" rel="noopener noreferrer" aria-label="Open PayPal in new tab"[^>]*>Open PayPal\s*</);
   assert.doesNotMatch(orders,/window\.location\.assign\(/);
   assert.match(publicLayout,/className="site-brand"[^>]*onClick=\{scrollHomeToTop\}/);
   assert.match(publicLayout,/window\.scrollTo\(\{top:0,behavior:reduced\?'auto':'smooth'\}\)/);
