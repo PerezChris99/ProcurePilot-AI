@@ -99,3 +99,30 @@ def test_connections_are_not_printed_on_failures(monkeypatch, capsys):
     assert 'testing-only' not in err
     assert 'postgresql' not in err
     assert 'neon_connection_failed' in err
+
+
+@pytest.mark.parametrize(('private_error', 'expected'), [
+    ('pydantic_core.ValidationError: 1 validation error for Settings', 'alembic_settings_invalid'),
+    ("ModuleNotFoundError: No module named 'alembic'", 'alembic_runtime_dependency_missing'),
+    ('psycopg.errors.InsufficientPrivilege: permission denied for table users', 'alembic_database_permission_denied'),
+    ('sqlalchemy.exc.OperationalError: connection timed out', 'alembic_database_connect_failed'),
+    ('psycopg.errors.DuplicateTable: relation already exists', 'alembic_schema_conflict'),
+    ("Can't locate revision identified by abc", 'alembic_revision_conflict'),
+    ('sqlalchemy.exc.ProgrammingError: invalidforeignkey', 'alembic_schema_sql_failed'),
+    ('unrecognized error password=secret', 'alembic_upgrade_failed'),
+])
+def test_alembic_error_classifier_returns_only_safe_category(private_error, expected):
+    result = gate.classify_alembic_failure(private_error, '')
+    assert result == expected
+    assert 'secret' not in result
+
+
+def test_config_preflight_catches_runtime_settings_errors_without_passwords(monkeypatch):
+    from app.core import config
+    class BrokenSettings:
+        def __init__(self):
+            raise ValueError('password=private-secret')
+    monkeypatch.setattr(config, 'Settings', BrokenSettings)
+    with pytest.raises(gate.ReleaseGateError, match='invalid_settings_other') as caught:
+        gate.validate_fastapi_settings()
+    assert 'private-secret' not in str(caught.value)
