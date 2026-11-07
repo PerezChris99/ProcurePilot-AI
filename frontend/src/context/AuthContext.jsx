@@ -32,12 +32,12 @@ export function AuthProvider({children}){
     setAuthToken(token);
     let active=true;
     apiRequest('/auth/me')
-      .then(result=>{if(active)setUser(result)})
-      .catch(error=>{
-        if(active){
-          if(error?.status===401)clearSession(true);
-          else setUser(null);
-        }
+      .then(result=>{
+        if(active&&sessionStorage.getItem(TOKEN_KEY)===token)setUser(result);
+      })
+      .catch(()=>{
+        // A 401 already triggers the current-token guard in apiRequest.
+        // Do not clear a newly signed-in user because an older request failed.
       })
       .finally(()=>{if(active)setInitializing(false)});
     return ()=>{

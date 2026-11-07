@@ -165,7 +165,7 @@ authorization gates. It does not prove external integration acceptance.
 
 Documentation: [Architecture](architecture.md) · [Threat model](security.md) ·
 [API](api.md) · [Devpost submission kit](HACKATHON_SUBMISSION_KIT.md) ·
-[Render deployment](RENDER_DEPLOYMENT.md).
+[Vercel + Neon deployment](VERCEL_NEON_DEPLOYMENT.md).
 
 ## Access through judging
 
