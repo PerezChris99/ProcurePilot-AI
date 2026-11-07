@@ -9,7 +9,7 @@ import json
 import logging
 
 try:
-    from app.main import app
+    from app.main import app as _loaded_app
 except Exception as _initialization_error:
     def _classify_failure(error):
         if isinstance(error, ModuleNotFoundError):
@@ -25,7 +25,7 @@ except Exception as _initialization_error:
         'Backend startup unavailable; category=%s', _category
     )
 
-    async def app(scope, receive, send):
+    async def _loaded_app(scope, receive, send):
         if scope['type'] == 'lifespan':
             while True:
                 msg = await receive()
@@ -53,5 +53,7 @@ except Exception as _initialization_error:
             await send({'type': 'http.response.body', 'body': body})
         elif scope['type'] == 'websocket':
             await send({'type': 'websocket.close', 'code': 1011})
+
+app = _loaded_app
 
 __all__ = ['app']

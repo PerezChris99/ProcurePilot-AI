@@ -68,3 +68,16 @@ def test_fail_closed_lifespan_shutdown(monkeypatch):
     asyncio.run(app({'type': 'lifespan'}, receive, send))
     assert [x['type'] for x in sent] == ['lifespan.startup.complete',
                                         'lifespan.shutdown.complete']
+
+
+def test_vercel_static_scanner_finds_top_level_app_assignment():
+    import ast
+    module = ast.parse(ENTRY.read_text(encoding='utf-8'))
+    exported = any(
+        isinstance(node, (ast.Assign, ast.AnnAssign)) and
+        any(isinstance(target, ast.Name) and target.id == 'app'
+            for target in (node.targets if isinstance(node, ast.Assign)
+                           else [node.target]))
+        for node in module.body
+    )
+    assert exported, 'Vercel PYTHON_HANDLER_NOT_FOUND: app must be top-level'
