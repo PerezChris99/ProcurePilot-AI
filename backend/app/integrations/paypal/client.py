@@ -53,7 +53,7 @@ class PayPalClient:
             parsed = urlsplit(value)
             return (
                 parsed.scheme == "https"
-                and parsed.hostname in ("www.sandbox.paypal.com", "www.paypal.com")
+                and parsed.hostname in ("www.sandbox.paypal.com", "sandbox.paypal.com")
                 and not parsed.username
                 and not parsed.password
                 and parsed.port is None

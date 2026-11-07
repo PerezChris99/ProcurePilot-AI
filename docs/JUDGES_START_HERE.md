@@ -97,10 +97,15 @@ The intended project needs **real, authorized test credentials**. Follow
 5. Choose an **eligible** offer and click **Create PO**, then **Submit for
    approval**. Open **Approvals** and approve as the authorized reviewer.
    If a different approver was assigned, sign in as that registered reviewer.
-6. In **Purchase orders**, click **Create PayPal Sandbox checkout**. The app
-   navigates to the official Sandbox buyer flow. Approve with the separate
-   **Sandbox Personal buyer**, return to ProcurePilot, and **Confirm buyer
-   approval & capture**. This explicit final action is not automatic.
+6. In **Purchase orders**, click **Create PayPal Sandbox checkout**. A
+   **separate browser tab** opens to the official PayPal Sandbox buyer flow;
+   ProcurePilot remains open in the original tab. Sign in with the separate
+   **Sandbox Personal buyer** (not your real PayPal, Developer Dashboard, or
+   Sandbox Business merchant credentials). After approval, PayPal returns to
+   the app in that checkout tab. Select **Confirm buyer approval & capture**;
+   this explicit final action is never automatic. If popups are blocked,
+   follow the saved order's **Open PayPal in new tab** link and sign in to
+   ProcurePilot again if the return tab requires it.
 7. Open the **audit timeline** and **Decision Passport**; inspect source
    evidence, frozen pricing, approval actor/timestamp and provider capture
    proof. Export the PDF if useful.

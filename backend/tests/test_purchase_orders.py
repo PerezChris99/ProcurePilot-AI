@@ -486,3 +486,22 @@ def test_channel3_recheck_releases_postgres_read_transaction(client,monkeypatch)
         assert response.json()['status']=='unchanged'
     finally:
         app.dependency_overrides[get_db]=original_override
+
+
+
+def test_checkout_approval_url_is_sandbox_only_and_cannot_target_live_paypal():
+    # The Orders v2 create response can provide a payer-action or approve link.
+    # A Sandbox-only app must never show a Live checkout or lookalike domain.
+    assert PayPalClient.is_approval_url(
+        'https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL-123')
+    assert PayPalClient.is_approval_url(
+        'https://sandbox.paypal.com/checkoutnow?token=PAYPAL-123')
+    for malicious in (
+        'https://www.paypal.com/checkoutnow?token=PAYPAL-123',
+        'http://www.sandbox.paypal.com/checkoutnow?token=PAYPAL-123',
+        'https://www.sandbox.paypal.com.evil.example/checkoutnow',
+        'https://user:password@www.sandbox.paypal.com/checkoutnow',
+        'https://www.sandbox.paypal.com:443/checkoutnow',
+        'javascript:alert(1)',
+    ):
+        assert not PayPalClient.is_approval_url(malicious)

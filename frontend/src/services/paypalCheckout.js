@@ -1,5 +1,4 @@
-// Checkout is an authenticated, human-initiated PayPal Sandbox redirect.
-// Only use the backend-verified HTTPS approval link, never arbitrary provider URLs.
+// PayPal Sandbox opens separately; only the backend-issued HTTPS link is trusted.
 const SANDBOX_HOSTS=new Set(['www.sandbox.paypal.com','sandbox.paypal.com']);
 
 export function verifiedSandboxApprovalUrl(raw){
@@ -13,7 +12,43 @@ export function verifiedSandboxApprovalUrl(raw){
   return url.href;
 }
 
-export function redirectToPayPalSandbox(url,navigate=target=>window.location.assign(target)){
-  const approved=verifiedSandboxApprovalUrl(url);
-  navigate(approved); // same tab: sessionStorage survives the return to /orders
+// Call synchronously from the buyer's click, BEFORE calling the asynchronous
+// checkout API; browsers may block window.open after the await.
+export function reservePayPalSandboxTab(openTab=()=>window.open('about:blank','_blank')){
+  let tab;
+  try{tab=openTab()}catch{return null}
+  if(!tab||tab.closed)return null;
+  // A trusted about:blank tab initially inherits sessionStorage from this
+  // origin. This lets ProcurePilot authenticate the PayPal return page.
+  // Fail CLOSED if the browser refuses to detach window.opener: a third-party
+  // PayPal page must not be able to navigate the original workspace.
+  try{
+    tab.opener=null;
+    if(tab.opener!==null){closePendingPayPalTab(tab);return null}
+  }catch{
+    closePendingPayPalTab(tab);
+    return null;
+  }
+  try{
+    tab.document.title='Preparing PayPal Sandbox checkout';
+    tab.document.body.textContent='Connecting to PayPal Sandbox…';
+  }catch{
+    // Some browsers isolate the blank document; opener has already been severed.
+  }
+  return tab;
+}
+
+// Never fall back to navigating the original application tab.
+export function navigatePayPalSandboxTab(rawUrl,tab){
+  const approved=verifiedSandboxApprovalUrl(rawUrl);
+  if(!tab||tab.closed)return false;
+  try{
+    tab.location.replace(approved);
+    return true;
+  }catch{return false}
+}
+
+export function closePendingPayPalTab(tab){
+  if(!tab||tab.closed)return;
+  try{tab.close()}catch{}
 }
