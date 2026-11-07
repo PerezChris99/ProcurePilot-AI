@@ -38,7 +38,7 @@ describe('Decision Trust Lab',()=>{
   it('shows real policy results on clearly labelled synthetic fixture data',async()=>{
     apiRequest.mockResolvedValue(example);
     const {client}=renderPage();
-    expect(await screen.findByRole('heading',{name:'2 / 2 checks matched expectations'}))
+    expect(await screen.findByRole('heading',{name:'2 / 2 checks matched expectations'}, {timeout:10000}))
       .toBeInTheDocument();
     expect(screen.getByText('Wrong monitor diagonal')).toBeInTheDocument();
     expect(screen.getByText('Required 72-inch monitor diagonal does not match the listing'))
@@ -52,7 +52,7 @@ describe('Decision Trust Lab',()=>{
     await waitFor(()=>{
       expect(apiRequest).toHaveBeenCalledTimes(2);
       expect(client.isFetching()).toBe(0);
-    });
+    }, {timeout:10000});
   });
 
   it('reports backend failure without fabricating checks and recovers only after a successful retry',async()=>{
@@ -66,12 +66,12 @@ describe('Decision Trust Lab',()=>{
     expect(screen.queryByText(/checks matched expectations/)).not.toBeInTheDocument();
     expect(apiRequest).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole('button',{name:'Run policy checks'}));
-    expect(await screen.findByRole('heading',{name:'2 / 2 checks matched expectations'}))
+    expect(await screen.findByRole('heading',{name:'2 / 2 checks matched expectations'}, {timeout:10000}))
       .toBeInTheDocument();
     await waitFor(()=>{
       expect(apiRequest).toHaveBeenCalledTimes(2);
       expect(client.isFetching()).toBe(0);
-    });
+    }, {timeout:10000});
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

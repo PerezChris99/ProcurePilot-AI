@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Read-only, credential-free acceptance of the public judging deployment.
+"""Read-only acceptance of public or authenticated automated-preview deployment.
 
-This tool never logs in, sends payment requests, reads secret environment
-variables, or calls Channel3/Gemini/PayPal. A PASS is infrastructure/access
+This tool never logs in, sends payment requests, or calls Channel3/Gemini/PayPal.
+It optionally reads a protected-preview automation secret from process env. A PASS is infrastructure/access
 proof only, not live provider-transaction proof.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from urllib import error, request
 from urllib.parse import urlsplit
@@ -31,11 +32,33 @@ def exact_https_origin(value: str) -> str:
     return "https://" + parsed.hostname.lower()
 
 
+PREVIEW_ORIGIN = "procurepilotai-preview.vercel.app"
+
+def _protection_headers(url: str) -> dict[str, str]:
+    """Never send the automation bypass token to production or other hosts."""
+    if urlsplit(url).hostname != PREVIEW_ORIGIN:
+        return {}
+    token = os.environ.get("VERCEL_AUTOMATION_BYPASS_SECRET", "").strip()
+    if not token or any(c in token for c in "\r\n"):
+        return {}
+    return {"x-vercel-protection-bypass": token}
+
+
+class _NoCrossOriginRedirect(request.HTTPRedirectHandler):
+    """Protected preview requests must not forward secrets via HTTP redirects."""
+    def redirect_request(self, req, fp, code, msg, hdrs, newurl):
+        if "x-vercel-protection-bypass" in {k.lower() for k in req.headers}:
+            return None
+        return super().redirect_request(req, fp, code, msg, hdrs, newurl)
+
+
 def inspect(url: str, *, method: str = "GET",
             headers: dict[str, str] | None = None) -> tuple[int, str, dict[str, str]]:
-    req = request.Request(url, headers=headers or {}, method=method)
+    safe_headers = {**(headers or {}), **_protection_headers(url)}
+    req = request.Request(url, headers=safe_headers, method=method)
+    opener = request.build_opener(_NoCrossOriginRedirect())
     try:
-        with request.urlopen(req, timeout=12) as response:
+        with opener.open(req, timeout=12) as response:
             return response.status, response.read(8192).decode("utf-8", "replace"), {
                 key.lower(): value for key, value in response.headers.items()
             }

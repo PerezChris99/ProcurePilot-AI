@@ -88,3 +88,35 @@ For public hosted acceptance, save the seven read-only checks as
 It requires 9/9 offline checks, a real Neon 0010 schema PASS, 7/7 hosted
 checks, a clean `perez` tree, and refuses to treat these as PayPal capture
 or provider certification. It **never merges or deploys**.
+
+## Staging E2E and protected Preview
+
+The separate Neon `procurepilot-ai-staging` project has no production data.
+Copy its **Direct** PostgreSQL TLS URL from the Neon Console (project
+`procurepilot-ai-staging`, database `procurepilot`, pooling OFF). Then run
+this single staging-only command from the repository root:
+
+```powershell
+.\backend\.venv\Scripts\python.exe .\qa\initialize_neon.py --smoke
+```
+
+It applies Alembic and runs actual FastAPI registration, login, JWT
+authorization, persistent procurement writes, DB status, policy scenarios and
+cross-user isolation. It creates disposable **staging** users and one
+staging procurement request, never calls providers and refuses production's
+Neon hostname. A sanitized report is saved to
+`qa/reports/staging-e2e.json`.
+
+The `perez` preview is `https://procurepilotai-preview.vercel.app` and
+may require Vercel Authentication. For protected HTTP acceptance, create a
+temporary revocable **Protection Bypass for Automation** secret in the
+Vercel dashboard and set `VERCEL_AUTOMATION_BYPASS_SECRET` privately in
+your terminal, then run:
+
+```powershell
+python .\qa\live_demo_check.py --frontend https://procurepilotai-preview.vercel.app --api https://procurepilotai-preview.vercel.app
+```
+
+The script never sends the bypass secret to production or arbitrary domains
+and blocks redirects when using it. Revoke the temporary bypass after QA.
+Never paste passwords, bypass tokens or provider keys into chats or Git.

@@ -12,9 +12,9 @@ signed webhooks, or legitimate product evidence to make a check appear green.
 
 | Gate | Proof | Status today |
 | --- | --- | --- |
-| Offline correctness | `qa/reports/summary.json`, nine passes | Maintainer reported 9/9 at `d6e61cd`; retest new candidate |
-| Neon database | `qa/reports/neon.json`, TLS connection, schema 0010 and required tables | DB provisioned; SQL connection unverified because connected Neon plugin is pinned to nonexistent `owner` role |
-| Hosted application | `qa/reports/hosted.json`, seven HTTP passes | Last reported 2/7, backend HTTP 500 |
+| Offline correctness | `qa/reports/summary.json`, nine passes | Latest supplied run 8/9 (two frontend Vitest timeouts); candidate fixes await new Windows 9/9 |
+| Neon database | `qa/reports/neon.json`, TLS connection, schema 0010 and required tables | Production schema reported green by owner; new staging project separately exists but needs migrations and staging write/read QA |
+| Hosted application | `qa/reports/hosted.json`, seven HTTP passes | Old production probe 2/7; PR #50 has since deployed, and both new production and protected preview need fresh HTTP acceptance |
 
 ### Step 1: pull and test the reviewed source
 
@@ -59,6 +59,16 @@ a passing preview.
 ```powershell
 python .\qa\live_demo_check.py --frontend https://procurepilotai.vercel.app --api https://procurepilotai.vercel.app | Tee-Object -FilePath .\qa\reports\hosted.json
 ```
+
+For a protected Vercel `perez` Preview, open Settings → Deployment
+Protection → **Protection Bypass for Automation** and create a temporary,
+revocable token. Set `VERCEL_AUTOMATION_BYPASS_SECRET` privately in your
+Windows PowerShell session. Then run the same seven checks with both
+`--frontend` and `--api` pointing to
+`https://procurepilotai-preview.vercel.app`. The script sends the secret
+only to this exact preview host, never production or an arbitrary URL,
+and refuses redirects to avoid credential leakage. Do not paste the
+secret into GitHub, chat, logs or Devpost. Revoke it after preview QA.
 
 For raw HTTP 500 diagnostics, use `python qa/hosted_readonly_check.py`.
 The Vercel `backend/main.py` entrypoint now fails closed with HTTP 503 and

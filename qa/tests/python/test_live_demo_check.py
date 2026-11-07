@@ -49,3 +49,27 @@ def test_checker_reports_deployment_mismatch_as_failed_gate_without_secrets():
                            "https://api.example",fetch=bad_fetch)
     assert len(rows)==7
     assert all(row["status"]=="FAIL" for row in rows)
+
+
+def test_preview_automation_secret_is_never_sent_to_production(monkeypatch):
+    monkeypatch.setenv("VERCEL_AUTOMATION_BYPASS_SECRET", "very-private-preview-token")
+    headers=checker["_protection_headers"]
+    assert headers("https://procurepilotai-preview.vercel.app/api/v1/health")=={
+        "x-vercel-protection-bypass":"very-private-preview-token",
+    }
+    assert headers("https://procurepilotai.vercel.app/api/v1/health")=={}
+    assert headers("https://untrusted.example.com/api/v1/health")=={}
+    assert headers("https://fake-procurepilotai-preview.vercel.app/")=={}
+    monkeypatch.setenv("VERCEL_AUTOMATION_BYPASS_SECRET", "bad" + chr(10) + "token")
+    assert headers("https://procurepilotai-preview.vercel.app/")=={}
+
+
+def test_protected_preview_redirect_cannot_forward_secret(monkeypatch):
+    from urllib.request import Request
+    monkeypatch.setenv("VERCEL_AUTOMATION_BYPASS_SECRET","private-staging-value")
+    req=Request("https://procurepilotai-preview.vercel.app/api/v1/health",
+                headers=checker["_protection_headers"](
+                    "https://procurepilotai-preview.vercel.app/api/v1/health"))
+    handler=checker["_NoCrossOriginRedirect"]()
+    assert handler.redirect_request(req,None,302,"Redirect",{},
+                    "https://attacker.example/capture") is None
