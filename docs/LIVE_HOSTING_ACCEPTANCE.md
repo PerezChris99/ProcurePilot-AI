@@ -4,13 +4,19 @@ This is the **minimum** read-only check before giving judges a hosted URL.
 It cannot prove AI output, real catalogue responses, a buyer's PayPal Sandbox
 approval, an actual capture, or a delivered signed webhook.
 
-After deploying a public **HTTPS** frontend, **HTTPS** API, PostgreSQL,
-Redis-backed authentication rate limiting and applying the latest Alembic
-migrations, run from the repository root:
+After deploying the reviewed version of **Vercel Services** and applying
+Neon PostgreSQL migrations through `0010_auth_throttles`, run the following
+from the repository root. Redis is optional: the application falls back to
+atomic Neon counters for public auth throttling.
 
 ```powershell
-python .\qa\live_demo_check.py --frontend https://YOUR-UI.onrender.com --api https://YOUR-API.onrender.com
+python .\qa\live_demo_check.py --frontend https://procurepilotai.vercel.app --api https://procurepilotai.vercel.app
 ```
+
+Record the JSON in the ignored `qa/reports/hosted.json` file using PowerShell
+`| Tee-Object -FilePath .\qa\reports\hosted.json`. The report makes no
+payment or account modifications. Run `python qa/report_release.py` to
+verify the combined offline, Neon and hosted evidence before a merge review.
 
 On macOS/Linux replace `python` with `python3`.
 

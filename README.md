@@ -4,7 +4,7 @@
 
 An accountable purchasing decision system built for the **PayPal AI Hackathon**. ProcurePilot brings together real product evidence, deterministic purchasing rules, bounded AI analysis, human approval, and verified **PayPal Sandbox** capture—then preserves the decision in a portable **Decision Passport**.
 
-[**Launch application**](https://procurepilotai.vercel.app) · [**Judge guide**](docs/JUDGES_START_HERE.md) · [**Architecture**](docs/architecture.md) · [**Security model**](docs/security.md) · [**Run tests**](qa/README.md) · [**MIT License**](LICENSE)
+[**Launch application**](https://procurepilotai.vercel.app) · [**Judge guide**](docs/JUDGES_START_HERE.md) · [**Architecture**](docs/architecture.md) · [**Release acceptance**](docs/RELEASE_READINESS.md) · [**Security model**](docs/security.md) · [**Run tests**](qa/README.md) · [**MIT License**](LICENSE)
 
 > **Demo boundary:** This is a hackathon prototype—not a production payment processor or retailer checkout. PayPal Sandbox does not move real money or pay Channel3 merchants. Public deployment readiness and real provider acceptance must be demonstrated separately from a successful code build.
 
