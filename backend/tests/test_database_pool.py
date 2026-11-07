@@ -1,7 +1,7 @@
 from pydantic import ValidationError
 import pytest
 from app.core.config import Settings
-from app.core.database import _engine_options, _is_neon_pooler, _apply_pooled_transaction_limits
+from app.core.database import _engine_options, _is_neon_pooler, _apply_pooled_transaction_limits, _attach_pooled_transaction_limits
 
 def test_postgresql_pool_and_timeout_defaults_are_bounded():
     settings=Settings(_env_file=None,app_env='test')
@@ -73,3 +73,22 @@ def test_transaction_local_neon_limits_are_parameterized_and_no_sql_injection():
     assert '9000' not in conn.query
     assert conn.arguments==('9000','2500','10000')
     assert 'true' in conn.query
+
+
+def test_pooler_begin_hook_is_registered_and_runs_once_per_transaction(monkeypatch):
+    from sqlalchemy import create_engine, text
+    import app.core.database as database_module
+    settings=Settings(_env_file=None,app_env='test')
+    seen=[]
+    monkeypatch.setattr(database_module,'_apply_pooled_transaction_limits',
+        lambda connection, config: seen.append((connection,config)))
+    engine=create_engine('sqlite://')
+    _attach_pooled_transaction_limits(engine,settings)
+    try:
+        with engine.connect() as connection:
+            with connection.begin():
+                assert connection.execute(text('SELECT 1')).scalar()==1
+        assert len(seen)==1
+        assert seen[0][1] is settings
+    finally:
+        engine.dispose()
