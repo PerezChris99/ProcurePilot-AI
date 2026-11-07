@@ -61,6 +61,14 @@ python .\qa\live_demo_check.py --frontend https://procurepilotai.vercel.app --ap
 ```
 
 For raw HTTP 500 diagnostics, use `python qa/hosted_readonly_check.py`.
+The Vercel `backend/main.py` entrypoint now fails closed with HTTP 503 and
+a **safe startup category** if an application import fails. Categories
+`missing_runtime_dependency`, `runtime_import_failure`, and
+`invalid_configuration` point to distinct operational causes; no raw
+exception message is disclosed. If the host still returns
+`FUNCTION_INVOCATION_FAILED` HTTP 500, inspect Vercel's Python runtime
+and bundle logs. The diagnostic does **not** fix imports or authorize
+account creation, provider calls, or payment handling.
 Vercel's connected runtime-log reader previously returned HTTP 403; the
 owner can view actual tracebacks under the deployment's Runtime Logs.
 
