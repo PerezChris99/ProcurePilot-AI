@@ -29,6 +29,23 @@ KNOWN_REVISIONS = frozenset((
     '0010_auth_throttles',
 ))
 HEAD = '0010_auth_throttles'
+# Distinct, public-safe exit codes make Vercel deployment state useful even
+# when build log access is restricted. Never encode an actual URL or exception.
+FAILURE_CODES = {
+    'unexpected_vercel_environment': 20,
+    'database_url_absent': 21,
+    'database_target_mismatch': 22,
+    'database_url_malformed': 23,
+    'neon_connection_failed': 24,
+    'alembic_upgrade_failed': 25,
+    'post_migration_db_connect_failed': 26,
+    'alembic_revision_outdated': 27,
+    'required_tables_missing': 28,
+    'unknown_alembic_revision': 29,
+    'unversioned_existing_tables': 30,
+    'migration_required_but_not_enabled': 31,
+    'database_name_mismatch': 32,
+}
 EXPECTED = {
     'production': (
         'ep-blue-band-bcjqtqrc.c-16.us-east-1.aws.neon.tech',
@@ -159,12 +176,12 @@ def main() -> int:
         return 0
     except ReleaseGateError as exc:
         print('[release-db] FAIL category=' + exc.category, file=sys.stderr)
-        return 2
+        return FAILURE_CODES.get(exc.category, 70)
     except Exception as exc:
         # Keep raw exceptions private; DB exceptions often embed the DSN.
         print('[release-db] FAIL category=unexpected_' + type(exc).__name__,
               file=sys.stderr)
-        return 2
+        return 71
 
 
 if __name__ == '__main__':
