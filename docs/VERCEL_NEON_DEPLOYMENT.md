@@ -53,7 +53,7 @@ environments when using a separate, safe preview DB):
 | `VITE_API_BASE_URL` | `/api/v1` (same-origin; safe to expose in JS) |
 | `DATABASE_URL` | **Secret**: Neon Postgres connection URI, with TLS; use a pooled URL at runtime and ensure psycopg 3 compatibility |
 | `JWT_SECRET_KEY` | **Secret**: random, unique, at least 32 characters, not any development secret |
-| `RATE_LIMIT_REDIS_URL` | **Secret**: Redis **TLS** URL, `rediss://...` |
+| `RATE_LIMIT_REDIS_URL` | Optional: Redis **TLS** URL, `rediss://...`; otherwise the app uses Neon PostgreSQL counters |
 | `DB_POOL_SIZE` | `1` (start conservative for serverless) |
 | `DB_MAX_OVERFLOW` | `1` |
 | `PAYPAL_BASE_URL` | `https://api-m.sandbox.paypal.com` |
@@ -90,7 +90,7 @@ python -m alembic -c alembic.ini current
 ```
 
 Avoid committing a production connection URL or echoing it in logs.
-The existing `/api/v1/ready` verifies database connectivity and
+The existing `/api/v1/ready` verifies database connectivity, the authentication counter migration and
 required tables; `/api/v1/health` checks process liveness only.
 
 ## PayPal Sandbox

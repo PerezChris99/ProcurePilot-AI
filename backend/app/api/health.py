@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.models import AiDailyBudget, User
+from app.models import AiDailyBudget, AuthRateLimitCounter, User
 
 router = APIRouter(tags=['health'])
 
@@ -26,6 +26,8 @@ def readiness_check(db: Session = Depends(get_db)):
         # SELECT ... LIMIT 1 is cheap and succeeds when tables are empty.
         db.scalar(select(User.id).limit(1))
         db.scalar(select(AiDailyBudget.scope).limit(1))
+        # Authentication is intentionally fail-closed without this migration.
+        db.scalar(select(AuthRateLimitCounter.bucket_key).limit(1))
     except SQLAlchemyError as exc:
         raise HTTPException(
             status_code=503, detail='Database or required schema is unavailable'

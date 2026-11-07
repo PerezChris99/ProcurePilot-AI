@@ -3,6 +3,7 @@
 No client-supplied X-Forwarded-For parsing: the trusted ASGI proxy must provide a
 validated request.client address, and the edge must limit aggregate traffic.
 """
+import asyncio
 import hashlib
 import hmac
 from functools import lru_cache
@@ -12,6 +13,7 @@ from redis.asyncio import Redis
 from redis.exceptions import RedisError
 
 from app.core.config import get_settings
+from app.security.postgres_throttle import enforce_postgres_throttle
 
 # Atomic increment + first-hit expiry, with a bounded fixed window.
 _SCRIPT = """
@@ -56,7 +58,7 @@ async def _guard(request: Request, action: str):
         # Local development must work offline; do not mistake this for a
         # distributed production limiter.
         return
-    if not settings.rate_limit_redis_url:
+    if not settings.rate_limit_redis_url and not getattr(settings, 'database_url', '').startswith('postgresql+psycopg://'):
         raise HTTPException(status_code=503, detail='Authentication protection service is not configured')
     source=(request.client.host if request.client else 'unknown') or 'unknown'
     identifier=await _identity(request)
@@ -65,6 +67,10 @@ async def _guard(request: Request, action: str):
     ]
     if identifier:
         buckets.append((_anonymous_key(settings.jwt_secret_key,action+':identity',identifier),8))
+    if not settings.rate_limit_redis_url:
+        # Neon/PostgreSQL is the shared fallback; offload blocking psycopg I/O.
+        await asyncio.to_thread(enforce_postgres_throttle, buckets)
+        return
     try:
         redis=_redis(settings.rate_limit_redis_url)
         for key,limit in buckets:
