@@ -101,3 +101,22 @@ Neon connection troubleshooting: https://neon.tech/docs/connect/connection-error
 5. If the production build gate fails, its fixed exit code identifies the safe category (e.g., 22 wrong Neon target/role, 24 database connection, 40 weak JWT, 25 migration failure, 60 API import, 62 readiness). Investigate without weakening authentication or changing DB identities arbitrarily.
 
 **External HTTP and production registration remain unverified until independently observed.**
+
+
+## 8. Deployment and recovery evidence — post-merge on 7 November 2026
+
+**GitHub:** PR #54 merged into `main` as `c21083849195a79c30e1b074ef127a62de6f2a6c` with the defended Vercel build gate and staging end-to-end tests.
+
+**Production Vercel:** deployment `dpl_DNApTYnhRbzHieVxnuYacwew8nBD` was **READY** and assigned the canonical `procurepilotai.vercel.app` alias on that exact merge SHA. The backend release build executed with the newly rotated strong JWT secret and its production-specific Neon allowlist. A successful gate requires Pydantic Settings validation, Neon SQL connectivity, Alembic `0010_auth_throttles`, all 11 required tables, and in-process FastAPI GET health/ready 200, auth/me 401, and same-origin CORS checks. The production migration flag was explicitly enabled only for that release; it applies known forward revisions if necessary. **No production test users or payments were created.**
+
+**Production Neon management confirmation:** the project's `ep-blue-band-bcjqtqrc` compute recorded new activity at `2026-11-07T18:11:51Z` with the compute active during the release. This independently corroborates actual production Neon use, rather than a build that never opened a database connection. The Neon SQL connector itself remains role-pinned to a nonexistent `owner` role, so an independent direct SQL `SELECT version_num` against production is still inaccessible from that specific connector. The Vercel backend gate performed the required SQL verification using the **application's** database role.
+
+**Staging:** Preview deployment `dpl_HdCCwubyn2eUuTemDQ1d193KWZJS` was READY after real database-backed 201 registration, 200 login, 200 JWT /me, 201 procurement creation and read-only API guard/CORS checks. Independent Neon SQL showed revision `0010_auth_throttles`, all required tables, and no residual disposable test records.
+
+**Post-acceptance controls:** the Vercel non-secret `PROCUREPILOT_RUN_REVIEWED_MIGRATIONS` switches were returned to `0` for Production and `perez` Preview; `PROCUREPILOT_STAGING_AUTH_SMOKE` was returned to `0`. Future builds retain a **read-only** schema/API readiness gate and will fail closed if schema is unexpectedly outdated rather than silently mutating a live database. Fresh deployments after those flag changes are the final configuration check.
+
+**Outstanding distinction:** a Vercel READY result and in-process HTTP 200/201 do not prove that external browser requests traverse Vercel's public routing successfully. This execution environment cannot resolve the public hostname and the connected Vercel runtime-log API still denies access. Thus real public HTTPS /health, /ready and a user-driven browser sign-in remain to be observed before claiming complete outside-in recovery.
+
+### Root-cause conclusion
+
+The reproducible startup blocker was an **invalid/weak Vercel JWT secret** (diagnostic exit 40 from the same Pydantic Settings validation used by FastAPI). Its rotation removed the startup misconfiguration. The absence of a deployment-time Alembic gate meant freshly provisioned Neon databases could remain without the required authentication throttling schema; adding a narrowly controlled, verified forward-migration gate restored the isolated staging schema and established production schema-readiness checks. Both issues were addressed without bypassing security or modifying real payments.
