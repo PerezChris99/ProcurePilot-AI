@@ -4,7 +4,7 @@
 
 An accountable purchasing decision system built for the **PayPal AI Hackathon**. ProcurePilot brings together real product evidence, deterministic purchasing rules, bounded AI analysis, human approval, and verified **PayPal Sandbox** capture—then preserves the decision in a portable **Decision Passport**.
 
-[**Launch application**](https://procurepilotai.vercel.app) · [**Judge guide**](docs/JUDGES_START_HERE.md) · [**Architecture**](docs/architecture.md) · [**Release acceptance**](docs/RELEASE_READINESS.md) · [**Security model**](docs/security.md) · [**Run tests**](qa/README.md) · [**MIT License**](LICENSE)
+[**Launch application**](https://procurepilotai.vercel.app) · [**Judge guide**](docs/JUDGES_START_HERE.md) · [**Judge access**](docs/JUDGE_ACCESS_PLAYBOOK.md) · [**Architecture**](docs/architecture.md) · [**Release acceptance**](docs/RELEASE_READINESS.md) · [**Security model**](docs/security.md) · [**Run tests**](qa/README.md) · [**MIT License**](LICENSE)
 
 > **Demo boundary:** This is a hackathon prototype—not a production payment processor or retailer checkout. PayPal Sandbox does not move real money or pay Channel3 merchants. Public deployment readiness and real provider acceptance must be demonstrated separately from a successful code build.
 
@@ -26,12 +26,12 @@ A purchasing decision must answer more than *“Which product is cheapest?”*
 
 | Start here | What you'll see |
 | :--- | :--- |
-| [**Web application**](https://procurepilotai.vercel.app) | React workspace, procurement form, approval queue, policy lab and order history. Hosted authentication and procurement creation are confirmed by the maintainer; live payment-provider acceptance is a separate gate. |
-| [**Judge walkthrough**](docs/JUDGES_START_HERE.md) | A guided path through the experience, with a separate no-credentials offline preview. |
+| [**Web application**](https://procurepilotai.vercel.app) | Hosted workspace for procurement, evidence analysis, approvals and PayPal Sandbox orders. The owner reports a successful PayPal transaction; public read-only acceptance and signed webhook delivery remain separate evidence gates. |
+| [**Judge walkthrough**](docs/JUDGES_START_HERE.md) | A guided path through the experience, secure Sandbox buyer instructions and a separate no-credentials offline preview. |
 | [**Decision Trust Lab**](docs/JUDGES_START_HERE.md) | Twelve labelled **synthetic** scenarios evaluated against the real deterministic policy code—no fake provider calls or payments. |
 | [**Backend API**](docs/api.md) | Authenticated procurement, discovery, approvals, Sandbox payments and signed webhook routes. |
 
-**Hosted status, November 8, 2026:** The maintainer has successfully registered, signed in and created a procurement on the production Vercel + Neon deployment. The production build gate verified actual Neon schema `0010_auth_throttles`, 11 required tables and in-process FastAPI health/readiness. A separate staging Preview exercised SQL-backed registration/login/JWT and procurement creation. **Public 7/7 read-only checks and live Channel3/Gemini/PayPal Sandbox capture and signed-webhook proof remain unverified.** The outdated 2/7 report predates the repaired deployment; it must not be presented as the current public API status. See the [live submission checklist](docs/SUBMISSION_READINESS.md) and [first-place execution plan](docs/WINNING_EXECUTION_PLAN_2026-11-08.md).
+**Hosted status, November 8, 2026:** The owner reports registering, signing in, completing a procurement and successfully completing a PayPal Sandbox buyer transaction visible in PayPal. This replaces the earlier unresolved checkout blocker; it is an owner confirmation, not an independently archived provider receipt. Vercel production and preview reported READY on matching commit `5dff11f`, and prior build checks confirmed Neon schema `0010_auth_throttles`. **The current 7/7 public HTTPS probe, a fresh 9/9 QA run and actual signed-webhook delivery are not independently established in this report.** The old 2/7 failure occurred before the repaired deployment and must not be described as the current status. See [submission readiness](docs/SUBMISSION_READINESS.md), [evidence map](docs/JUDGING_EVIDENCE_MATRIX.md) and [Devpost materials](docs/DEVPOST_FINAL_DRAFT.md).
 
 ## How a purchase moves through ProcurePilot
 
@@ -167,7 +167,7 @@ python .\qa\live_demo_check.py --frontend https://procurepilotai.vercel.app --ap
 
 The seven read-only gates cover landing page, deep links, API liveness, database/schema readiness, CORS, protected order access and protected policy-lab access. **Require 7/7**, then separately verify live Channel3 discovery, a real bounded Gemini response, distinct PayPal Sandbox buyer approval, exact capture, and signed webhook delivery. Passing mocked Python/React tests or a Vercel build alone cannot substitute for these checks.
 
-Useful detailed references: [QA matrix](qa/README.md) · [Provider acceptance](docs/INTEGRATION_ACCEPTANCE.md) · [Vercel + Neon runbook](docs/VERCEL_NEON_DEPLOYMENT.md) · [API reference](docs/api.md).
+Useful detailed references: [QA matrix](qa/README.md) · [Judge access](docs/JUDGE_ACCESS_PLAYBOOK.md) · [Devpost submission draft](docs/DEVPOST_FINAL_DRAFT.md) · [Provider acceptance](docs/INTEGRATION_ACCEPTANCE.md) · [Vercel + Neon runbook](docs/VERCEL_NEON_DEPLOYMENT.md) · [API reference](docs/api.md).
 
 ## Technical scope
 
@@ -198,6 +198,6 @@ vercel.json                Same-origin Vercel Services routing
 
 Created for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/). The submission requires a functional project, genuine PayPal + AI integration evidence, a documented repository, and a public demo video; see the [submission checklist](docs/HACKATHON_SUBMISSION_KIT.md).
 
-**License:** [MIT](LICENSE) · [Copyright and attribution](NOTICE). ProcurePilot AI is an independent hackathon project and is not presented as an official PayPal, Gemini, Channel3, Neon or Vercel product.
+**License:** [MIT](LICENSE) · [Copyright and attribution](NOTICE). ProcurePilot AI is an independent hackathon project and is not presented as an official PayPal, Gemini, Channel3, Neon or Vercel product. A real Sandbox transaction and genuine video are distinct from simulated offline sample data; use the [evidence map](docs/JUDGING_EVIDENCE_MATRIX.md) to evaluate those boundaries.
 
 **The principle:** *Every purchase has a reason—and the evidence to explain it.*
