@@ -65,6 +65,8 @@ def test_request_to_ai_to_human_approval_to_paypal_capture_has_one_audit_trail(c
         ai_daily_global_runs=100,
     ))
 
+    found=client.post(f'/api/v1/procurement-requests/{request_id}/discover',headers=headers)
+    assert found.status_code==200
     analyzed=client.post(f'/api/v1/procurement-requests/{request_id}/analyze',headers=headers)
     assert analyzed.status_code==200
     assert analyzed.json()['source']=='gemini'
