@@ -716,3 +716,58 @@ def test_paypal_order_identity_and_amount_are_verified_before_capture(client,mon
     result=client.post(path+'/payments/paypal/capture',headers=owner)
     assert result.status_code==409
     assert state['captured']==0
+
+
+def test_recovery_of_completed_get_without_original_purchase_unit_fields(client,monkeypatch):
+    """PayPal GET COMPLETED may expose only capture details; never POST twice."""
+    owner,order=approved_order(client,monkeypatch,'completed-sparse-get@example.com')
+    fake_paypal(monkeypatch,order['id'])
+    count={'get':0,'capture':0}
+    async def sparse_completed(self,order_id):
+        count['get']+=1
+        return {'id':order_id,'status':'COMPLETED',
+                'purchase_units':[{
+                    'reference_id':order['po_number'],
+                    'payments':{'captures':[{
+                        'id':'CAPTURE-PROVIDER-ALREADY-COMPLETED','status':'COMPLETED',
+                        'amount':{'currency_code':'USD','value':'240.00'},
+                    }]},
+                }]}
+    async def no_duplicate_capture(self,*args,**kwargs):
+        count['capture']+=1
+        raise AssertionError('Must not issue a second POST /capture')
+    monkeypatch.setattr(PayPalClient,'get_order',sparse_completed)
+    monkeypatch.setattr(PayPalClient,'capture_order',no_duplicate_capture)
+    path=f"/api/v1/purchase-orders/{order['id']}"
+    assert client.post(path+'/payments/paypal/create',headers=owner).status_code==200
+    result=client.post(path+'/payments/paypal/capture',headers=owner)
+    assert result.status_code==200,result.text
+    assert result.json()['status']=='paid'
+    assert result.json()['payment']['capture_id']=='CAPTURE-PROVIDER-ALREADY-COMPLETED'
+    assert count=={'get':1,'capture':0}
+    again=client.post(path+'/payments/paypal/capture',headers=owner)
+    assert again.status_code==200
+    assert count=={'get':1,'capture':0}
+
+
+def test_completed_remote_get_with_wrong_capture_amount_must_not_mark_paid(client,monkeypatch):
+    owner,order=approved_order(client,monkeypatch,'completed-wrong-amount@example.com')
+    fake_paypal(monkeypatch,order['id'])
+    calls={'post':0}
+    async def mismatched_completed(self,order_id):
+        return {'id':order_id,'status':'COMPLETED',
+                'purchase_units':[{'payments':{'captures':[{
+                    'id':'CAPTURE-NOT-OURS','status':'COMPLETED',
+                    'amount':{'currency_code':'USD','value':'239.00'},
+                }]}}]}
+    async def no_capture(self,*args,**kwargs):
+        calls['post']+=1
+        raise AssertionError('Provider is already COMPLETED, never recapture')
+    monkeypatch.setattr(PayPalClient,'get_order',mismatched_completed)
+    monkeypatch.setattr(PayPalClient,'capture_order',no_capture)
+    path=f"/api/v1/purchase-orders/{order['id']}"
+    assert client.post(path+'/payments/paypal/create',headers=owner).status_code==200
+    result=client.post(path+'/payments/paypal/capture',headers=owner)
+    assert result.status_code==409,result.text
+    assert calls['post']==0
+    assert client.get(path,headers=owner).json()['status']=='payment_pending'
