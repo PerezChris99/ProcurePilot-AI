@@ -78,6 +78,7 @@ FAILURE_CODES = {
     'staging_live_channel3_failed': 81,
     'staging_live_ai_failed': 82,
     'staging_live_paypal_oauth_failed': 83,
+    'staging_gemini_primary_failed': 84,
 }
 EXPECTED = {
     'production': (
@@ -414,6 +415,23 @@ def verify_preview_live_providers(environment: str) -> None:
     print('[release-db] PASS genuine Channel3, model analysis, PayPal Sandbox OAuth (read-only)')
 
 
+def verify_preview_primary_gemini(environment: str) -> None:
+    """One actual Google ADK Gemini call; do not count fallback success as Gemini."""
+    if (environment != 'preview' or
+            os.environ.get('PROCUREPILOT_STAGING_PRIMARY_GEMINI_SMOKE') != '1'):
+        return
+    import asyncio
+    from scripts.provider_smoke import run_checks
+    result = asyncio.run(run_checks(
+        'gemini', gemini_timeout_seconds=24, ai_route='gemini',
+    ))
+    details = result.get('checks', {}).get('gemini', {})
+    if details.get('status') != 'pass' or details.get('provider') != 'gemini':
+        raise ReleaseGateError('staging_gemini_primary_failed')
+    print('[release-db] PASS direct Google ADK Gemini response (no fallback)')
+
+
+
 def main() -> int:
     environment = os.environ.get('VERCEL_ENV', '')
     if not os.environ.get('VERCEL') and not environment:
@@ -441,6 +459,7 @@ def main() -> int:
         verify(revision, tables)
         smoke_fastapi(environment)
         verify_preview_live_providers(environment)
+        verify_preview_primary_gemini(environment)
         print('[release-db] PASS FastAPI health/readiness/auth guards, Neon and Alembic 0010')
         return 0
     except ReleaseGateError as exc:
