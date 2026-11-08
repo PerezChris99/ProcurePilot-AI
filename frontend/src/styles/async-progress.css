@@ -1,0 +1,57 @@
+/* Calm, explicit feedback for network-bound authentication and route loading. */
+.async-progress{
+  display:grid;
+  gap:10px;
+  width:100%;
+  margin:14px 0 0;
+  color:#425570;
+}
+.async-progress-track{
+  position:relative;
+  height:5px;
+  overflow:hidden;
+  border-radius:3px;
+  background:#e5ecf1;
+}
+.async-progress-indicator{
+  display:block;
+  width:36%;
+  height:100%;
+  border-radius:3px;
+  background:linear-gradient(90deg,#2cb4e8,#0b1b3d);
+  animation:async-progress-sweep 1.45s ease-in-out infinite;
+  will-change:transform;
+}
+.async-progress-label{
+  margin:0;
+  color:#425570;
+  font-size:.9375rem;
+  line-height:1.5;
+  font-weight:500;
+}
+.async-progress-compact{max-width:26rem;margin:0 auto;}
+.route-loading{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:35vh;
+  padding:32px 24px;
+  text-align:center;
+}
+@keyframes async-progress-sweep{
+  from{transform:translateX(-110%)}
+  to{transform:translateX(320%)}
+}
+@media(prefers-reduced-motion:reduce){
+  .async-progress-indicator{
+    animation:none;
+    will-change:auto;
+    transform:none;
+    width:100%;
+    background:#2cb4e8;
+  }
+}
+
+/* Keep the author acknowledgement visually quieter than navigation links. */
+.site-footer-brief .site-footer-credit{margin:10px 0 0;font-size:.90625rem;line-height:1.55;color:#596a7c;}
+.site-footer-credit a{font-weight:650;}

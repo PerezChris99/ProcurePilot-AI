@@ -22,11 +22,11 @@ vi.mock('./pages/OrdersPage.jsx',async()=>{
 function renderAt(path){return render(<MemoryRouter initialEntries={[path]}><App/></MemoryRouter>)}
 
 describe('Public landing and protected workspace routing',()=>{
-  beforeEach(()=>{auth.user=null;auth.initializing=false;});
+  beforeEach(()=>{auth.user=null;auth.initializing=false;auth.busy=false;auth.sessionExpired=false;});
 
-  it('shows the landing page at / for unauthenticated judges',()=>{
+  it('shows the landing page at / for unauthenticated judges',async()=>{
     renderAt('/');
-    expect(screen.getByRole('heading',{level:1})).toHaveTextContent(/every purchase, accountable/i);
+    expect(await screen.findByRole('heading',{level:1})).toHaveTextContent(/every purchase, accountable/i);
     expect(screen.getByRole('link',{name:/get started/i})).toHaveAttribute('href','/register');
   });
 
@@ -36,10 +36,10 @@ describe('Public landing and protected workspace routing',()=>{
     expect(screen.queryByRole('heading',{name:'Signed-in dashboard'})).not.toBeInTheDocument();
   });
 
-  it('shows the protected dashboard to an authenticated workspace user',()=>{
+  it('shows the protected dashboard to an authenticated workspace user',async()=>{
     auth.user={id:'person-1',full_name:'Procurement Judge'};
     renderAt('/dashboard');
-    expect(screen.getByRole('heading',{name:'Signed-in dashboard'})).toBeInTheDocument();
+    expect(await screen.findByRole('heading',{name:'Signed-in dashboard'})).toBeInTheDocument();
   });
 
   it('returns to the original PayPal callback and PO after a required sign-in',async()=>{
@@ -54,9 +54,29 @@ describe('Public landing and protected workspace routing',()=>{
     expect(auth.login).toHaveBeenCalledTimes(1);
   });
 
-  it('retains the /orders path used by PayPal Sandbox return',()=>{
+  it('retains the /orders path used by PayPal Sandbox return',async()=>{
     auth.user={id:'person-1',full_name:'Procurement Judge'};
     renderAt('/orders?token=SANDBOX-ORDER-ID');
-    expect(screen.getByRole('heading',{name:'Orders checkout return'})).toBeInTheDocument();
+    expect(await screen.findByRole('heading',{name:'Orders checkout return'})).toBeInTheDocument();
   });
+  it('shows an accessible pending state while checking sign-in credentials',()=>{
+    auth.busy=true;
+    renderAt('/login');
+    expect(screen.getByRole('button',{name:'Signing in…'})).toBeDisabled();
+    expect(screen.getByRole('progressbar',{name:'Verifying your account securely…'})).toBeInTheDocument();
+  });
+
+  it('shows a pending state while securely creating a workspace',()=>{
+    auth.busy=true;
+    renderAt('/register');
+    expect(screen.getByRole('button',{name:'Creating workspace…'})).toBeDisabled();
+    expect(screen.getByRole('progressbar',{name:'Creating your secure workspace…'})).toBeInTheDocument();
+  });
+
+  it('shows restored-session progress while revalidating an existing token',()=>{
+    auth.initializing=true;
+    renderAt('/dashboard');
+    expect(screen.getByRole('progressbar',{name:'Restoring your secure session…'})).toBeInTheDocument();
+  });
+
 });

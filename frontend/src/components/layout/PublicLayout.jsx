@@ -42,6 +42,7 @@ export function PublicFooter(){
         <a href="https://github.com/PerezChris99/ProcurePilot-AI" target="_blank" rel="noopener noreferrer">Project on GitHub <ExternalLink size={13} aria-hidden="true"/></a>
         <a href="https://github.com/PerezChris99/ProcurePilot-AI/blob/main/docs/JUDGES_START_HERE.md" target="_blank" rel="noopener noreferrer">Judge walkthrough <ExternalLink size={13} aria-hidden="true"/></a>
         <a href="https://unsplash.com/license" target="_blank" rel="noopener noreferrer">Photography: Unsplash <ExternalLink size={13} aria-hidden="true"/></a>
+        <p className="site-footer-credit">Developed by <a href="https://kweeziperez.com" target="_blank" rel="noopener noreferrer">Kweezi Perez Christopher <ExternalLink size={13} aria-hidden="true"/></a></p>
       </div>
     </div>
     <div className="site-footer-bottom">

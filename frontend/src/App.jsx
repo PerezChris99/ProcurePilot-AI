@@ -1,28 +1,39 @@
+import {lazy,Suspense} from 'react';
 import {Route,Routes} from 'react-router-dom';
 import PageMetadata from './components/routing/PageMetadata.jsx';
 import PublicLayout from './components/layout/PublicLayout.jsx';
-import LandingPage from './pages/LandingPage.jsx';
-import PublicInfoPage from './pages/PublicInfoPage.jsx';
-import AppShell from './components/layout/AppShell.jsx';
 import RequireAuth from './components/routing/RequireAuth.jsx';
-import DashboardPage from './pages/DashboardPage.jsx';
-import TrustLabPage from './pages/TrustLabPage.jsx';
-import ProcurementPage from './pages/ProcurementPage.jsx';
-import OrdersPage from './pages/OrdersPage.jsx';
-import ApprovalsPage from './pages/ApprovalsPage.jsx';
-import ActivityPage from './pages/ActivityPage.jsx';
-import DiscoveryPage from './pages/DiscoveryPage.jsx';
-import RequestDetailPage from './pages/RequestDetailPage.jsx';
+import AsyncProgress from './components/ui/AsyncProgress.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
-import NotFoundPage from './pages/NotFoundPage.jsx';
+
+// Keep sign-in and registration in the first bundle. Load unrelated pages
+// on demand so judges do not download charts, catalogue and payment code
+// before they can enter their account credentials.
+const LandingPage=lazy(()=>import('./pages/LandingPage.jsx'));
+const PublicInfoPage=lazy(()=>import('./pages/PublicInfoPage.jsx'));
+const NotFoundPage=lazy(()=>import('./pages/NotFoundPage.jsx'));
+const AppShell=lazy(()=>import('./components/layout/AppShell.jsx'));
+const DashboardPage=lazy(()=>import('./pages/DashboardPage.jsx'));
+const TrustLabPage=lazy(()=>import('./pages/TrustLabPage.jsx'));
+const ProcurementPage=lazy(()=>import('./pages/ProcurementPage.jsx'));
+const OrdersPage=lazy(()=>import('./pages/OrdersPage.jsx'));
+const ApprovalsPage=lazy(()=>import('./pages/ApprovalsPage.jsx'));
+const ActivityPage=lazy(()=>import('./pages/ActivityPage.jsx'));
+const DiscoveryPage=lazy(()=>import('./pages/DiscoveryPage.jsx'));
+const RequestDetailPage=lazy(()=>import('./pages/RequestDetailPage.jsx'));
 
 const publicPages=[
   'about','how-it-works','privacy','terms',
   'security','accessibility','responsible-use','contact',
 ];
+function RouteFallback(){
+  return <div className="route-loading">
+    <AsyncProgress compact label="Opening page…"/>
+  </div>;
+}
 export default function App(){
-  return <><PageMetadata/><Routes>
+  return <><PageMetadata/><Suspense fallback={<RouteFallback/>}><Routes>
     <Route element={<PublicLayout/>}>
       <Route path="/" element={<LandingPage/>}/>
       {publicPages.map(kind=><Route key={kind} path={'/'+kind} element={<PublicInfoPage kind={kind}/>}/>)}
@@ -42,5 +53,5 @@ export default function App(){
         <Route path="/requests/:requestId" element={<RequestDetailPage/>}/>
       </Route>
     </Route>
-  </Routes></>;
+  </Routes></Suspense></>;
 }

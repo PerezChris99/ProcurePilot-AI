@@ -3,6 +3,8 @@ import {Link,useLocation,useNavigate} from 'react-router-dom';
 import {LockKeyhole,Mail} from 'lucide-react';
 import {useAuth} from '../context/useAuth.js';
 import AuthLayout from '../components/layout/AuthLayout.jsx';
+import AsyncProgress from '../components/ui/AsyncProgress.jsx';
+import {preloadWorkspace} from './preloadWorkspace.js';
 
 export default function LoginPage(){
   const [email,setEmail]=useState('');
@@ -14,13 +16,16 @@ export default function LoginPage(){
 
   async function submit(event){
     event.preventDefault();
+    if(busy)return;
     setError('');
+    const from=location.state?.from;
+    const destination=from
+      ?from.pathname+(from.search||'')+(from.hash||'')
+      :'/dashboard';
+    // Begin fetching the destination while the server verifies credentials.
+    preloadWorkspace(destination);
     try{
       await login({email,password});
-      const from=location.state?.from;
-      const destination=from
-        ?from.pathname+(from.search||'')+(from.hash||'')
-        :'/dashboard';
       navigate(destination,{replace:true});
     }catch(err){setError(err.message)}
   }
@@ -35,7 +40,7 @@ export default function LoginPage(){
         Your session expired. Sign in again to continue where you left off.
       </p>}
     </div>
-    <form className="auth-form" onSubmit={submit}>
+    <form className="auth-form" onSubmit={submit} aria-busy={busy}>
       <label htmlFor="email">Email address</label>
       <div className="auth-input">
         <Mail size={17}/>
@@ -53,6 +58,7 @@ export default function LoginPage(){
       <button className="button button-primary auth-submit" type="submit" disabled={busy}>
         {busy?'Signing in…':'Sign in'}
       </button>
+      {busy&&<AsyncProgress label="Verifying your account securely…"/>}
     </form>
     <p className="auth-switch">New to ProcurePilot? <Link to="/register">Create an account</Link></p>
   </AuthLayout>;

@@ -54,11 +54,21 @@ cold start, TLS handshake, Neon server processing and frontend work.
   installed in Vercel's backend build environment (safe code 73), so pytest
   was removed from that build and replaced with the real staging SQL-backed
   acceptance gate. Do not describe this as a passing full pytest suite.
-- **Not yet measured:** actual live browser p50/p95 auth time, first cold
-  serverless invocation, JS bundle/route transition time. `main` does not
-  include the optimization until owner approval and reviewed merge.
+- **Still not measured:** current live browser p50/p95 login/signup time, first cold serverless invocation and JS chunk-to-interactive timing. The batched SQL and registration snapshot improvements have already been merged into the live source baseline; this document must not describe them as an unmerged branch candidate.
 
-## 4. Browser A/B benchmark (same device and network)
+## 4. Fast judge-entry frontend pass (8 November)
+
+The application previously imported the entire authenticated page tree, including procurement, order views and Recharts-based screens, on the initial sign-in/register route. The revised React app keeps **LoginPage** and **RegisterPage** eagerly available while deferring unrelated public and authenticated screens through `React.lazy` and `Suspense`. Only the destination workspace route plus its shell are prefetched after the person submits the login or registration form; that download overlaps the same backend POST and adds **no server/provider API calls**. Normal React Router navigation and the PayPal `/orders?paypal=return&po=...` redirect remain intact.
+
+A labelled **indeterminate progress bar** immediately appears while credentials are checked or a new workspace is committed. Session restoration and delayed route chunk loading also show an explicit pending state. There are no fake percentages or artificial waiting delays; animation respects reduced-motion preferences. Failed authentication continues to show the actual backend error rather than a fabricated success screen. The final homepage footer credits the developer below the existing photography source link.
+
+**Limits:** Frontend splitting cannot make Argon2 verification, remote Neon database transactions or Vercel cold starts instantaneous. No p50/p95 reduction or bandwidth savings figure is claimed until measured on the same network. Route loading may involve a small additional code request but substantially reduces unnecessary initial module evaluation.
+
+**Verification before next rollout:** `frontend/src/App.test.jsx`, `components/ui/AsyncProgress.test.jsx` and `components/layout/PublicFooter.test.jsx` now cover asynchronous navigation, progress semantics and footer link placement. Run `./test-all.bat` and a strict Vite production build, then inspect the login/register Network waterfall (downloaded JS, time to interactive, POST duration, post-auth route time). A slow backend needs separate timing analysis; a progress bar only communicates that work is ongoing.
+
+**Deployment hold:** The current Vercel team reported HTTP 402 `api-deployments-free-per-day` after exceeding 100 deployments in 24 hours. The user requested no further deployment attempts until the quota period has elapsed. Source changes can be committed/merged meanwhile without claiming they are already visible on the production domain.
+
+## 5. Browser A/B benchmark (same device and network)
 
 1. Open Chrome DevTools → **Network**, enable **Preserve log**, hide sensitive
    request payloads in screenshots, and avoid sharing bearer tokens.
@@ -75,7 +85,7 @@ cold start, TLS handshake, Neon server processing and frontend work.
    latency samples. A successful build and lower SQL query count alone do not
    prove specific milliseconds saved.
 
-## 5. Release and rollback
+## 6. Release and rollback
 
 - The code is on existing `perez`; no new branch or GitHub Actions.
 - Do not merge `perez` until the current full offline QA checks pass and

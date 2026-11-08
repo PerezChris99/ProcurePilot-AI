@@ -13,6 +13,7 @@ import './styles/clock.css';
 import './styles/fintech-polish.css';
 import './styles/accessibility-brand.css';
 import './styles/layout-refinement.css';
+import './styles/async-progress.css';
 import './styles/trust-lab.css';
 const queryClient=new QueryClient({defaultOptions:{queries:{retry:1,refetchOnWindowFocus:false,staleTime:30000}}});
 ReactDOM.createRoot(document.getElementById('root')).render(<React.StrictMode><QueryClientProvider client={queryClient}><BrowserRouter><AuthProvider><App/></AuthProvider></BrowserRouter></QueryClientProvider></React.StrictMode>);
