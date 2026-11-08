@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     paypal_client_secret: str | None = None
     paypal_base_url: str = 'https://api-m.sandbox.paypal.com'
     paypal_webhook_id: str | None = None
+    paypal_webhook_url: str | None = None
     model_config = SettingsConfigDict(env_file=('.env','../.env'),env_file_encoding='utf-8',case_sensitive=False,extra='ignore')
 
     @model_validator(mode='after')
