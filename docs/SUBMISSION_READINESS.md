@@ -6,25 +6,14 @@
 · Repository: https://github.com/PerezChris99/ProcurePilot-AI
 · Hosted application: https://procurepilotai.vercel.app
 
-**Verified completion: 11/36 submission gates.**
-Checkboxes are binary: source-level implementation can satisfy a code gate,
-but cannot replace a live PayPal or Gemini acceptance, a browser audit,
-or the Devpost submission. Partial progress is explained below without checking
-the remaining work off. Status incorporates owner-confirmed hosted account
-creation/login/procurement creation on 8 Nov, production Vercel and Neon
-build-gate evidence, and the latest GitHub source review.
+**Completion status:** source-level functionality is extensively implemented, and the owner has now confirmed a completed PayPal Sandbox payment visible in PayPal. **The artifact-level submission remains open:** fresh QA, public HTTP acceptance, independent webhook evidence, sanitized payment receipt, judge-access handoff, public video and Devpost submission must not be marked complete without their own proof. This checklist deliberately does not call the project 100% verified. See [secure judge access](JUDGE_ACCESS_PLAYBOOK.md) and [submission text](DEVPOST_FINAL_DRAFT.md).
 
-**Current change candidate:** authentication latency optimization on existing
-`perez` (batched DB throttle and reduced registration SQL roundtrips).
-Performance improvements are **source-implemented but NOT yet certified faster
-for actual public users**, pending a passing Preview regression build and
-browser latency measurements. `main` remains the known working release
-until separately reviewed.
+**Release baseline, 8 November:** `main` and `perez` were synchronized at `5dff11f`, and production plus Preview Vercel deployments were READY for that same SHA. New submission-document edits on `perez` require a fresh diff review, PR merge and deployment confirmation; READY is not equivalent to an external 7/7 probe.
 
 ## A. Fundamentals and eligibility
 
 - [x] **S01** — Project identity and buyer problem explained ([README](../README.md)).
-- [x] **S02** — PayPal Sandbox Orders v2 / webhook code implemented; **not** a live capture PASS.
+- [x] **S02** — PayPal Sandbox Orders v2 / webhook code implemented; the owner now reports a successfully completed Sandbox payment also visible in PayPal. Capture details and live webhook delivery are separately tracked under S23/S24.
 - [x] **S03** — Google ADK / Gemini source integration implemented; real hosted proof outstanding.
 - [x] **S04** — GitHub repository publicly accessible.
 - [x] **S05** — MIT `LICENSE` committed.
@@ -35,13 +24,11 @@ until separately reviewed.
 
 ## B. Release quality
 
-- [ ] **S09** — Reconfirm 9/9 for the CURRENT `perez` commit. Latest attached
-      report: 8/9, with Trust Lab and public legal-page Vitest timeouts.
-      Tests and worker scheduling were corrected, but not yet rerun locally.
+- [ ] **S09** — Reconfirm 9/9 for the CURRENT `perez` commit. An earlier 9/9 result was maintainer-reported for `d6e61cd`; it is not a new test run after PayPal capture-response changes or final presentation edits.
 - [x] **S10** — Judge README, flow diagrams, local preview and run instructions.
 - [ ] **S11** — Latest candidate passes clean-room 9/9, source/diff/secret review.
-- [ ] **S12** — User approves after online tests, then one `perez`→`main` PR/merge.
-- [ ] **S13** — Production and Preview deployed `fa5f321` and `main`/`perez` were synchronized after PR #55. Current auth-speed candidate is not yet approved/retested for production; the release gate remains open.
+- [ ] **S12** — Complete final source/document diff review, then PR from the existing `perez` branch into `main`; verify a merged result and no orphaned work. The owner authorized this final-readiness work.
+- [x] **S13** — As of the last deployment lookup on 8 Nov, production and Preview Vercel reported READY on `5dff11f` and `main`/`perez` matched. Recheck the next production deployment after final documentation and UI changes.
 
 ## C. Hosted Vercel + Neon
 
@@ -56,14 +43,14 @@ until separately reviewed.
 
 - [ ] **S20** — Buyer need → real offers → rules → stored fixed-price PO.
 - [ ] **S21** — Human approval/rejection audited; denied unauthorized reviewer.
-- [ ] **S22** — **Blocked by Sandbox identity confusion:** merchant API OAuth passed the real Preview probe, but PayPal refuses the checkout because the browser is signing in as the same Business Sandbox seller. Buyer must log out there and approve with a distinct Personal Sandbox account; no real buyer approval recorded yet.
-- [ ] **S23** — Explicit capture matches amount, currency, order and capture IDs.
+- [x] **S22** — Owner-confirmed PayPal Sandbox buyer approval and completed transaction visible in PayPal on 8 Nov, using the now-functioning buyer flow. The earlier Business-seller login blocker is resolved; archive a sanitized receipt for judges.
+- [ ] **S23** — Owner reports successful Sandbox transaction, and Orders v2 capture-response handling is implemented. Independently compare the saved PO with the actual provider order/capture ID, currency, amount and displayed paid status before checking this evidence gate.
 - [ ] **S24** — Signed webhook reaches public HTTPS; replays/mismatches rejected.
 - [ ] **S25** — Decision Passport and readable PDF reflect real evidence truthfully.
 
 ## E. Judge access and safety
 
-- [ ] **S26** — Judge follows instructions unaided in fresh clean browser.
+- [ ] **S26** — Judge follows [secure access guide](JUDGE_ACCESS_PLAYBOOK.md) unaided in a fresh clean browser, including a distinct dedicated Personal Sandbox buyer; keep test credentials out of the public repo.
 - [ ] **S27** — 375/768/1440px, keyboard, legible type and payment control QA.
 - [ ] **S28** — Expired JWT, empty/no stock, provider outage and PayPal cancel recovery.
 - [ ] **S29** — Provider keys rotated where needed; budgets, secrets, assets and Sandbox-only endpoints reviewed.
@@ -72,8 +59,8 @@ until separately reviewed.
 ## F. Submission package and confirmation
 
 - [ ] **S31** — Real browser screenshots of source, approval, capture, Passport.
-- [ ] **S32** — Public English YouTube footage of working app under 3 minutes.
-- [ ] **S33** — Complete accurate Devpost description.
+- [ ] **S32** — Public English YouTube footage of real working app under 3 minutes; use the [2:45 production script](DEVPOST_FINAL_DRAFT.md) and verify the YouTube URL and public visibility.
+- [x] **S33** — Accurate [Devpost text draft](DEVPOST_FINAL_DRAFT.md) prepared for review; actual insertion into Devpost is a separate S35 submission action.
 - [ ] **S34** — Precise tools/platform and genuine sponsor-category disclosure.
 - [ ] **S35** — Public repo, runnable demo access, video and required fields entered.
 - [ ] **S36** — Submitted Devpost entry confirmed before Nov 12 cutoff (not draft).
@@ -86,10 +73,10 @@ until separately reviewed.
 - [x] **Staging route acceptance** — Verified real FastAPI + Neon request processing, with stubbed third-party providers: pre-search 409, search success, saved-evidence analysis success, cached retry, no extra catalogue/model calls and zero retained test rows.
 - [x] **Read-only actual provider smoke** — Real Preview Channel3 priced offers, bounded ADK model-route output and PayPal Sandbox OAuth all passed; no payment created.
 - [x] **Live direct-Gemini validation** — Preview deployed READY with an actual ADK Gemini-only response; fallback explicitly disabled for the probe. No purchase/provider-write action.
-- [ ] **Sandbox buyer/capture/webhook proof** — Personal buyer must approve checkout independently of Business merchant; capture and signed webhook replay still require verified evidence.
+- [x] **Sandbox buyer milestone** — The owner reports the separate Personal Sandbox buyer checkout completed and the transaction appears inside PayPal. Independently archived capture attributes and signed webhook replay are still distinct open tasks.
 - [ ] **Actual judge-browser flow** — Capture and audit complete hosted search → model response → human approval → Sandbox capture, including current full test suite and mobile UX.
 
-See [search/AI and PayPal diagnosis](SEARCH_AI_PAYPAL_TRIAGE_2026-11-08.md). **The main S01–S36 count is 11/36** based on the separate, actual primary Gemini + Channel3 provider probes; paid capture and the judge demo remain unverified.
+See [search/AI and PayPal diagnosis](SEARCH_AI_PAYPAL_TRIAGE_2026-11-08.md) for the historical investigation. Earlier 11/36 totals and the seller-login blocker are superseded by the later owner-confirmed successful PayPal transaction; a revised all-gates count requires current independent evidence, not extrapolation.
 
 ## G. Authentication performance (not counted in S01–S36)
 
@@ -109,7 +96,7 @@ starts and frontend bundle loading. No unsupported percentage speed-up claim.
 
 ## H. Prize-focused readiness (not counted in S01–S36)
 
-- [ ] **W01** — Prove the entire legitimate PayPal Sandbox buyer approval, explicit capture and signed webhook flow; retain amount/currency/idempotency evidence.
+- [ ] **W01** — Archive the owner-confirmed PayPal Sandbox buyer transaction, match saved amount/currency/order/capture IDs and prove signed webhook delivery or explicitly leave that evidence unclaimed.
 - [ ] **W02** — Prove real Channel3 offers and one AI response with accurate provider attribution, constrained by buyer's deterministic policy.
 - [ ] **W03** — Capture one concrete, truthful impact example and one meaningful ineligible-offer rejection.
 - [ ] **W04** — Rehearse a judge-led 3-minute walkthrough with accessible text, no secret leakage, and no fabricated PayPal checkout.
@@ -124,13 +111,8 @@ From the project root on Windows:
 
 ```powershell
 .\test-all.bat
-.\backend\.venv\Scripts\python.exe .\qa\initialize_neon.py
 python .\qa\live_demo_check.py --frontend https://procurepilotai.vercel.app --api https://procurepilotai.vercel.app | Tee-Object -FilePath .\qa\reports\hosted.json
 .\backend\.venv\Scripts\python.exe .\qa\report_release.py
 ```
 
-**Warning:** Running the Neon initializer applies `alembic upgrade head`
-to the **selected** actual database, with the copied private Direct connection URL.
-Do not pass a production URL to a disposable test. The hosted probe is
-GET/OPTIONS only; it never tests payments. Read the
-[release playbook](RELEASE_READINESS.md) before execution.
+**Safety:** This final evidence sequence intentionally omits database initialization or migrations: a read-only acceptance audit must not mutate production data. The hosted probe uses GET/OPTIONS and cannot verify a real PayPal capture or signed webhook. Read the [release playbook](RELEASE_READINESS.md) for operational changes.

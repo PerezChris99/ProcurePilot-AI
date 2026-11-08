@@ -66,7 +66,7 @@ export default function DashboardPage(){
     <section className="panel trust-lab-cta" aria-label="Policy verification" style={{marginTop:16}}>
       <div className="panel-heading">
         <div><h3>Test our purchasing safeguards</h3>
-          <p>Run ten transparent, read-only policy checks. No payments or real provider calls.</p>
+          <p>Run transparent, read-only policy checks on synthetic offers. No payments or real provider calls.</p>
         </div>
         <Link to="/trust-lab" className="text-link">Open Decision Trust Lab
           <ShieldCheck size={15} aria-hidden="true"/></Link>

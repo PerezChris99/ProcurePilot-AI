@@ -4,9 +4,8 @@
 [Official rules](https://paypalaihackathon.devpost.com/rules) ·
 **Submission cutoff:** November 12, 2026, **12:00 PST / 23:00 EAT**.
 
-**Updated:** November 7, 2026. **State:** copy-ready draft; real hosted acceptance and payment proof outstanding.
-The entrant must verify the hosted URL, live transaction evidence, video and
-submission before replacing any `[REQUIRES VERIFICATION]` field. Never
+**Updated:** November 8, 2026. **State:** copy-ready submission narrative; owner has confirmed a real PayPal Sandbox transaction visible in PayPal, while fresh external QA, signed-webhook evidence, judge access details, public video and Devpost submission still require independent completion.
+The entrant must verify the hosted URL, archive sanitized transaction evidence, publish the authentic video and submit the final project before replacing any `[REQUIRES VERIFICATION]` field. Never
 invent a provider response, demonstration result, payment capture, sponsor use,
 user testimonial or savings percentage.
 
@@ -23,9 +22,12 @@ user testimonial or savings percentage.
 - **Code:** https://github.com/PerezChris99/ProcurePilot-AI
 - **License:** https://github.com/PerezChris99/ProcurePilot-AI/blob/main/LICENSE
   (GitHub detects MIT).
-- **Hosted application:** https://procurepilotai.vercel.app — public frontend verified; live API and database acceptance NOT YET VERIFIED (last reported 2/7).
+- **Hosted application:** https://procurepilotai.vercel.app — owner-confirmed hosted workflow and PayPal Sandbox transaction; the earlier 2/7 report predates the repaired release. Current 7/7 external probe is still pending.
 - **Public YouTube demo:** `[REQUIRES VERIFICATION — actual public video URL]`
 - **Judge access:** `[REQUIRES VERIFICATION — clear signup/test account route]`
+- **Judge testing instructions:** [Secure evaluation and buyer access](JUDGE_ACCESS_PLAYBOOK.md)
+- **Short ready-to-paste text:** [Final Devpost draft](DEVPOST_FINAL_DRAFT.md)
+- **Evidence map:** [Judging evidence](JUDGING_EVIDENCE_MATRIX.md)
 - **Offline source walkthrough:** [Judges start here](JUDGES_START_HERE.md)
 - **Repository execution and QA:** [README](../README.md), [QA](../qa/README.md)
 
@@ -102,9 +104,7 @@ ADK analyst with bounded fallback, authenticated buyer/approver workflows,
 Sandbox checkout/capture integrations, signed webhook handling, an auditable
 Decision Passport with PDF export and a nine-gate offline QA runner.
 The maintainer reported **9/9 offline gates passing on November 7,
-2026**, at commit `d6e61cd`; any subsequent candidate changes must be retested. Live hosted payments, public webhook delivery and judge access still
-require separate confirmation and should not be claimed as complete until
-actually recorded.
+2026**, at commit `d6e61cd`; subsequent changes require a fresh suite. On November 8 the owner reported a successful live **Sandbox** buyer transaction visible in PayPal. This confirms the owner's observed result, not independent capture-ID reconciliation or signed webhook delivery. Judge access, current 9/9 QA, the public 7/7 HTTPS check and an authentic video are still outstanding evidence gates.
 
 ### What we learned
 
@@ -174,10 +174,8 @@ technical explanation; never substitute it for actual working footage.
 - **Channel3**: actual product/offer retrieval and timestamped policy evidence.
 - FastAPI/Python, React/JSX/Vite, SQLAlchemy/Alembic/PostgreSQL, PDF exports.
 
-**Current hosting direction:** Vercel Services for React and FastAPI at
-https://procurepilotai.vercel.app; Neon PostgreSQL 17 is provisioned and its
-secret DATABASE_URL is configured. The hosting API and Neon migration are
-**not yet certified** (last 7-check probe was 2/7). This project is **not
+**Current hosting:** Vercel Services for React and FastAPI at
+https://procurepilotai.vercel.app; Neon PostgreSQL 17 schema checks have run, and production/Preview Vercel deployments were READY on commit `5dff11f` on 8 November. The owner reports a completed real Sandbox payment. A **new public 7-check HTTP probe and delivered signed-webhook proof are still required** for those distinct claims. The historical 2/7 result predates the repaired release and is obsolete. This project is **not
 hosted on Render** and does not claim eligibility for Render's sponsor prize.
 Neon-backed auth rate limits are available without a separate Redis account.
 
@@ -201,8 +199,7 @@ integration is the most defensible sponsor entry today.
 - [ ] Add **verified live HTTPS demo URL**, or fully reproducible external
       provider test access; do not insert a placeholder as a real URL.
 - [ ] Run real Channel3 + Google ADK provider smoke and full UI journey.
-- [ ] Run PayPal **Sandbox Personal buyer** approval and explicit capture; match
-      IDs, currency, amount and UI state.
+- [ ] Archive the owner-confirmed **Sandbox Personal buyer** transaction evidence and compare exact saved capture ID, currency, amount and UI state. The owner reports seeing the completed test transaction in PayPal on 8 November; do not mislabel it as an untested checkout blocker.
 - [ ] Test one signed HTTPS PayPal webhook (including duplicate delivery).
 - [ ] Confirm mobile/desktop usability, no console errors, CORS and resilience.
 - [ ] Capture screenshots and publish an authentic YouTube video **under 3:00**.
