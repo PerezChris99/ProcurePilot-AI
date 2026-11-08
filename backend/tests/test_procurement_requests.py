@@ -7,6 +7,15 @@ def auth_headers(client,email):
     response=client.post('/api/v1/auth/register',json={'email':email,'full_name':'Procurement User','password':'correct-horse-battery-staple'})
     return {'Authorization':'Bearer '+response.json()['access_token']}
 
+def discover_saved_products(client, request_id, headers):
+    response = client.post(
+        '/api/v1/procurement-requests/' + request_id + '/discover',
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    return response
+
+
 def test_request_is_persisted_and_scoped_to_authenticated_user(client):
     headers=auth_headers(client,'owner@example.com')
     created=client.post('/api/v1/procurement-requests',headers=headers,json={'request_text':'20 monitors with 27 inch displays','quantity':20,'budget':'5000.00','currency':'USD'})
@@ -65,7 +74,7 @@ def _fake_settings(*, per_user=12, global_runs=100):
     )
 
 
-def test_first_ai_analysis_discovers_once_uses_bounded_packet_and_caches_result(client,monkeypatch):
+def test_search_then_ai_analysis_uses_saved_snapshot_and_caches_result(client,monkeypatch):
     headers=auth_headers(client,'agent-owner@example.com')
     created=client.post('/api/v1/procurement-requests',headers=headers,json={
         'request_text':'Find 10 office chairs for employees','quantity':10,'currency':'USD'})
@@ -95,6 +104,7 @@ def test_first_ai_analysis_discovers_once_uses_bounded_packet_and_caches_result(
     monkeypatch.setattr(runtime,'run_evidence_analysis',fake_analysis)
     monkeypatch.setattr(procurement_api,'get_settings',lambda:_fake_settings())
 
+    discover_saved_products(client, request_id, headers)
     first=client.post('/api/v1/procurement-requests/'+request_id+'/analyze',headers=headers)
     assert first.status_code==200
     assert first.json()['cached'] is False
@@ -119,6 +129,7 @@ def test_empty_catalogue_has_usable_assessment_without_spending_tokens(client,mo
         raise AssertionError('Do not spend Gemini tokens for an empty catalogue')
     monkeypatch.setattr(Channel3Client,'search_products',no_products)
     monkeypatch.setattr(runtime,'run_evidence_analysis',should_not_run)
+    discover_saved_products(client, request_id, headers)
     response=client.post('/api/v1/procurement-requests/'+request_id+'/analyze',headers=headers)
     assert response.status_code==200
     assert response.json()['source']=='catalogue_only'
@@ -150,6 +161,8 @@ def test_per_user_ai_daily_limit_prevents_extra_model_calls(client,monkeypatch):
             'request_text':f'Office monitor purchase for room number {n}',
             'quantity':1,'currency':'USD'})
         ids.append(response.json()['id'])
+    for request_id in ids:
+        discover_saved_products(client, request_id, headers)
     first=client.post('/api/v1/procurement-requests/'+ids[0]+'/analyze',headers=headers)
     assert first.status_code==200
     second=client.post('/api/v1/procurement-requests/'+ids[1]+'/analyze',headers=headers)
@@ -182,6 +195,7 @@ def test_all_policy_blocked_offers_skip_gemini_and_save_zero_token_answer(client
     monkeypatch.setattr(runtime,'run_evidence_analysis',forbidden)
     monkeypatch.setattr(procurement_api,'get_settings',lambda:_fake_settings(per_user=1,global_runs=1))
 
+    discover_saved_products(client, request_id, headers)
     first=client.post(f'/api/v1/procurement-requests/{request_id}/analyze',headers=headers)
     assert first.status_code==200
     assert first.json()['source']=='catalogue_only'
@@ -223,6 +237,7 @@ def test_prompt_has_strict_char_budget_before_reserving_ai_call(client,monkeypat
         return SimpleNamespace(**{**vars(_fake_settings()),'ai_max_prompt_chars':1600,
                                   'ai_evidence_candidates':8})
     monkeypatch.setattr(procurement_api,'get_settings',compact_settings)
+    discover_saved_products(client, request_id, headers)
     response=client.post(f'/api/v1/procurement-requests/{request_id}/analyze',headers=headers)
     assert response.status_code==200
     assert len(calls)==1 and len(calls[0])<=1600
@@ -299,6 +314,7 @@ def test_real_api_ai_failover_records_groq_source_and_caches_answer(client,monke
         }
     monkeypatch.setattr(runtime,'_run',inference)
 
+    discover_saved_products(client, request_id, headers)
     response=client.post(f'/api/v1/procurement-requests/{request_id}/analyze',headers=headers)
     assert response.status_code==200
     assert response.json()['source']=='groq'
@@ -343,6 +359,7 @@ def test_real_api_ai_backup_refuses_when_daily_quota_has_one_slot(client,monkeyp
         calls.append(provider)
         raise runtime.AgentExecutionError('Google 503',category='provider_unavailable')
     monkeypatch.setattr(runtime,'_run',inference)
+    discover_saved_products(client, request_id, headers)
     response=client.post(f'/api/v1/procurement-requests/{request_id}/analyze',headers=headers)
     assert response.status_code==429
     assert response.headers.get('Retry-After')
@@ -352,7 +369,7 @@ def test_real_api_ai_backup_refuses_when_daily_quota_has_one_slot(client,monkeyp
     assert len(saved['analysis_json']['results'])==1
 
 
-def test_channel3_discovery_and_implicit_ai_discovery_close_read_transactions(client, monkeypatch):
+def test_explicit_discovery_only_releases_transactions_and_ai_does_not_search(client, monkeypatch):
     """Provider awaits must not outlive PostgreSQL's 15s idle transaction window."""
     releases = []
     original_release = procurement_api._release_db_for_provider_io
@@ -381,9 +398,19 @@ def test_channel3_discovery_and_implicit_ai_discovery_close_read_transactions(cl
 
     discovery = client.post('/api/v1/procurement-requests/' + ids[0] + '/discover',
                             headers=headers)
-    analysis = client.post('/api/v1/procurement-requests/' + ids[1] + '/analyze',
-                          headers=headers)
+    before_search = client.post(
+        '/api/v1/procurement-requests/' + ids[1] + '/analyze',
+        headers=headers,
+    )
     assert discovery.status_code == 200
+    assert before_search.status_code == 409
+    assert 'Search products first' in before_search.json()['detail']
+    assert releases == ids[:1]
+    discover_saved_products(client, ids[1], headers)
+    analysis = client.post(
+        '/api/v1/procurement-requests/' + ids[1] + '/analyze',
+        headers=headers,
+    )
     assert analysis.status_code == 200
     assert analysis.json()['source'] == 'catalogue_only'
     assert releases == ids
@@ -418,6 +445,7 @@ def test_all_transient_ai_failures_yield_honest_retryable_catalogue_summary(clie
     monkeypatch.setattr(runtime,'run_evidence_analysis',fail_once)
     monkeypatch.setattr(procurement_api,'get_settings',lambda:_fake_settings())
 
+    discover_saved_products(client, request_id, headers)
     first=client.post(f'/api/v1/procurement-requests/{request_id}/analyze',
                       headers=headers)
     assert first.status_code==200

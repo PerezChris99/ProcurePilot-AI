@@ -72,6 +72,13 @@ FAILURE_CODES = {
     'auth_regression_tests_auth': 74,
     'auth_regression_tests_rate_limits': 75,
     'auth_regression_tests_postgres_throttle': 76,
+    'staging_ai_prerequisite_failed': 78,
+    'staging_ai_discovery_failed': 79,
+    'staging_ai_analysis_failed': 80,
+    'staging_live_channel3_failed': 81,
+    'staging_live_ai_failed': 82,
+    'staging_live_paypal_oauth_failed': 83,
+    'staging_gemini_primary_failed': 84,
 }
 EXPECTED = {
     'production': (
@@ -303,6 +310,72 @@ def smoke_fastapi(environment: str) -> None:
                 })
             if request.status_code != 201:
                 raise ReleaseGateError('staging_request_creation_failed')
+            if os.environ.get('PROCUREPILOT_STAGING_AI_ROUTE_SMOKE') == '1':
+                # Mock ONLY the two external providers; keep the real
+                # authenticated FastAPI endpoints, policy, SQL and Neon rows.
+                # No Gemini charges, Channel3 quota or PayPal transactions.
+                from types import SimpleNamespace
+                from unittest.mock import patch
+                from app.agents import runtime
+                from app.api import procurement_requests as procurement_api
+                from app.integrations.channel3.client import Channel3Client
+                from app.integrations.channel3.schemas import (
+                    Channel3Offer, Channel3Price, Channel3Product, Channel3SearchResponse,
+                )
+                request_id = request.json()['id']
+                path = '/api/v1/procurement-requests/' + request_id
+                before = client.post(path + '/analyze', headers=headers)
+                if before.status_code != 409:
+                    raise ReleaseGateError('staging_ai_prerequisite_failed')
+                calls = {'catalogue': 0, 'model': 0}
+                async def stub_catalogue(self, query, **kwargs):
+                    calls['catalogue'] += 1
+                    return Channel3SearchResponse(products=[Channel3Product(
+                        id='staging-evidence-item',
+                        title='Staging API connectivity smoke test only',
+                        offers=[Channel3Offer(
+                            url='https://seller.example/staging-item',
+                            domain='seller.example', availability='InStock',
+                            price=Channel3Price(amount='20.00', currency='USD'),
+                        )],
+                    )])
+                async def stub_analysis(user_id, prompt, **kwargs):
+                    calls['model'] += 1
+                    return {
+                        'text': 'Saved staging offer qualifies under the test policy.',
+                        'model': 'test-provider', 'provider': 'gemini',
+                        'usage': {'input_tokens': 7, 'output_tokens': 8},
+                    }
+                mock_settings = SimpleNamespace(
+                    google_api_key='staging-mock-do-not-send',
+                    ai_fallback_enabled=False,
+                    ai_evidence_candidates=4,
+                    ai_max_prompt_chars=3600,
+                    ai_daily_user_runs=12,
+                    ai_daily_global_runs=100,
+                )
+                with (
+                    patch.object(Channel3Client, 'search_products', stub_catalogue),
+                    patch.object(runtime, 'run_evidence_analysis', stub_analysis),
+                    patch.object(procurement_api, 'reserve_ai_call',
+                                 lambda *_args, **_kw: None),
+                    patch.object(procurement_api, 'get_settings',
+                                 lambda: mock_settings),
+                ):
+                    discovery = client.post(path + '/discover', headers=headers)
+                    if discovery.status_code != 200:
+                        raise ReleaseGateError('staging_ai_discovery_failed')
+                    analysis = client.post(path + '/analyze', headers=headers)
+                    cached = client.post(path + '/analyze', headers=headers)
+                if (
+                    analysis.status_code != 200
+                    or analysis.json().get('source') != 'gemini'
+                    or cached.status_code != 200
+                    or cached.json().get('cached') is not True
+                    or calls != {'catalogue': 1, 'model': 1}
+                ):
+                    raise ReleaseGateError('staging_ai_analysis_failed')
+
         finally:
             event.remove(engine, 'before_cursor_execute', count_auth_upserts)
             if user_id:
@@ -314,6 +387,49 @@ def smoke_fastapi(environment: str) -> None:
                         db.commit()
                 except Exception as exc:
                     raise ReleaseGateError('staging_cleanup_failed') from exc
+
+
+def verify_preview_live_providers(environment: str) -> None:
+    """Optional one-shot read-only checks against real provider credentials.
+
+    No create order, capture, webhook, real user, or mutable remote operation.
+    Gemini may use at most the bounded primary + configured backups. The
+    provider_smoke report contains no secret values and is not printed here.
+    """
+    if (environment != 'preview' or
+            os.environ.get('PROCUREPILOT_STAGING_PROVIDER_SMOKE') != '1'):
+        return
+    import asyncio
+    from scripts.provider_smoke import run_checks
+
+    result = asyncio.run(run_checks(
+        'all', gemini_timeout_seconds=36, ai_route='auto',
+    ))
+    for key, error_code in (
+        ('channel3', 'staging_live_channel3_failed'),
+        ('gemini', 'staging_live_ai_failed'),
+        ('paypal', 'staging_live_paypal_oauth_failed'),
+    ):
+        if result.get('checks', {}).get(key, {}).get('status') != 'pass':
+            raise ReleaseGateError(error_code)
+    print('[release-db] PASS genuine Channel3, model analysis, PayPal Sandbox OAuth (read-only)')
+
+
+def verify_preview_primary_gemini(environment: str) -> None:
+    """One actual Google ADK Gemini call; do not count fallback success as Gemini."""
+    if (environment != 'preview' or
+            os.environ.get('PROCUREPILOT_STAGING_PRIMARY_GEMINI_SMOKE') != '1'):
+        return
+    import asyncio
+    from scripts.provider_smoke import run_checks
+    result = asyncio.run(run_checks(
+        'gemini', gemini_timeout_seconds=24, ai_route='gemini',
+    ))
+    details = result.get('checks', {}).get('gemini', {})
+    if details.get('status') != 'pass' or details.get('provider') != 'gemini':
+        raise ReleaseGateError('staging_gemini_primary_failed')
+    print('[release-db] PASS direct Google ADK Gemini response (no fallback)')
+
 
 
 def main() -> int:
@@ -342,6 +458,8 @@ def main() -> int:
                 raise ReleaseGateError('post_migration_db_connect_failed') from exc
         verify(revision, tables)
         smoke_fastapi(environment)
+        verify_preview_live_providers(environment)
+        verify_preview_primary_gemini(environment)
         print('[release-db] PASS FastAPI health/readiness/auth guards, Neon and Alembic 0010')
         return 0
     except ReleaseGateError as exc:

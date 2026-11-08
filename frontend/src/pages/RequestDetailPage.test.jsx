@@ -128,6 +128,72 @@ describe('RequestDetailPage - accountable product discovery',()=>{
 });
 
 
+describe('Separate catalogue search and AI analysis',()=>{
+  beforeEach(()=>apiRequest.mockReset());
+
+  it('requires explicit Channel3 discovery and never searches again when analyzing',async()=>{
+    let saved=requestFixture({source:'offline_demo',records:false});
+    apiRequest.mockImplementation(path=>{
+      if(path==='/procurement-requests/req-qa')return Promise.resolve(saved);
+      if(path==='/procurement-requests/req-qa/discover'){
+        saved=requestFixture();
+        return Promise.resolve(saved.analysis_json);
+      }
+      if(path==='/procurement-requests/req-qa/analyze')
+        return Promise.resolve({explanation:'Verified saved offers only',source:'gemini'});
+      return Promise.resolve({});
+    });
+    renderRequest();
+    expect(await screen.findByRole('button',{name:'Search products first'})).toBeDisabled();
+    expect(apiRequest.mock.calls.some(([path])=>path.endsWith('/analyze'))).toBe(false);
+    fireEvent.click(screen.getByRole('button',{name:/search channel3/i}));
+    await waitFor(()=>expect(apiRequest.mock.calls.some(([path])=>
+      path==='/procurement-requests/req-qa/discover')).toBe(true));
+    const ai=await screen.findByRole('button',{name:/ask ai to analyze/i});
+    expect(ai).toBeEnabled();
+    fireEvent.click(ai);
+    await waitFor(()=>expect(apiRequest.mock.calls.some(([path])=>
+      path==='/procurement-requests/req-qa/analyze')).toBe(true));
+    expect(apiRequest.mock.calls.filter(([path])=>
+      path==='/procurement-requests/req-qa/discover')).toHaveLength(1);
+  });
+
+  it('discards stale analysis text after refreshing saved catalogue results',async()=>{
+    let saved=requestFixture();
+    apiRequest.mockImplementation(path=>{
+      if(path==='/procurement-requests/req-qa')return Promise.resolve(saved);
+      if(path==='/procurement-requests/req-qa/analyze')
+        return Promise.resolve({explanation:'Prior model assessment',source:'gemini'});
+      if(path==='/procurement-requests/req-qa/discover'){
+        saved=requestFixture();
+        return Promise.resolve(saved.analysis_json);
+      }
+      return Promise.resolve({});
+    });
+    renderRequest();
+    fireEvent.click(await screen.findByRole('button',{name:/ask ai to analyze/i}));
+    expect(await screen.findByText('Prior model assessment')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button',{name:/refresh results/i}));
+    await waitFor(()=>expect(screen.queryByText('Prior model assessment')).not.toBeInTheDocument());
+    expect(screen.getByRole('button',{name:/ask ai to analyze/i})).toBeEnabled();
+  });
+
+  it('keeps saved products visible when only the AI service returns a failure',async()=>{
+    apiRequest.mockImplementation(path=>{
+      if(path==='/procurement-requests/req-qa')return Promise.resolve(requestFixture());
+      if(path==='/procurement-requests/req-qa/analyze')
+        return Promise.reject(new Error('The AI model provider is not configured'));
+      return Promise.resolve({});
+    });
+    renderRequest();
+    fireEvent.click(await screen.findByRole('button',{name:/ask ai to analyze/i}));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/saved catalogue offers remain available/i);
+    expect(screen.getByRole('heading',{name:'QA 27-inch monitor'})).toBeInTheDocument();
+    expect(screen.queryByText('Prior model assessment')).not.toBeInTheDocument();
+  });
+});
+
+
 describe('LiteLLM model source attribution',()=>{
   it('shows the provider used for a recovered model assessment',async()=>{
     apiRequest.mockResolvedValue({

@@ -245,6 +245,16 @@ async def analyze_request(
     _upgrade_legacy_snapshot(request, db)
     current = request.analysis_json or {}
 
+    # Discovery and analysis are separate, explicit user actions. The AI
+    # endpoint must NEVER call the catalogue provider or mutate a request
+    # merely because no search has occurred. This also avoids confusing
+    # users when two differently-labelled buttons appear to do the same thing.
+    if current.get('source') != 'Channel3':
+        raise HTTPException(
+            status_code=409,
+            detail='Search products first to save catalogue evidence, then ask AI to analyze it.',
+        )
+
     # Repeated clicks and refreshes must not spend another model call on the same
     # saved evidence. Refreshing Channel3 deliberately invalidates this cache.
     if current.get('ai_explanation') and not current.get('ai_retryable'):
@@ -254,19 +264,6 @@ async def analyze_request(
             'source': current.get('ai_source', 'gemini'),
             'usage': current.get('ai_usage'),
         }
-
-    # A first-time judge can press Ask AI without explicitly pressing Search.
-    # Discover once, save the deterministic result, then analyze only its summary.
-    if current.get('source') != 'Channel3':
-        user_id = user.id
-        _release_db_for_provider_io(db, request)
-        current = await _catalogue_snapshot(request, user_id)
-        request = _owned_request(request_id, user, db)
-        request.analysis_json = current
-        request.status = 'products_discovered'
-        db.add(request)
-        db.commit()
-        db.refresh(request)
 
     # A ranked product without any approved, confirmed in-stock offer is not
     # a payable recommendation. Deterministic policy explains this for zero
@@ -297,7 +294,18 @@ async def analyze_request(
             'cached': False, 'source': 'catalogue_only', 'usage': None,
         }
 
-    # The AI SDK is deliberately imported only on the analysis route. Health,\n    # registration, login, catalog search, and payments do not need ADK.\n    # A broken AI SDK must not prevent authentication API startup.\n    from app.agents import runtime\n    from app.agents.runtime import AgentConfigurationError, AgentExecutionError\n\n    settings = get_settings()
+    # Lazy AI import keeps login, catalogue search and payments independent
+    # from third-party model SDK startup.
+    try:
+        from app.agents import runtime
+        from app.agents.runtime import AgentConfigurationError, AgentExecutionError
+    except (ImportError, RuntimeError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail='AI analysis service is unavailable. Saved catalogue results are unaffected.',
+        ) from exc
+
+    settings = get_settings()
     if not settings.google_api_key and not runtime.configured_fallbacks(settings):
         raise HTTPException(
             status_code=503,

@@ -6,7 +6,7 @@
 · Repository: https://github.com/PerezChris99/ProcurePilot-AI
 · Hosted application: https://procurepilotai.vercel.app
 
-**Verified completion: 10/36 submission gates.**
+**Verified completion: 11/36 submission gates.**
 Checkboxes are binary: source-level implementation can satisfy a code gate,
 but cannot replace a live PayPal or Gemini acceptance, a browser audit,
 or the Devpost submission. Partial progress is explained below without checking
@@ -49,14 +49,14 @@ until separately reviewed.
 - [ ] **S15** — Production FastAPI build gate proves in-process `/api/v1/health` 200 and `/api/v1/ready` 200, and browser auth works. An independent PUBLIC HTTPS health 200 JSON check and runtime log review are still missing.
 - [x] **S16** — **Production Neon schema and connection verified by the backend Vercel build gate**: correct production host/role, Alembic `0010_auth_throttles`, all 11 tables, and in-process FastAPI readiness 200. Staging Neon is separately migrated to 0010; the Vercel Preview passed real SQL-backed registration/login/JWT/procurement creation. This is not a 7/7 public HTTP result.
 - [ ] **S17** — Latest production 7/7 *public HTTP* probe is still missing. The old 2/7 result predated the now-working Vercel/Neon release, so it is obsolete. Rerun `qa/live_demo_check.py` from a machine with network access; Preview may require Vercel authentication.
-- [ ] **S18** — Actual hosted Channel3 search and Gemini/ADK response.
+- [x] **S18** — **Real provider connectivity proven in Vercel Preview:** Channel3 returned priced products, the bounded automatic ADK model route responded, and a separate exact-primary **Gemini-only ADK** probe passed without fallback. This is read-only provider acceptance; the full browser purchasing journey is a separate gate.
 - [ ] **S19** — **Partially achieved:** owner confirmed fresh hosted registration, login and procurement creation on 8 Nov. Still requires explicit expired-session testing, two-account data isolation, logout and device refresh acceptance.
 
 ## D. Real PayPal Sandbox and evidence
 
 - [ ] **S20** — Buyer need → real offers → rules → stored fixed-price PO.
 - [ ] **S21** — Human approval/rejection audited; denied unauthorized reviewer.
-- [ ] **S22** — Distinct Business Sandbox seller + Personal buyer complete approval.
+- [ ] **S22** — **Blocked by Sandbox identity confusion:** merchant API OAuth passed the real Preview probe, but PayPal refuses the checkout because the browser is signing in as the same Business Sandbox seller. Buyer must log out there and approve with a distinct Personal Sandbox account; no real buyer approval recorded yet.
 - [ ] **S23** — Explicit capture matches amount, currency, order and capture IDs.
 - [ ] **S24** — Signed webhook reaches public HTTPS; replays/mismatches rejected.
 - [ ] **S25** — Decision Passport and readable PDF reflect real evidence truthfully.
@@ -77,6 +77,19 @@ until separately reviewed.
 - [ ] **S34** — Precise tools/platform and genuine sponsor-category disclosure.
 - [ ] **S35** — Public repo, runnable demo access, video and required fields entered.
 - [ ] **S36** — Submitted Devpost entry confirmed before Nov 12 cutoff (not draft).
+
+## Provider and checkout diagnosis (8 Nov)
+
+- [x] **AI source-level root cause** — Repaired literal `\\n` sequences in the Python lazy runtime import/assignment block that caused HTTP 500 on eligible-offer analyses.
+- [x] **Separate backend action semantics** — `/discover` only fetches/ranks/saves Channel3, while `/analyze` requires saved Channel3 evidence (409 otherwise) and does not search again.
+- [x] **UI evidence labeling** — Search is a prerequisite to AI; old AI assessments are cleared after refreshing products and model outages are not mistaken for a successful model response.
+- [x] **Staging route acceptance** — Verified real FastAPI + Neon request processing, with stubbed third-party providers: pre-search 409, search success, saved-evidence analysis success, cached retry, no extra catalogue/model calls and zero retained test rows.
+- [x] **Read-only actual provider smoke** — Real Preview Channel3 priced offers, bounded ADK model-route output and PayPal Sandbox OAuth all passed; no payment created.
+- [x] **Live direct-Gemini validation** — Preview deployed READY with an actual ADK Gemini-only response; fallback explicitly disabled for the probe. No purchase/provider-write action.
+- [ ] **Sandbox buyer/capture/webhook proof** — Personal buyer must approve checkout independently of Business merchant; capture and signed webhook replay still require verified evidence.
+- [ ] **Actual judge-browser flow** — Capture and audit complete hosted search → model response → human approval → Sandbox capture, including current full test suite and mobile UX.
+
+See [search/AI and PayPal diagnosis](SEARCH_AI_PAYPAL_TRIAGE_2026-11-08.md). **The main S01–S36 count is 11/36** based on the separate, actual primary Gemini + Channel3 provider probes; paid capture and the judge demo remain unverified.
 
 ## G. Authentication performance (not counted in S01–S36)
 

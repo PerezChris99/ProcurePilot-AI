@@ -51,6 +51,21 @@ describe('OrdersPage',()=>{
     }));
   });
 
+  it('clearly distinguishes merchant seller from Personal Sandbox buyer at checkout',async()=>{
+    apiRequest.mockResolvedValue([{
+      ...pendingOrder,status:'approved',
+    }]);
+    renderPage();
+    expect(await screen.findByRole('note',{name:'PayPal Sandbox buyer and seller accounts'}))
+      .toHaveTextContent(/Sandbox Business seller account/i);
+    expect(screen.getByRole('note',{name:'PayPal Sandbox buyer and seller accounts'}))
+      .toHaveTextContent(/Personal buyer account/i);
+    expect(screen.getByRole('link',{name:'Find Sandbox test accounts'}))
+      .toHaveAttribute('href','https://developer.paypal.com/dashboard/accounts');
+    expect(screen.queryByRole('button',{name:/confirm buyer approval & capture/i}))
+      .not.toBeInTheDocument();
+  });
+
   it('does not expose capture before the buyer returns from PayPal',async()=>{
     apiRequest.mockResolvedValue([{
       ...pendingOrder,status:'payment_pending',
