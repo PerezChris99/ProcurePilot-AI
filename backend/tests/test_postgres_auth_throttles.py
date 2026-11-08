@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -88,3 +88,42 @@ def test_missing_migration_fails_closed(monkeypatch):
         postgres_throttle.enforce_postgres_throttle([('hashed-source', 120)])
     assert exc.value.status_code == 503
     engine.dispose()
+
+
+def test_source_and_identity_throttle_use_single_sql_write_per_attempt(shared_limiter_db):
+    """Two independent safeguards, one remote DB UPSERT round-trip."""
+    inserts = []
+    def track(_conn, _cursor, statement, _params, _context, _many):
+        if 'INSERT INTO auth_rate_limit_counters' in statement:
+            inserts.append(statement)
+
+    event.listen(shared_limiter_db, 'before_cursor_execute', track)
+    try:
+        for _ in range(3):
+            postgres_throttle.enforce_postgres_throttle([
+                ('hmac-source', 120),
+                ('hmac-identity', 8),
+            ])
+        assert len(inserts) == 3
+        assert all('ON CONFLICT' in sql.upper() for sql in inserts)
+        assert all(sql.count('?') >= 6 for sql in inserts)  # both VALUES rows
+        with postgres_throttle.SessionLocal() as session:
+            records = session.scalars(select(AuthRateLimitCounter)).all()
+            assert len(records) == 2
+            assert {record.hits for record in records} == {3}
+    finally:
+        event.remove(shared_limiter_db, 'before_cursor_execute', track)
+
+
+def test_denied_identity_remains_counted_without_disabling_source_guard(shared_limiter_db):
+    buckets = [('hmac-source', 120), ('hmac-identity', 1)]
+    postgres_throttle.enforce_postgres_throttle(buckets)
+    for count in (2, 3):
+        with pytest.raises(HTTPException) as denied:
+            postgres_throttle.enforce_postgres_throttle(buckets)
+        assert denied.value.status_code == 429
+        assert int(denied.value.headers['Retry-After']) > 0
+        with postgres_throttle.SessionLocal() as session:
+            rows = {item.bucket_key: item.hits for item in
+                    session.scalars(select(AuthRateLimitCounter))}
+        assert rows == {'hmac-source': count, 'hmac-identity': count}
