@@ -60,6 +60,10 @@ def test_integration_status_reports_configured_providers_without_secrets(
     assert payload["paypal"]["credentials_configured"] is True
     assert payload["paypal"]["webhook_configured"] is True
     assert payload["paypal"]["environment"] == "sandbox"
+    assert payload["paypal"]["webhook_id_hint"] is None  # non-PayPal fixture ID
+    assert payload["paypal"]["webhook_url_configured"] is False
+    assert payload["paypal"]["webhook_last_verified_at"] is None
+    assert payload["paypal"]["merchant_checkout_verified"] is False
 
     for secret in (
         "private-gemini-key",
@@ -167,3 +171,59 @@ def test_backup_only_ai_status_is_configured_without_exposing_provider_keys(clie
     assert ai['provider_checks']=='configuration_only'
     assert 'private-groq-key' not in response.text
     assert 'private-openrouter-key' not in response.text
+
+
+def test_paypal_status_uses_real_settings_and_masked_id_without_leaking_secret(client,monkeypatch):
+    from app.models import WebhookEvent, Payment
+    from app.core.database import SessionLocal
+    from datetime import datetime,timezone
+    webhook_id="8WG66389BF802771C"
+    monkeypatch.setattr(integrations,"get_settings",lambda:SimpleNamespace(
+        app_env="production",
+        google_api_key=None,ai_model="gemini-3.5-flash-lite",
+        channel3_api_key=None,channel3_base_url=None,
+        paypal_client_id="private-business-id",
+        paypal_client_secret="private-merchant-secret",
+        paypal_webhook_id=webhook_id,
+        paypal_webhook_url="https://procurepilotai.vercel.app/api/v1/webhooks/paypal",
+        paypal_base_url="https://api-m.sandbox.paypal.com",
+    ))
+    with SessionLocal() as session:
+        session.add(WebhookEvent(
+            provider_event_id="WH-STATUS-REAL-001",
+            event_type="CHECKOUT.ORDER.APPROVED",verified=True,payload={},
+            processed_at=datetime(2026,11,8,14,0,0,tzinfo=timezone.utc),
+        ))
+        session.commit()
+    response=client.get("/api/v1/integrations/status",headers=_register(client,email="live-status@example.com"))
+    assert response.status_code==200
+    paypal=response.json()["paypal"]
+    assert paypal["webhook_configured"] is True
+    assert paypal["webhook_id_valid"] is True
+    assert paypal["webhook_id_hint"]=="••••771C"
+    assert paypal["webhook_url_configured"] is True
+    assert paypal["webhook_callback_url"]=="https://procurepilotai.vercel.app/api/v1/webhooks/paypal"
+    assert paypal["webhook_last_verified_at"] is not None
+    assert paypal["merchant_checkout_verified"] is False
+    assert webhook_id not in response.text
+    assert "private-merchant-secret" not in response.text
+    assert "private-business-id" not in response.text
+
+
+def test_paypal_status_never_equates_credentials_or_webhook_env_to_successful_checkout(client,monkeypatch):
+    monkeypatch.setattr(integrations,"get_settings",lambda:SimpleNamespace(
+        app_env="production",
+        google_api_key=None,ai_model=None,channel3_api_key=None,channel3_base_url=None,
+        paypal_client_id="merchant-id",paypal_client_secret="merchant-secret",
+        paypal_webhook_id="1FD22569JY512342V",
+        paypal_webhook_url="https://procurepilotai.vercel.app/api/v1/webhooks/paypal",
+        paypal_base_url="https://api-m.sandbox.paypal.com",
+    ))
+    response=client.get("/api/v1/integrations/status",headers=_register(client,email="merchant-status@example.com"))
+    assert response.status_code==200
+    paypal=response.json()["paypal"]
+    assert paypal["credentials_configured"] is True
+    assert paypal["webhook_configured"] is True
+    assert paypal["webhook_id_valid"] is True
+    assert paypal["merchant_checkout_verified"] is False
+    assert paypal["webhook_last_verified_at"] is None
