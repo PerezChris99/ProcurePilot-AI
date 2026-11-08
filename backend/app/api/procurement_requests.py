@@ -245,16 +245,6 @@ async def analyze_request(
     _upgrade_legacy_snapshot(request, db)
     current = request.analysis_json or {}
 
-    # Repeated clicks and refreshes must not spend another model call on the same
-    # saved evidence. Refreshing Channel3 deliberately invalidates this cache.
-    if current.get('ai_explanation') and not current.get('ai_retryable'):
-        return {
-            'request_id': request.id, 'explanation': current['ai_explanation'],
-            'status': request.status, 'cached': True,
-            'source': current.get('ai_source', 'gemini'),
-            'usage': current.get('ai_usage'),
-        }
-
     # Discovery and analysis are separate, explicit user actions. The AI
     # endpoint must NEVER call the catalogue provider or mutate a request
     # merely because no search has occurred. This also avoids confusing
@@ -264,6 +254,16 @@ async def analyze_request(
             status_code=409,
             detail='Search products first to save catalogue evidence, then ask AI to analyze it.',
         )
+
+    # Repeated clicks and refreshes must not spend another model call on the same
+    # saved evidence. Refreshing Channel3 deliberately invalidates this cache.
+    if current.get('ai_explanation') and not current.get('ai_retryable'):
+        return {
+            'request_id': request.id, 'explanation': current['ai_explanation'],
+            'status': request.status, 'cached': True,
+            'source': current.get('ai_source', 'gemini'),
+            'usage': current.get('ai_usage'),
+        }
 
     # A ranked product without any approved, confirmed in-stock offer is not
     # a payable recommendation. Deterministic policy explains this for zero
