@@ -491,8 +491,23 @@ async def capture_paypal_order(order_id:str,db:Session=Depends(get_db),user:User
         client=PayPalClient()
         client.ensure_configured()
         remote=await client.get_order(paypal_order_id)
-        if not _paypal_order_matches(remote,order,payment): raise HTTPException(status_code=409,detail='PayPal order details do not match the approved purchase order.')
-        result=await client.capture_order(paypal_order_id,hashlib.sha256(('capture:'+payment.idempotency_key).encode()).hexdigest()[:32]) if remote.get('status')=='APPROVED' else remote
+        if remote.get('status')=='COMPLETED':
+            # Recovery after a past POST /capture succeeded at PayPal but
+            # the former strict response matcher returned a local 502.
+            # A completed GET may also omit original purchase-unit metadata.
+            # The saved provider order ID, merchant binding, exact completed
+            # capture amount and currency must all match; NO SECOND POST.
+            if _paypal_completed_capture(remote,order,payment) is None:
+                raise HTTPException(status_code=409,detail='This PayPal order reports completed but its capture evidence does not match the approved purchase order. Do not create another payment.')
+            result=remote
+        else:
+            if not _paypal_order_matches(remote,order,payment):
+                raise HTTPException(status_code=409,detail='PayPal order details do not match the approved purchase order.')
+            # APPROVED is the only status allowed to initiate capture.
+            result=await client.capture_order(
+                paypal_order_id,
+                hashlib.sha256(('capture:'+payment.idempotency_key).encode()).hexdigest()[:32],
+            )
     except (PayPalConfigurationError,PayPalUnavailable) as exc:
         raise HTTPException(status_code=503 if isinstance(exc,PayPalConfigurationError) else 502,detail='PayPal could not verify or capture this order.') from exc
     # The Orders v2 POST capture response is *not* a repeat of GET order:
@@ -515,8 +530,6 @@ async def capture_paypal_order(order_id:str,db:Session=Depends(get_db),user:User
                 confirmation=await client.get_order(paypal_order_id)
             except (PayPalConfigurationError,PayPalUnavailable) as exc:
                 raise HTTPException(status_code=502,detail='PayPal capture may have succeeded but confirmation is unavailable. Retry confirmation on this same purchase order, not a new payment.') from exc
-            if not _paypal_order_matches(confirmation,order,payment):
-                raise HTTPException(status_code=502,detail='PayPal confirmation does not match the original approved purchase order.')
             capture=_paypal_completed_capture(confirmation,order,payment)
             if capture is None:
                 raise HTTPException(status_code=409,detail='PayPal has not returned a verified completed capture. This purchase order remains pending; check the provider order before retrying.')
