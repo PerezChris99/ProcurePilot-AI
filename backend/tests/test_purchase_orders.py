@@ -771,3 +771,25 @@ def test_completed_remote_get_with_wrong_capture_amount_must_not_mark_paid(clien
     assert result.status_code==409,result.text
     assert calls['post']==0
     assert client.get(path,headers=owner).json()['status']=='payment_pending'
+
+
+def test_paypal_pending_capture_preserves_merchant_fingerprint_for_safe_reconciliation(client,monkeypatch):
+    from app.api import purchase_orders
+    owner,order=approved_order(client,monkeypatch,'pending-capture-fingerprint@example.com')
+    fake_paypal(monkeypatch,order['id'])
+    async def nonfinal(self,order_id,key):
+        return {'id':order_id,'status':'PENDING',
+                'purchase_units':[{'payments':{'captures':[{
+                    'id':'PENDING-CAPTURE-001','status':'PENDING',
+                    'amount':{'currency_code':'USD','value':'240.00'},
+                }]}}]}
+    monkeypatch.setattr(PayPalClient,'capture_order',nonfinal)
+    path=f"/api/v1/purchase-orders/{order['id']}"
+    assert client.post(path+'/payments/paypal/create',headers=owner).status_code==200
+    result=client.post(path+'/payments/paypal/capture',headers=owner)
+    assert result.status_code==409
+    saved=client.get(path,headers=owner).json()
+    assert saved['status']=='payment_pending'
+    assert saved['payment']['status']=='pending'
+    assert saved['payment']['checkout_merchant_current'] is True
+    assert saved['payment']['capture_id'] is None
