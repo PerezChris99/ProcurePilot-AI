@@ -573,3 +573,146 @@ def test_unbound_legacy_checkout_is_not_reopened_after_merchant_rotation(monkeyp
     assert data['checkout_merchant_current'] is False
     assert data['approval_url'] is None
     assert data['paypal_order_id']=='OLD-MERCHANT-ORDER'
+
+
+def test_paypal_documented_capture_response_without_original_order_fields_succeeds(client,monkeypatch):
+    """PayPal POST /capture returns captures but may omit original custom_id and amount."""
+    owner,order=approved_order(client,monkeypatch,'paypal-documented-capture@example.com')
+    fake_paypal(monkeypatch,order['id'])
+    captured_calls=[]
+    async def documented_capture(self,order_id,idempotency_key):
+        captured_calls.append((order_id,idempotency_key))
+        return {
+            'id':order_id,'status':'COMPLETED',
+            'purchase_units':[{
+                'reference_id':order['po_number'],
+                'payments':{'captures':[{
+                    'id':'DOCUMENTED-CAPTURE-001','status':'COMPLETED',
+                    'amount':{'currency_code':'USD','value':'240.00'},
+                }]}
+            }],
+        }
+    monkeypatch.setattr(PayPalClient,'capture_order',documented_capture)
+    path=f"/api/v1/purchase-orders/{order['id']}"
+    assert client.post(path+'/payments/paypal/create',headers=owner).status_code==200
+    response=client.post(path+'/payments/paypal/capture',headers=owner)
+    assert response.status_code==200,response.text
+    assert response.json()['status']=='paid'
+    assert response.json()['payment']['status']=='completed'
+    assert response.json()['payment']['capture_id']=='DOCUMENTED-CAPTURE-001'
+    assert len(captured_calls)==1
+    replay=client.post(path+'/payments/paypal/capture',headers=owner)
+    assert replay.status_code==200
+    assert replay.json()['payment']['capture_id']=='DOCUMENTED-CAPTURE-001'
+    assert len(captured_calls)==1
+
+
+def test_paypal_capture_reconciles_sparsely_returned_completed_result_using_get_only(client,monkeypatch):
+    owner,order=approved_order(client,monkeypatch,'capture-reconcile@example.com')
+    fake_paypal(monkeypatch,order['id'])
+    state={'capture':0,'get':0}
+    async def get_order(self,order_id):
+        state['get']+=1
+        payload={'id':order_id,'status':'APPROVED',
+                 'purchase_units':[{'custom_id':order['id'],
+                                    'amount':{'currency_code':'USD','value':'240.00'}}]}
+        if state['capture']:
+            payload['status']='COMPLETED'
+            payload['purchase_units'][0]['payments']={'captures':[{
+                'id':'RECONCILED-CAPTURE-001','status':'COMPLETED',
+                'amount':{'currency_code':'USD','value':'240.00'}}]}
+        return payload
+    async def incomplete_post(self,order_id,key):
+        state['capture']+=1
+        return {'id':order_id,'status':'COMPLETED',
+                'purchase_units':[{'reference_id':order['po_number'],'payments':{}}]}
+    monkeypatch.setattr(PayPalClient,'get_order',get_order)
+    monkeypatch.setattr(PayPalClient,'capture_order',incomplete_post)
+    path=f"/api/v1/purchase-orders/{order['id']}"
+    assert client.post(path+'/payments/paypal/create',headers=owner).status_code==200
+    result=client.post(path+'/payments/paypal/capture',headers=owner)
+    assert result.status_code==200,result.text
+    assert result.json()['status']=='paid'
+    assert result.json()['payment']['capture_id']=='RECONCILED-CAPTURE-001'
+    assert state=={'capture':1,'get':2}
+
+
+def test_retry_after_provider_has_captured_only_reads_completed_order_no_repeat_capture(client,monkeypatch):
+    """Recover from the prior production 502 without another money movement."""
+    owner,order=approved_order(client,monkeypatch,'already-captured-sandbox@example.com')
+    fake_paypal(monkeypatch,order['id'])
+    state={'get':0,'capture':0}
+    async def completed_remote(self,order_id):
+        state['get']+=1
+        return {'id':order_id,'status':'COMPLETED',
+                'purchase_units':[{'custom_id':order['id'],
+                                   'amount':{'currency_code':'USD','value':'240.00'},
+                                   'payments':{'captures':[{
+                                       'id':'ALREADY-CAPTURED-001','status':'COMPLETED',
+                                       'amount':{'currency_code':'USD','value':'240.00'},
+                                   }]}}]}
+    async def should_never_capture(self,*_args,**_kwargs):
+        state['capture']+=1
+        raise AssertionError('Already completed provider payment must not be captured again')
+    monkeypatch.setattr(PayPalClient,'get_order',completed_remote)
+    monkeypatch.setattr(PayPalClient,'capture_order',should_never_capture)
+    path=f"/api/v1/purchase-orders/{order['id']}"
+    assert client.post(path+'/payments/paypal/create',headers=owner).status_code==200
+    result=client.post(path+'/payments/paypal/capture',headers=owner)
+    assert result.status_code==200,result.text
+    assert result.json()['status']=='paid'
+    assert result.json()['payment']['capture_id']=='ALREADY-CAPTURED-001'
+    assert state=={'get':1,'capture':0}
+    assert client.post(path+'/payments/paypal/capture',headers=owner).status_code==200
+    assert state=={'get':1,'capture':0}
+
+
+@pytest.mark.parametrize('variation',[
+    'wrong_amount','wrong_currency','wrong_order_id','wrong_custom_id',
+    'duplicate_captures','non_finite_amount',
+])
+def test_paypal_capture_evidence_mismatch_fails_closed_without_marking_paid(client,monkeypatch,variation):
+    owner,order=approved_order(client,monkeypatch,'capture-invalid-'+variation+'@example.com')
+    fake_paypal(monkeypatch,order['id'])
+    async def unsafe_capture(self,order_id,key):
+        capture={'id':'MISMATCHED-CAPTURE-001','status':'COMPLETED',
+                 'amount':{'currency_code':'USD','value':'240.00'}}
+        unit={'reference_id':order['po_number'],'payments':{'captures':[capture]}}
+        response={'id':order_id,'status':'COMPLETED','purchase_units':[unit]}
+        if variation=='wrong_amount': capture['amount']['value']='100.00'
+        if variation=='wrong_currency': capture['amount']['currency_code']='EUR'
+        if variation=='wrong_order_id': response['id']='OTHER-ORDER-DO-NOT-TRUST'
+        if variation=='wrong_custom_id': unit['custom_id']='another-procurement-id'
+        if variation=='duplicate_captures': unit['payments']['captures'].append(capture.copy())
+        if variation=='non_finite_amount': capture['amount']['value']='NaN'
+        return response
+    monkeypatch.setattr(PayPalClient,'capture_order',unsafe_capture)
+    path=f"/api/v1/purchase-orders/{order['id']}"
+    assert client.post(path+'/payments/paypal/create',headers=owner).status_code==200
+    result=client.post(path+'/payments/paypal/capture',headers=owner)
+    assert result.status_code in (409,502),result.text
+    saved=client.get(path,headers=owner).json()
+    assert saved['status']=='payment_pending'
+    assert saved['payment']['status']!='completed'
+    assert saved['payment']['capture_id'] is None
+    assert not any(e['action']=='payment.paypal_capture_completed' for e in saved['audit_events'])
+
+
+def test_paypal_order_identity_and_amount_are_verified_before_capture(client,monkeypatch):
+    owner,order=approved_order(client,monkeypatch,'pre-capture-identity@example.com')
+    fake_paypal(monkeypatch,order['id'])
+    state={'captured':0}
+    async def untrusted_remote(self,order_id):
+        return {'id':order_id,'status':'APPROVED',
+                'purchase_units':[{'custom_id':'another-purchase-order',
+                                   'amount':{'currency_code':'USD','value':'240.00'}}]}
+    async def do_not_capture(self,*args,**kwargs):
+        state['captured']+=1
+        return {}
+    monkeypatch.setattr(PayPalClient,'get_order',untrusted_remote)
+    monkeypatch.setattr(PayPalClient,'capture_order',do_not_capture)
+    path=f"/api/v1/purchase-orders/{order['id']}"
+    assert client.post(path+'/payments/paypal/create',headers=owner).status_code==200
+    result=client.post(path+'/payments/paypal/capture',headers=owner)
+    assert result.status_code==409
+    assert state['captured']==0
