@@ -67,6 +67,10 @@ FAILURE_CODES = {
     'staging_request_creation_failed': 68,
     'staging_cleanup_failed': 69,
     'auth_regression_failed': 72,
+    'auth_regression_missing_pytest': 73,
+    'auth_regression_tests_auth': 74,
+    'auth_regression_tests_rate_limits': 75,
+    'auth_regression_tests_postgres_throttle': 76,
 }
 EXPECTED = {
     'production': (
@@ -312,18 +316,24 @@ def run_preview_auth_regressions(environment: str) -> None:
     env['APP_ENV'] = 'test'
     env['DATABASE_URL'] = 'sqlite://'
     env.pop('RATE_LIMIT_REDIS_URL', None)
-    try:
-        result = subprocess.run([
-            sys.executable, '-m', 'pytest', '-q',
-            'tests/test_auth.py',
-            'tests/test_auth_rate_limits.py',
-            'tests/test_postgres_auth_throttles.py',
-        ], cwd=BACKEND, env=env, capture_output=True, text=True,
-            timeout=180, check=False)
-    except (OSError, TimeoutError, subprocess.TimeoutExpired) as exc:
-        raise ReleaseGateError('auth_regression_failed') from exc
-    if result.returncode != 0:
-        raise ReleaseGateError('auth_regression_failed')
+    groups = (
+        ('tests/test_auth.py', 'auth_regression_tests_auth'),
+        ('tests/test_auth_rate_limits.py', 'auth_regression_tests_rate_limits'),
+        ('tests/test_postgres_auth_throttles.py', 'auth_regression_tests_postgres_throttle'),
+    )
+    for test_file, category in groups:
+        try:
+            result = subprocess.run([
+                sys.executable, '-m', 'pytest', '-q', test_file,
+            ], cwd=BACKEND, env=env, capture_output=True, text=True,
+                timeout=180, check=False)
+        except (OSError, TimeoutError, subprocess.TimeoutExpired) as exc:
+            raise ReleaseGateError(category) from exc
+        if result.returncode != 0:
+            combined = (result.stdout + '\n' + result.stderr).lower()
+            if 'no module named pytest' in combined:
+                raise ReleaseGateError('auth_regression_missing_pytest')
+            raise ReleaseGateError(category)
     print('[release-db] PASS Preview isolated authentication and limiter regressions')
 
 
