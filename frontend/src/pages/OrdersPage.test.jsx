@@ -79,6 +79,26 @@ describe('OrdersPage',()=>{
     expect(screen.getByRole('link',{name:/Open PayPal in new tab/i})).toBeInTheDocument();
   });
 
+  it('suppresses old merchant approval URL and capture after seller credentials change',async()=>{
+    apiRequest.mockResolvedValue([{
+      ...pendingOrder,status:'payment_pending',
+      request_id:'request-1',
+      payment:{
+        status:'buyer_approved',
+        paypal_order_id:'8GD1081877280761G',
+        approval_url:null,
+        checkout_merchant_current:false,
+      },
+    }]);
+    renderPage('/orders');
+    const warning=await screen.findByText(/created under a previous Business Sandbox merchant/i);
+    expect(warning).toBeInTheDocument();
+    expect(screen.getByRole('link',{name:/refresh product discovery and create a new purchase order/i}))
+      .toHaveAttribute('href','/requests/request-1');
+    expect(screen.queryByRole('link',{name:/open PayPal in new tab/i})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:/confirm buyer approval & capture/i})).not.toBeInTheDocument();
+  });
+
   it('does not expose capture before the buyer returns from PayPal',async()=>{
     apiRequest.mockResolvedValue([{
       ...pendingOrder,status:'payment_pending',

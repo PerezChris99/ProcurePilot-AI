@@ -505,3 +505,71 @@ def test_checkout_approval_url_is_sandbox_only_and_cannot_target_live_paypal():
         'javascript:alert(1)',
     ):
         assert not PayPalClient.is_approval_url(malicious)
+
+
+def test_merchant_rotation_never_replays_or_captures_previous_seller_order(client,monkeypatch):
+    """Merchant credentials rotated after order creation: never reuse the old token."""
+    from app.api import purchase_orders
+    headers,order=approved_order(client,monkeypatch,'rotated-seller@example.com')
+    fake_paypal(monkeypatch,order['id'])
+    merchant={'id':'us-business-seller-A'}
+    actual_init=PayPalClient.__init__
+    actual_settings=purchase_orders.get_settings
+    def init(self,transport=None):
+        actual_init(self,transport)
+        self.client_id=merchant['id']
+    monkeypatch.setattr(PayPalClient,'__init__',init)
+    monkeypatch.setattr(purchase_orders,'get_settings',lambda:SimpleNamespace(
+        frontend_url=actual_settings().frontend_url,
+        paypal_client_id=merchant['id'],
+    ))
+    new_calls=[]
+    async def create_once(self,**kwargs):
+        new_calls.append(kwargs['idempotency_key'])
+        return {'id':'OLD-SELLER-PAYPAL-ORDER',
+                'status':'PAYER_ACTION_REQUIRED',
+                'links':[{'rel':'approve','href':'https://www.sandbox.paypal.com/checkoutnow?token=OLD-SELLER-PAYPAL-ORDER'}]}
+    monkeypatch.setattr(PayPalClient,'create_order',create_once)
+    path=f"/api/v1/purchase-orders/{order['id']}"
+    first=client.post(path+'/payments/paypal/create',headers=headers)
+    assert first.status_code==200,first.text
+    assert first.json()['idempotent_replay'] is False
+    assert first.json()['payment']['checkout_merchant_current'] is True
+    same_merchant=client.post(path+'/payments/paypal/create',headers=headers)
+    assert same_merchant.status_code==200
+    assert same_merchant.json()['idempotent_replay'] is True
+    assert len(new_calls)==1
+    merchant['id']='new-us-business-seller-B'
+    listing=client.get(path,headers=headers)
+    assert listing.status_code==200
+    assert listing.json()['status']=='payment_pending'
+    assert listing.json()['payment']['checkout_merchant_current'] is False
+    assert listing.json()['payment']['approval_url'] is None
+    assert listing.json()['payment']['paypal_order_id']=='OLD-SELLER-PAYPAL-ORDER'
+    blocked=client.post(path+'/payments/paypal/create',headers=headers)
+    assert blocked.status_code==409
+    assert 'previous merchant configuration' in blocked.json()['detail']
+    capture=client.post(path+'/payments/paypal/capture',headers=headers)
+    assert capture.status_code==409
+    assert 'previous merchant configuration' in capture.json()['detail']
+    assert len(new_calls)==1
+    listing=client.get(path,headers=headers)
+    assert listing.json()['status']=='payment_pending'
+    assert listing.json()['payment']['capture_id'] is None
+    assert not any(event['action']=='payment.paypal_capture_completed' for event in listing.json()['audit_events'])
+
+
+def test_unbound_legacy_checkout_is_not_reopened_after_merchant_rotation(monkeypatch):
+    """Pre-fingerprint checkouts cannot be treated as belonging to a new seller."""
+    from app.api import purchase_orders
+    monkeypatch.setattr(purchase_orders,'get_settings',lambda:SimpleNamespace(paypal_client_id='new-seller'))
+    legacy=SimpleNamespace(
+        id='old',provider='paypal',paypal_order_id='OLD-MERCHANT-ORDER',
+        capture_id=None,status='created',amount=Decimal('10.00'),
+        currency='USD',approval_url='https://www.sandbox.paypal.com/checkoutnow?token=OLD-MERCHANT-ORDER',
+        created_at=None,provider_response={'status':'PAYER_ACTION_REQUIRED'},
+    )
+    data=purchase_orders._payment_data(legacy)
+    assert data['checkout_merchant_current'] is False
+    assert data['approval_url'] is None
+    assert data['paypal_order_id']=='OLD-MERCHANT-ORDER'
