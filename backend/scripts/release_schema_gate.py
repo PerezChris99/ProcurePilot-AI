@@ -85,6 +85,13 @@ FAILURE_CODES = {
     'paypal_existing_order_unavailable': 88,
     'paypal_existing_order_unapproved': 89,
     'paypal_existing_order_payee_missing': 90,
+    'paypal_webhook_management_unauthorized': 91,
+    'paypal_webhook_management_forbidden': 92,
+    'paypal_webhook_management_not_found': 93,
+    'paypal_webhook_management_rate_limited': 94,
+    'paypal_webhook_management_provider_error': 95,
+    'paypal_webhook_management_rejected': 96,
+    'paypal_webhook_management_transport': 97,
 }
 EXPECTED = {
     'production': (
@@ -438,6 +445,35 @@ def verify_preview_primary_gemini(environment: str) -> None:
 
 
 
+def paypal_webhook_diagnostic_category(exc: BaseException) -> str:
+    """Classify real PayPal API errors without serializing sensitive payloads.
+
+    PayPalClient wraps httpx exceptions, and the one-shot webhook setup tool
+    wraps PayPalClient exceptions. Only the safe HTTP status class or generic
+    transport category leaves the build. Nothing creates/captures a payment.
+    """
+    import httpx
+    source: BaseException | None = exc
+    for _ in range(5):
+        if isinstance(source, httpx.HTTPStatusError):
+            status=source.response.status_code
+            if status==401:
+                return 'paypal_webhook_management_unauthorized'
+            if status==403:
+                return 'paypal_webhook_management_forbidden'
+            if status==404:
+                return 'paypal_webhook_management_not_found'
+            if status==429:
+                return 'paypal_webhook_management_rate_limited'
+            if 500<=status<=599:
+                return 'paypal_webhook_management_provider_error'
+            return 'paypal_webhook_management_rejected'
+        if isinstance(source, httpx.TransportError):
+            return 'paypal_webhook_management_transport'
+        source=source.__cause__ if source is not None else None
+    return 'paypal_webhook_management_unavailable'
+
+
 def inspect_preview_paypal_merchant(environment: str) -> None:
     """One-shot read-only PayPal REST app webhook and historical order inspection.
 
@@ -459,7 +495,7 @@ def inspect_preview_paypal_merchant(environment: str) -> None:
         try:
             webhook=await ensure_webhook(create=False,client=client)
         except WebhookSetupError as exc:
-            raise ReleaseGateError('paypal_webhook_management_unavailable') from exc
+            raise ReleaseGateError(paypal_webhook_diagnostic_category(exc)) from exc
         if webhook.get('action')!='existing':
             raise ReleaseGateError('paypal_webhook_not_in_rest_app')
         configured=get_settings().paypal_webhook_id
