@@ -66,6 +66,19 @@ describe('OrdersPage',()=>{
       .not.toBeInTheDocument();
   });
 
+  it('does not equate a PayPal merchant refusal callback with a buyer-approved payment',async()=>{
+    apiRequest.mockResolvedValue([{
+      ...pendingOrder,status:'payment_pending',
+      payment:{status:'created',approval_url:'https://www.sandbox.paypal.com/checkoutnow?token=SANDBOX-ORDER'},
+    }]);
+    renderPage('/orders?paypal=cancel&po=po-1&token=SANDBOX-ORDER');
+    const warning=await screen.findByRole('alert');
+    expect(warning).toHaveTextContent(/PayPal did not approve this checkout/i);
+    expect(warning).toHaveTextContent(/merchant cannot accept payments/i);
+    expect(screen.queryByRole('button',{name:/confirm buyer approval & capture/i})).not.toBeInTheDocument();
+    expect(screen.getByRole('link',{name:/Open PayPal in new tab/i})).toBeInTheDocument();
+  });
+
   it('does not expose capture before the buyer returns from PayPal',async()=>{
     apiRequest.mockResolvedValue([{
       ...pendingOrder,status:'payment_pending',
