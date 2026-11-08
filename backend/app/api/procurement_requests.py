@@ -255,18 +255,15 @@ async def analyze_request(
             'usage': current.get('ai_usage'),
         }
 
-    # A first-time judge can press Ask AI without explicitly pressing Search.
-    # Discover once, save the deterministic result, then analyze only its summary.
+    # Discovery and analysis are separate, explicit user actions. The AI
+    # endpoint must NEVER call the catalogue provider or mutate a request
+    # merely because no search has occurred. This also avoids confusing
+    # users when two differently-labelled buttons appear to do the same thing.
     if current.get('source') != 'Channel3':
-        user_id = user.id
-        _release_db_for_provider_io(db, request)
-        current = await _catalogue_snapshot(request, user_id)
-        request = _owned_request(request_id, user, db)
-        request.analysis_json = current
-        request.status = 'products_discovered'
-        db.add(request)
-        db.commit()
-        db.refresh(request)
+        raise HTTPException(
+            status_code=409,
+            detail='Search products first to save catalogue evidence, then ask AI to analyze it.',
+        )
 
     # A ranked product without any approved, confirmed in-stock offer is not
     # a payable recommendation. Deterministic policy explains this for zero
@@ -299,8 +296,14 @@ async def analyze_request(
 
     # Lazy AI import keeps login, catalogue search and payments independent
     # from third-party model SDK startup.
-    from app.agents import runtime
-    from app.agents.runtime import AgentConfigurationError, AgentExecutionError
+    try:
+        from app.agents import runtime
+        from app.agents.runtime import AgentConfigurationError, AgentExecutionError
+    except (ImportError, RuntimeError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail='AI analysis service is unavailable. Saved catalogue results are unaffected.',
+        ) from exc
 
     settings = get_settings()
     if not settings.google_api_key and not runtime.configured_fallbacks(settings):
