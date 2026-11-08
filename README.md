@@ -4,13 +4,17 @@
 
 An accountable purchasing decision system built for the **PayPal AI Hackathon**. ProcurePilot brings together real product evidence, deterministic purchasing rules, bounded AI analysis, human approval, and verified **PayPal Sandbox** capture—then preserves the decision in a portable **Decision Passport**.
 
-[**Launch application**](https://procurepilotai.vercel.app) · [**Judge guide**](docs/JUDGES_START_HERE.md) · [**Judge access**](docs/JUDGE_ACCESS_PLAYBOOK.md) · [**Architecture**](docs/architecture.md) · [**Release acceptance**](docs/RELEASE_READINESS.md) · [**Security model**](docs/security.md) · [**Run tests**](qa/README.md) · [**MIT License**](LICENSE)
+[**Launch application**](https://procurepilotai.vercel.app) · [**2:45 demo story**](docs/DEMO_CHEAPEST_WRONG_PRODUCT.md) · [**Judge guide**](docs/JUDGES_START_HERE.md) · [**Judge access**](docs/JUDGE_ACCESS_PLAYBOOK.md) · [**Architecture**](docs/architecture.md) · [**Release acceptance**](docs/RELEASE_READINESS.md) · [**Security model**](docs/security.md) · [**Run tests**](qa/README.md) · [**MIT License**](LICENSE)
 
 > **Demo boundary:** This is a hackathon prototype—not a production payment processor or retailer checkout. PayPal Sandbox does not move real money or pay Channel3 merchants. Public deployment readiness and real provider acceptance must be demonstrated separately from a successful code build.
 
 ---
 
 ## The problem
+
+**What happens when the cheapest product is the wrong product?**
+
+A 24-inch screen is not a good substitute when the buyer requires 27 inches, regardless of the price. ProcurePilot uses saved catalogue evidence and deterministic policy to expose that kind of mismatch. A lower-priced rejected listing is not a saving—it is an unsuitable option.
 
 A purchasing decision must answer more than *“Which product is cheapest?”*
 
@@ -27,7 +31,7 @@ A purchasing decision must answer more than *“Which product is cheapest?”*
 | Start here | What you'll see |
 | :--- | :--- |
 | [**Web application**](https://procurepilotai.vercel.app) | Hosted workspace for procurement, evidence analysis, approvals and PayPal Sandbox orders. The owner reports a successful PayPal transaction; public read-only acceptance and signed webhook delivery remain separate evidence gates. |
-| [**Judge walkthrough**](docs/JUDGES_START_HERE.md) | A guided path through the experience, secure Sandbox buyer instructions and a separate no-credentials offline preview. |
+| [**Judge walkthrough**](docs/JUDGES_START_HERE.md) | Follow the question from a rejected unsuitable offer to genuine AI analysis, human approval and a PayPal Sandbox-backed Decision Passport; includes separate no-credentials offline preview and secure buyer instructions. |
 | [**Decision Trust Lab**](docs/JUDGES_START_HERE.md) | Twelve labelled **synthetic** scenarios evaluated against the real deterministic policy code—no fake provider calls or payments. |
 | [**Backend API**](docs/api.md) | Authenticated procurement, discovery, approvals, Sandbox payments and signed webhook routes. |
 

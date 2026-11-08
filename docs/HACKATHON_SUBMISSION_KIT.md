@@ -15,10 +15,10 @@ user testimonial or savings percentage.
 - **Tagline:** *Every Purchase Has a Reason.*
 - **Category:** Accountable AI-assisted purchasing; evidence-first agentic
   commerce with mandatory human authorization.
-- **One-sentence pitch:** ProcurePilot turns a buyer's request into a
-  defensible purchasing decision by combining real Channel3 offer evidence,
-  policy-checked AI comparison, human approval and verified PayPal Sandbox
-  payment records in a single Decision Passport.
+- **One-sentence pitch:** What happens when the cheapest product is the wrong
+  product? ProcurePilot checks real Channel3 offers against requirements,
+  uses Gemini/ADK to explain eligible evidence, requires human approval and
+  preserves PayPal Sandbox payment proof in one Decision Passport.
 - **Code:** https://github.com/PerezChris99/ProcurePilot-AI
 - **License:** https://github.com/PerezChris99/ProcurePilot-AI/blob/main/LICENSE
   (GitHub detects MIT).
@@ -27,6 +27,7 @@ user testimonial or savings percentage.
 - **Judge access:** `[REQUIRES VERIFICATION — clear signup/test account route]`
 - **Judge testing instructions:** [Secure evaluation and buyer access](JUDGE_ACCESS_PLAYBOOK.md)
 - **Short ready-to-paste text:** [Final Devpost draft](DEVPOST_FINAL_DRAFT.md)
+- **Canonical filming plan:** [The wrong-product purchasing demonstration](DEMO_CHEAPEST_WRONG_PRODUCT.md)
 - **Evidence map:** [Judging evidence](JUDGING_EVIDENCE_MATRIX.md)
 - **Offline source walkthrough:** [Judges start here](JUDGES_START_HERE.md)
 - **Repository execution and QA:** [README](../README.md), [QA](../qa/README.md)
@@ -35,16 +36,16 @@ user testimonial or savings percentage.
 
 ### Inspiration
 
-Teams often finish a purchase without a defensible record of **why** it was
-made. Buyers may compare prices across tabs, lose the original specification,
-approve something slightly wrong, or be unable to reconstruct who agreed to
-the cost. A purchasing assistant should help people make accountable choices
-instead of treating the first cheap result as the answer.
+**What happens when the cheapest product is the wrong product?** Buying teams
+can mistake an apparently good price for a good purchasing decision even when
+the product fails a mandatory specification. ProcurePilot was built to preserve
+what the buyer required, which actual offers qualified, why alternatives were
+rejected, who approved the choice, and what PayPal Sandbox payment was recorded.
 
 ### What it does
 
-ProcurePilot AI turns an ordinary purchasing request into a transparent,
-auditable decision. A buyer specifies the item, quantity, currency, budget and
+ProcurePilot AI treats that question as an evidence-based purchasing decision,
+not a generic AI product recommendation. A buyer specifies the item, quantity, currency, budget and
 optional mandatory attributes or merchant restrictions. Channel3 supplies
 actual products and retailer offers. Deterministic Python policy checks
 availability, screen size where explicitly requested, supported attributes,
@@ -124,30 +125,13 @@ not claims about the current hackathon build.
 
 ## 3. Video: 2:45 evidence-first storyboard
 
-**Target runtime: 2:40–2:50. Hard requirement: less than 3 minutes.**
-YouTube video must be publicly accessible and show actual browser behavior.
-Film the strongest pre-rehearsed **real** Sandbox journey. Edit only to
-remove waiting time; do not fake a payment, AI response, user testimonial or
-source. No unlicensed music or unrelated copyrighted logos. Frame browser
-safely so passwords, tokens and account secrets are never visible.
+**Central question:** **“What happens when the cheapest product is the wrong product?”** The [complete filming script, timing and proof requirements](DEMO_CHEAPEST_WRONG_PRODUCT.md) is the canonical storyboard. Keep the full recording below three minutes; YouTube must be public and the video must show a real functioning application.
 
-| Time | On screen | Narration intent / proof |
-| --- | --- | --- |
-| 0:00–0:13 | Calm landing page and one purchasing pain statement | "Buying is easy. Proving why a business should buy is harder." |
-| 0:13–0:33 | Enter explicit item, quantity, currency and budget | Show a focused real buyer workflow |
-| 0:33–1:03 | Live Channel3 results; one eligible and one rejected offer | Show real product source, amount, missing size/stock rule, not invented listings |
-| 1:03–1:27 | Ask AI; show provider attribution and an evidence-based comparison | Explain that ADK model output informs but cannot approve |
-| 1:27–1:51 | Create exact PO, frozen amount, submit and authorized human approval | Make control separation obvious |
-| 1:51–2:19 | Create checkout; real PayPal Sandbox buyer login/approval and return | Show genuine Sandbox domain, not a simulated green check |
-| 2:19–2:37 | Explicit capture, completed status and payment IDs | Show amount/currency validation, no retail settlement claim |
-| 2:37–2:45 | Decision Passport, PDF export, final tagline | "Every purchase has a reason—and now it has a record." |
+Demonstrate one understandable business request, an actual Channel3 offer that fails a hard requirement, a qualified alternative, genuine attributed Gemini/ADK analysis when it succeeds, human approval, real PayPal Sandbox buyer authorization and capture, and the final Decision Passport. Start with the problem, not a technical architecture slide.
 
-**Presenter rule:** articulate one claim per clip; keep product names, amounts,
-source badges and screen-size text large enough to read at 1080p. Zoom in
-rather than speeding up the footage. Show at least one visible rejection and
-one actual PayPal approval/capture. If the live run cannot be captured,
-**do not edit together mock results and call them live**. Resolve the blocker
-or explicitly disclose the limits of the recorded demo.
+**Critical accuracy guard:** State that the wrong item was *cheaper* only if actual saved same-currency, same-quantity quotes prove that price ordering. If no such pair is present, show the rejected offer honestly and keep the opening question as a hypothetical. Clearly label any synthetic Trust Lab cutaway; never present it as an actual Channel3 quote, AI response or payment.
+
+Edit away network waiting but never invent provider outcomes, transaction IDs or savings. Keep type readable at ordinary 1080p playback size. Redact test buyer credentials and private details; respect third-party content and trademark permissions.
 
 ## 4. Recommended screenshots (actual capture only)
 
