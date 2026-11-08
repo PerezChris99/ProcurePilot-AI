@@ -1,12 +1,13 @@
 import {ArrowRight,Plus,ShieldCheck} from 'lucide-react';
 import {Link} from 'react-router-dom';
-import {useQuery} from '@tanstack/react-query';
+import {useQuery,useQueryClient} from '@tanstack/react-query';
 import {getHealth,getIntegrationStatus,getDashboardSummary} from '../services/api.js';
 import {useAuth} from '../context/useAuth.js';
 import IntegrationStatusPanel from '../components/ui/IntegrationStatusPanel.jsx';
 
 export default function DashboardPage(){
   const {user}=useAuth();
+  const queryClient=useQueryClient();
   const hour=new Date().getHours();
   const greeting=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
   const name=(user?.full_name||'').trim().split(/\s+/)[0]?.slice(0,35)||'there';
@@ -21,6 +22,16 @@ export default function DashboardPage(){
   const summaryQuery=useQuery({
     queryKey:['dashboard-summary'],queryFn:getDashboardSummary,retry:false,
   });
+  // Explicit manual refresh bypasses query stale timers and updates the same
+  // caches used by the 30s/60s passive polls. Never call PayPal or AI just to
+  // refresh dashboard configuration.
+  const refreshSystemStatus=async()=>{
+    const [nextHealth,nextIntegrations]=await Promise.all([
+      getHealth({force:true}),getIntegrationStatus({force:true}),
+    ]);
+    queryClient.setQueryData(['api-health'],nextHealth);
+    queryClient.setQueryData(['integration-status'],nextIntegrations);
+  };
   const summary=summaryQuery.data;
   const value=key=>summary?String(summary[key]??0):'—';
   const metrics=[
@@ -86,7 +97,7 @@ export default function DashboardPage(){
               </div>
         }
       </article>
-      <IntegrationStatusPanel health={health} integrations={integrations}/>
+      <IntegrationStatusPanel health={health} integrations={integrations} onRefresh={refreshSystemStatus}/>
     </section>
   </div>;
 }
