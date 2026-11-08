@@ -49,9 +49,39 @@ def _approval_order(order_id,user,db):
 def _audit(db,user_id,action,*,order_id=None,request_id=None,details=None):
     db.add(AuditEvent(user_id=user_id,purchase_order_id=order_id,request_id=request_id,action=action,details=details or {}))
 
+def _merchant_fingerprint(client_id: str | None) -> str:
+    """One-way server-only checkout binding to the PayPal REST app client ID.
+
+    No client ID, secret or fingerprint is ever sent to the frontend. Changing
+    REST apps never silently reuses an order previously issued to a seller.
+    """
+    return hashlib.sha256(('paypal-sandbox-merchant-v1:'+(client_id or '')).encode()).hexdigest()
+
+
+def _current_checkout_merchant(payment, *, client_id=None) -> bool:
+    evidence=payment.provider_response or {}
+    if not isinstance(evidence, dict):
+        return False
+    known=evidence.get('merchant_fingerprint')
+    current=_merchant_fingerprint(client_id if client_id is not None else get_settings().paypal_client_id)
+    # Legacy checkouts are unbound and must NOT be trusted for replay after a
+    # potential merchant rotation. Keep their evidence/audit trail intact.
+    return isinstance(known,str) and known==current
+
+
 def _payment_data(payment):
     if payment is None: return None
-    return {'id':payment.id,'provider':payment.provider,'paypal_order_id':payment.paypal_order_id,'capture_id':payment.capture_id,'status':payment.status,'amount':payment.amount,'currency':payment.currency,'approval_url':payment.approval_url,'created_at':payment.created_at}
+    merchant_current=_current_checkout_merchant(payment) if payment.paypal_order_id else True
+    # Fail closed only for pending checkouts; paid evidence remains visible.
+    unsafe=not merchant_current and payment.status!='completed'
+    return {
+        'id':payment.id,'provider':payment.provider,
+        'paypal_order_id':payment.paypal_order_id,'capture_id':payment.capture_id,
+        'status':payment.status,'amount':payment.amount,'currency':payment.currency,
+        'approval_url':None if unsafe else payment.approval_url,
+        'checkout_merchant_current':not unsafe,
+        'created_at':payment.created_at,
+    }
 
 def _serialize(order,db):
     items=db.scalars(select(PurchaseOrderItem).where(PurchaseOrderItem.purchase_order_id==order.id)).all()
@@ -260,20 +290,33 @@ async def create_paypal_order(order_id:str,db:Session=Depends(get_db),user:User=
         client.ensure_configured()
     except PayPalConfigurationError as exc: raise HTTPException(status_code=503,detail='PayPal Sandbox configuration or credentials are invalid.') from exc
     payment=db.scalar(select(Payment).where(Payment.purchase_order_id==order.id))
-    if payment and payment.paypal_order_id and payment.approval_url:
-        return {'payment':_payment_data(payment),'approval_url':payment.approval_url,'idempotent_replay':True}
+    merchant_fingerprint=_merchant_fingerprint(client.client_id)
+    if payment and payment.paypal_order_id:
+        if not _current_checkout_merchant(payment,client_id=client.client_id):
+            raise HTTPException(
+                status_code=409,
+                detail='This PayPal checkout belongs to a previous merchant configuration. '
+                       'For safety, create a fresh procurement purchase order and checkout '
+                       'under the current Sandbox Business seller. The old order remains unpaid.',
+            )
+        if payment.approval_url:
+            return {'payment':_payment_data(payment),'approval_url':payment.approval_url,'idempotent_replay':True}
     if payment:
         payment.status='creating'
+        payment.provider_response={'merchant_fingerprint':merchant_fingerprint}
     else:
-        payment=Payment(purchase_order_id=order.id,idempotency_key=uuid.uuid4().hex,status='creating',amount=order.total_amount,currency=order.currency)
+        payment=Payment(purchase_order_id=order.id,idempotency_key=uuid.uuid4().hex,status='creating',amount=order.total_amount,currency=order.currency,provider_response={'merchant_fingerprint':merchant_fingerprint})
         db.add(payment)
     try:
         db.commit()
     except IntegrityError as exc:
         db.rollback()
         existing=db.scalar(select(Payment).where(Payment.purchase_order_id==order.id))
-        if existing and existing.paypal_order_id and existing.approval_url:
-            return {'payment':_payment_data(existing),'approval_url':existing.approval_url,'idempotent_replay':True}
+        if existing and existing.paypal_order_id:
+            if not _current_checkout_merchant(existing,client_id=client.client_id):
+                raise HTTPException(status_code=409,detail='Checkout belongs to a previous merchant configuration; create a new procurement purchase order.') from exc
+            if existing.approval_url:
+                return {'payment':_payment_data(existing),'approval_url':existing.approval_url,'idempotent_replay':True}
         raise HTTPException(status_code=409,detail='A PayPal checkout attempt is already being created for this purchase order.') from exc
     db.refresh(payment)
     item=db.scalar(select(PurchaseOrderItem).where(PurchaseOrderItem.purchase_order_id==order.id))
@@ -313,7 +356,7 @@ async def create_paypal_order(order_id:str,db:Session=Depends(get_db),user:User=
     if not result.get('id') or not approval_url or not PayPalClient.is_valid_order_id(result.get('id')) or not PayPalClient.is_approval_url(approval_url):
         payment.status='failed'; payment.provider_response={'status':'invalid_create_order_response'}; db.commit()
         raise HTTPException(status_code=502,detail='PayPal did not return a usable approval link.')
-    payment.paypal_order_id=result['id']; payment.approval_url=approval_url; payment.status='created'; payment.provider_response={'id':result['id'],'status':result.get('status')}
+    payment.paypal_order_id=result['id']; payment.approval_url=approval_url; payment.status='created'; payment.provider_response={'id':result['id'],'status':result.get('status'),'merchant_fingerprint':merchant_fingerprint}
     order.status='payment_pending'
     _audit(db,user.id,'payment.paypal_order_created',order_id=order.id,request_id=order.request_id,details={'paypal_order_id':result['id'],'amount':str(order.total_amount),'currency':order.currency})
     db.commit(); db.refresh(payment)
@@ -325,6 +368,8 @@ async def capture_paypal_order(order_id:str,db:Session=Depends(get_db),user:User
     payment=db.scalar(select(Payment).where(Payment.purchase_order_id==order.id))
     if payment is None or not payment.paypal_order_id: raise HTTPException(status_code=409,detail='Create a PayPal checkout order first.')
     if payment.status=='completed' and order.status=='paid': return _serialize(order,db)
+    if not _current_checkout_merchant(payment):
+        raise HTTPException(status_code=409,detail='Cannot capture a PayPal order from a previous merchant configuration. Create a fresh procurement purchase order.')
     if order.status not in ('approved','payment_pending'): raise HTTPException(status_code=409,detail='Purchase order is not eligible for payment capture.')
     payment_id=payment.id
     paypal_order_id=payment.paypal_order_id
