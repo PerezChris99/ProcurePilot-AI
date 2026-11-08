@@ -140,3 +140,66 @@ def test_model_level_pydantic_validation_with_empty_location_is_classified(monke
     monkeypatch.setattr(config, 'Settings', BrokenSettings)
     with pytest.raises(gate.ReleaseGateError, match='invalid_settings_jwt'):
         gate.validate_fastapi_settings()
+
+
+def test_paypal_diagnostic_is_read_only_and_refuses_wrong_webhook_id(monkeypatch):
+    from types import SimpleNamespace
+    from app.integrations.paypal import client as paypal_module
+    from app.core import config
+    from scripts import configure_paypal_webhook as webhook_setup
+    monkeypatch.setenv('PROCUREPILOT_PAYPAL_INSPECT','1')
+    monkeypatch.setenv('PROCUREPILOT_PAYPAL_INSPECT_ORDER_ID','SANDBOX-EXISTING-123')
+    monkeypatch.setattr(config,'get_settings',lambda:SimpleNamespace(
+        paypal_webhook_id='CORRECTPAYPALID98765'))
+    calls=[]
+    class MockPayPal:
+        def ensure_configured(self): calls.append('credentials_checked')
+        def is_valid_order_id(self, value): return True
+        async def get_order(self, value):
+            calls.append('get_order')
+            return {
+                'status':'PAYER_ACTION_REQUIRED',
+                'purchase_units':[{'payee':{'merchant_id':'MERCHANT-TEST'}}],
+            }
+    monkeypatch.setattr(paypal_module,'PayPalClient',MockPayPal)
+    async def mock_webhook(*,create,client):
+        assert create is False
+        calls.append('list_webhook')
+        return {'id':'DIFFERENTID000000','action':'existing'}
+    monkeypatch.setattr(webhook_setup,'ensure_webhook',mock_webhook)
+    with pytest.raises(gate.ReleaseGateError,match='paypal_webhook_id_mismatch'):
+        gate.inspect_preview_paypal_merchant('preview')
+    assert calls == ['credentials_checked','list_webhook']
+    assert 'get_order' not in calls
+
+
+def test_paypal_diagnostic_classifies_unapproved_historical_order(monkeypatch):
+    from types import SimpleNamespace
+    from app.integrations.paypal import client as paypal_module
+    from app.core import config
+    from scripts import configure_paypal_webhook as webhook_setup
+    monkeypatch.setenv('PROCUREPILOT_PAYPAL_INSPECT','1')
+    monkeypatch.setenv('PROCUREPILOT_PAYPAL_INSPECT_ORDER_ID','SANDBOX-EXISTING-123')
+    monkeypatch.setattr(config,'get_settings',lambda:SimpleNamespace(
+        paypal_webhook_id='CORRECTPAYPALID98765'))
+    calls=[]
+    class MockPayPal:
+        def ensure_configured(self): calls.append('checked')
+        def is_valid_order_id(self,value): return True
+        async def get_order(self,value):
+            calls.append('get_order')
+            return {'status':'CREATED','purchase_units':[{'payee':{'merchant_id':'MERCHANT-TEST'}}]}
+    monkeypatch.setattr(paypal_module,'PayPalClient',MockPayPal)
+    async def match(*,create,client):
+        assert create is False
+        return {'id':'CORRECTPAYPALID98765','action':'existing'}
+    monkeypatch.setattr(webhook_setup,'ensure_webhook',match)
+    with pytest.raises(gate.ReleaseGateError,match='paypal_existing_order_unapproved'):
+        gate.inspect_preview_paypal_merchant('preview')
+    assert calls==['checked','get_order']
+
+
+def test_paypal_diagnostic_is_never_executed_in_production(monkeypatch):
+    monkeypatch.setenv('PROCUREPILOT_PAYPAL_INSPECT','1')
+    monkeypatch.setenv('PROCUREPILOT_PAYPAL_INSPECT_ORDER_ID','SANDBOX-EXISTING-123')
+    gate.inspect_preview_paypal_merchant('production')  # no network or side effects
