@@ -83,11 +83,12 @@ until separately reviewed.
 - [x] **P01 source** — Profiled the registration/login path and identified two sequential remote PostgreSQL auth-throttle UPSERTs plus a post-commit registration SELECT.
 - [x] **P02 source** — Implemented one atomic multi-bucket UPSERT and a pre-commit response snapshot; Argon2id and strict rate-limit checks retained.
 - [x] **P03 targeted proof** — Standalone SQLAlchemy/SQLite execution demonstrated one UPSERT per auth attempt and retained both counters; automated regression tests committed.
-- [ ] **P04 Preview** — Current commit passes targeted pytest, actual Preview FastAPI/Neon readiness, and responsive browser login/registration with no regressions.
-- [ ] **P05 measurable speed** — Measure a warm/cold sign-in and sign-up baseline vs candidate, capturing p50/p95, browser network timing, and stable auth-error behavior on real hosted users (avoid repeated failures beyond throttle limits).
-- [ ] **P06 release** — Owner approves Preview results; merge `perez`→`main`, verify production SHA and rerun health/ready/login.
+- [x] **P04 Preview SQL acceptance** — Vercel Preview deployed optimized backend READY, with real staging Neon registration 201, login 200, JWT /me 200, procurement 201, health/readiness 200 and a SQLAlchemy event proving exactly one auth limiter INSERT for registration and one for login; independently verified zero leftover disposable users/orders.
+- [ ] **P05 offline QA** — Run complete `test-all.bat` / 9/9 and targeted pytest from a fully installed local environment. The Vercel backend builder does **not** contain pytest; its isolated pytest gate was replaced with real staging integration checks.
+- [ ] **P06 measurable speed** — Measure cold/warm sign-in and sign-up before vs after release, capturing p50/p95 browser timings, dashboard usability and stable auth-error behavior; do not exceed throttle limits.
+- [ ] **P07 release** — Owner approves Preview; merge `perez`→`main`, verify production SHA and rerun public health/ready/login without touching PayPal state.
 
-**Latency reality:** The code removes two round trips from the sign-up path
+For technical details and exact test scope see [authentication performance report](AUTH_PERFORMANCE_2026-11-08.md).\n\n**Latency reality:** The code removes two round trips from the sign-up path
 (one batched limiter write in place of two; one post-commit read eliminated)
 and one round trip from the login limiter path. Total user-visible time also
 depends on Argon2's deliberately secure CPU work, Neon latency, Vercel cold
