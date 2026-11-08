@@ -203,3 +203,29 @@ def test_paypal_diagnostic_is_never_executed_in_production(monkeypatch):
     monkeypatch.setenv('PROCUREPILOT_PAYPAL_INSPECT','1')
     monkeypatch.setenv('PROCUREPILOT_PAYPAL_INSPECT_ORDER_ID','SANDBOX-EXISTING-123')
     gate.inspect_preview_paypal_merchant('production')  # no network or side effects
+
+
+@pytest.mark.parametrize("status,category", [
+    (401, "paypal_webhook_management_unauthorized"),
+    (403, "paypal_webhook_management_forbidden"),
+    (404, "paypal_webhook_management_not_found"),
+    (429, "paypal_webhook_management_rate_limited"),
+    (503, "paypal_webhook_management_provider_error"),
+    (400, "paypal_webhook_management_rejected"),
+])
+def test_read_only_paypal_webhook_diagnostic_classifies_http_code_without_provider_body(status,category):
+    import httpx
+    request=httpx.Request("GET","https://api-m.sandbox.paypal.com/v1/notifications/webhooks")
+    response=httpx.Response(status,request=request,json={"debug_id":"private-provider-id","message":"private-provider-payload"})
+    error=httpx.HTTPStatusError("Private provider content",request=request,response=response)
+    assert gate.paypal_webhook_diagnostic_category(error)==category
+    try:
+        raise RuntimeError("Wrapped PayPal request") from error
+    except RuntimeError as wrapper:
+        assert gate.paypal_webhook_diagnostic_category(wrapper)==category
+
+
+def test_read_only_paypal_webhook_diagnostic_categorizes_transport_and_unknown():
+    import httpx
+    assert gate.paypal_webhook_diagnostic_category(httpx.ConnectError("secret host data"))=="paypal_webhook_management_transport"
+    assert gate.paypal_webhook_diagnostic_category(ValueError("unexpected data"))=="paypal_webhook_management_unavailable"
