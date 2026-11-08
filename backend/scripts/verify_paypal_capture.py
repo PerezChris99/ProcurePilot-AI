@@ -151,7 +151,7 @@ class CaptureEndpointContract(unittest.TestCase):
         self.client=self.stack.enter_context(TestClient(app))
         self.addCleanup(self.stack.close)
         self.state={'captures':0,'gets':0,'already_completed':False,
-                    'sparse_post':False,'wrong_amount':False}
+                    'sparse_post':False,'wrong_amount':False,'pending_post':False}
         async def discover(_,query,*,limit=20,filters=None,user_id=None,page_token=None):
             return Channel3SearchResponse(products=[Channel3Product(
                 id='test-monitor-1',title='27 inch business monitor',
@@ -206,6 +206,9 @@ class CaptureEndpointContract(unittest.TestCase):
             }
             if self.state['sparse_post']:
                 data['purchase_units'][0]['payments']={}
+            if self.state['pending_post']:
+                data['status']='PENDING'
+                data['purchase_units'][0]['payments']['captures'][0]['status']='PENDING'
             return data
         self.stack.enter_context(patch.object(PayPalClient,'get_order',get_paypal))
         self.stack.enter_context(patch.object(PayPalClient,'capture_order',capture_paypal))
@@ -266,6 +269,16 @@ class CaptureEndpointContract(unittest.TestCase):
         self.assertEqual(result.json()['status'],'paid')
         self.assertEqual(self.state['captures'],1)
         self.assertEqual(self.state['gets'],2)
+
+    def test_real_api_pending_capture_preserves_merchant_binding(self):
+        self.state['pending_post']=True
+        result=self.client.post(self.path+'/payments/paypal/capture',headers=self.headers)
+        self.assertEqual(result.status_code,409)
+        data=self.client.get(self.path,headers=self.headers).json()
+        self.assertEqual(data['status'],'payment_pending')
+        self.assertEqual(data['payment']['status'],'pending')
+        self.assertTrue(data['payment']['checkout_merchant_current'])
+        self.assertIsNone(data['payment']['capture_id'])
 
     def test_real_api_mismatched_capture_amount_keeps_unpaid(self):
         self.state['wrong_amount']=True
