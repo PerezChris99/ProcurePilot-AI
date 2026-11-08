@@ -26,12 +26,12 @@ A purchasing decision must answer more than *“Which product is cheapest?”*
 
 | Start here | What you'll see |
 | :--- | :--- |
-| [**Web application**](https://procurepilotai.vercel.app) | React workspace, procurement form, approval queue, policy lab and order history. The frontend is deployed; do not infer API readiness from the landing page alone. |
+| [**Web application**](https://procurepilotai.vercel.app) | React workspace, procurement form, approval queue, policy lab and order history. Hosted authentication and procurement creation are confirmed by the maintainer; live payment-provider acceptance is a separate gate. |
 | [**Judge walkthrough**](docs/JUDGES_START_HERE.md) | A guided path through the experience, with a separate no-credentials offline preview. |
 | [**Decision Trust Lab**](docs/JUDGES_START_HERE.md) | Twelve labelled **synthetic** scenarios evaluated against the real deterministic policy code—no fake provider calls or payments. |
 | [**Backend API**](docs/api.md) | Authenticated procurement, discovery, approvals, Sandbox payments and signed webhook routes. |
 
-**Hosted acceptance status, November 7, 2026:** The last maintainer-reported seven-check probe passed the frontend and deep-link gates (**2/7**), while all API routes returned HTTP 500. Subsequent packaging deployments built successfully, but the complete live check has **not** been reported as passing. Treat the hosted end-to-end demonstration as **unverified** until the probe and real provider checks succeed.
+**Hosted status, November 8, 2026:** The maintainer has successfully registered, signed in and created a procurement on the production Vercel + Neon deployment. The production build gate verified actual Neon schema `0010_auth_throttles`, 11 required tables and in-process FastAPI health/readiness. A separate staging Preview exercised SQL-backed registration/login/JWT and procurement creation. **Public 7/7 read-only checks and live Channel3/Gemini/PayPal Sandbox capture and signed-webhook proof remain unverified.** The outdated 2/7 report predates the repaired deployment; it must not be presented as the current public API status. See the [live submission checklist](docs/SUBMISSION_READINESS.md) and [first-place execution plan](docs/WINNING_EXECUTION_PLAN_2026-11-08.md).
 
 ## How a purchase moves through ProcurePilot
 
