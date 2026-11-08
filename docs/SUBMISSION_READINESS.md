@@ -73,10 +73,10 @@
 - [x] **Staging route acceptance** — Verified real FastAPI + Neon request processing, with stubbed third-party providers: pre-search 409, search success, saved-evidence analysis success, cached retry, no extra catalogue/model calls and zero retained test rows.
 - [x] **Read-only actual provider smoke** — Real Preview Channel3 priced offers, bounded ADK model-route output and PayPal Sandbox OAuth all passed; no payment created.
 - [x] **Live direct-Gemini validation** — Preview deployed READY with an actual ADK Gemini-only response; fallback explicitly disabled for the probe. No purchase/provider-write action.
-- [ ] **Sandbox buyer/capture/webhook proof** — Personal buyer must approve checkout independently of Business merchant; capture and signed webhook replay still require verified evidence.
+- [x] **Sandbox buyer milestone** — The owner reports the separate Personal Sandbox buyer checkout completed and the transaction appears inside PayPal. Independently archived capture attributes and signed webhook replay are still distinct open tasks.
 - [ ] **Actual judge-browser flow** — Capture and audit complete hosted search → model response → human approval → Sandbox capture, including current full test suite and mobile UX.
 
-See [search/AI and PayPal diagnosis](SEARCH_AI_PAYPAL_TRIAGE_2026-11-08.md). **The main S01–S36 count is 11/36** based on the separate, actual primary Gemini + Channel3 provider probes; paid capture and the judge demo remain unverified.
+See [search/AI and PayPal diagnosis](SEARCH_AI_PAYPAL_TRIAGE_2026-11-08.md) for the historical investigation. Earlier 11/36 totals and the seller-login blocker are superseded by the later owner-confirmed successful PayPal transaction; a revised all-gates count requires current independent evidence, not extrapolation.
 
 ## G. Authentication performance (not counted in S01–S36)
 
@@ -96,7 +96,7 @@ starts and frontend bundle loading. No unsupported percentage speed-up claim.
 
 ## H. Prize-focused readiness (not counted in S01–S36)
 
-- [ ] **W01** — Prove the entire legitimate PayPal Sandbox buyer approval, explicit capture and signed webhook flow; retain amount/currency/idempotency evidence.
+- [ ] **W01** — Archive the owner-confirmed PayPal Sandbox buyer transaction, match saved amount/currency/order/capture IDs and prove signed webhook delivery or explicitly leave that evidence unclaimed.
 - [ ] **W02** — Prove real Channel3 offers and one AI response with accurate provider attribution, constrained by buyer's deterministic policy.
 - [ ] **W03** — Capture one concrete, truthful impact example and one meaningful ineligible-offer rejection.
 - [ ] **W04** — Rehearse a judge-led 3-minute walkthrough with accessible text, no secret leakage, and no fabricated PayPal checkout.
@@ -111,13 +111,8 @@ From the project root on Windows:
 
 ```powershell
 .\test-all.bat
-.\backend\.venv\Scripts\python.exe .\qa\initialize_neon.py
 python .\qa\live_demo_check.py --frontend https://procurepilotai.vercel.app --api https://procurepilotai.vercel.app | Tee-Object -FilePath .\qa\reports\hosted.json
 .\backend\.venv\Scripts\python.exe .\qa\report_release.py
 ```
 
-**Warning:** Running the Neon initializer applies `alembic upgrade head`
-to the **selected** actual database, with the copied private Direct connection URL.
-Do not pass a production URL to a disposable test. The hosted probe is
-GET/OPTIONS only; it never tests payments. Read the
-[release playbook](RELEASE_READINESS.md) before execution.
+**Safety:** This final evidence sequence intentionally omits database initialization or migrations: a read-only acceptance audit must not mutate production data. The hosted probe uses GET/OPTIONS and cannot verify a real PayPal capture or signed webhook. Read the [release playbook](RELEASE_READINESS.md) for operational changes.
