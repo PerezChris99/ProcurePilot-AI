@@ -75,6 +75,9 @@ FAILURE_CODES = {
     'staging_ai_prerequisite_failed': 78,
     'staging_ai_discovery_failed': 79,
     'staging_ai_analysis_failed': 80,
+    'staging_live_channel3_failed': 81,
+    'staging_live_ai_failed': 82,
+    'staging_live_paypal_oauth_failed': 83,
 }
 EXPECTED = {
     'production': (
@@ -385,6 +388,32 @@ def smoke_fastapi(environment: str) -> None:
                     raise ReleaseGateError('staging_cleanup_failed') from exc
 
 
+def verify_preview_live_providers(environment: str) -> None:
+    """Optional one-shot read-only checks against real provider credentials.
+
+    No create order, capture, webhook, real user, or mutable remote operation.
+    Gemini may use at most the bounded primary + configured backups. The
+    provider_smoke report contains no secret values and is not printed here.
+    """
+    if (environment != 'preview' or
+            os.environ.get('PROCUREPILOT_STAGING_PROVIDER_SMOKE') != '1'):
+        return
+    import asyncio
+    from scripts.provider_smoke import run_checks
+
+    result = asyncio.run(run_checks(
+        'all', gemini_timeout_seconds=36, ai_route='auto',
+    ))
+    for key, error_code in (
+        ('channel3', 'staging_live_channel3_failed'),
+        ('gemini', 'staging_live_ai_failed'),
+        ('paypal', 'staging_live_paypal_oauth_failed'),
+    ):
+        if result.get('checks', {}).get(key, {}).get('status') != 'pass':
+            raise ReleaseGateError(error_code)
+    print('[release-db] PASS genuine Channel3, model analysis, PayPal Sandbox OAuth (read-only)')
+
+
 def main() -> int:
     environment = os.environ.get('VERCEL_ENV', '')
     if not os.environ.get('VERCEL') and not environment:
@@ -411,6 +440,7 @@ def main() -> int:
                 raise ReleaseGateError('post_migration_db_connect_failed') from exc
         verify(revision, tables)
         smoke_fastapi(environment)
+        verify_preview_live_providers(environment)
         print('[release-db] PASS FastAPI health/readiness/auth guards, Neon and Alembic 0010')
         return 0
     except ReleaseGateError as exc:
