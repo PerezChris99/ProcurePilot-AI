@@ -46,6 +46,7 @@ class PaymentResponse(BaseModel):
     amount: Decimal
     currency: str
     approval_url: str|None
+    checkout_merchant_current: bool = True
     created_at: datetime
 
 class PayPalCheckoutResponse(BaseModel):
