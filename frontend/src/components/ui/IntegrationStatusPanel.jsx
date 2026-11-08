@@ -1,3 +1,4 @@
+import {useState} from 'react';
 import {Activity, Database, PackageSearch, RefreshCw, ShieldCheck, Sparkles, Wallet} from 'lucide-react';
 
 function State({label,tone}){
@@ -19,7 +20,10 @@ function configurationState(query,configured,partial=false){
   return partial?{label:'Incomplete',tone:'checking'}:{label:'Not configured',tone:'offline'};
 }
 
-export default function IntegrationStatusPanel({health,integrations}){
+export default function IntegrationStatusPanel({health,integrations,onRefresh}){
+  const [manualRefreshing,setManualRefreshing]=useState(false);
+  const [refreshMessage,setRefreshMessage]=useState('');
+  const [refreshFailed,setRefreshFailed]=useState(false);
   const state=integrations.data;
   const ai=configurationState(integrations,state?.ai?.configured);
   const channel=configurationState(
@@ -30,7 +34,13 @@ export default function IntegrationStatusPanel({health,integrations}){
     integrations,state?.paypal?.credentials_configured,
     state?.paypal?.client_id_set || state?.paypal?.client_secret_set,
   );
-  const webhook=configurationState(integrations,state?.paypal?.webhook_configured);
+  const webhook=configurationState(
+    integrations,
+    state?.paypal?.webhook_configured
+      && state?.paypal?.webhook_id_valid!==false
+      && state?.paypal?.webhook_url_configured!==false,
+    state?.paypal?.webhook_configured || state?.paypal?.webhook_url_configured,
+  );
   const db=integrations.isPending?{label:'Checking',tone:'checking'}:
     integrations.isError?{label:'Unavailable',tone:'offline'}:
     !state?.database?.connected?{label:'Disconnected',tone:'offline'}:
@@ -40,10 +50,38 @@ export default function IntegrationStatusPanel({health,integrations}){
     state?.database?.engine==='sqlite'?'SQLite':'Database';
   const mode=state?.paypal?.environment==='live'?'Live':
     state?.paypal?.environment==='sandbox'?'Sandbox':'Unspecified';
-  const checking=integrations.isFetching || health.isFetching;
+  const checking=manualRefreshing;
   const lastUpdated=integrations.dataUpdatedAt?
     new Date(integrations.dataUpdatedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):null;
-  const refresh=()=>{void Promise.all([health.refetch(),integrations.refetch()]);};
+  const refresh=async()=>{
+    if(manualRefreshing)return;
+    setManualRefreshing(true);
+    setRefreshFailed(false);
+    setRefreshMessage('Checking hosted API and integrations…');
+    try{
+      if(onRefresh){
+        await onRefresh();
+      }else{
+        const results=await Promise.all([health.refetch(),integrations.refetch()]);
+        if(results.some(result=>result?.isError))throw new Error('Refresh failed');
+      }
+      setRefreshMessage('Status updated just now');
+    }catch{
+      setRefreshFailed(true);
+      setRefreshMessage('Refresh failed. The last known status is shown; retry to check again.');
+    }finally{
+      setManualRefreshing(false);
+    }
+  };
+  const webhookDescription=state?.paypal?.webhook_configured
+    ? 'Webhook ID '+(state.paypal.webhook_id_hint||'set')+
+      ' · Callback '+(state.paypal.webhook_url_configured?'set':'missing')+
+      ' · '+(state.paypal.webhook_last_verified_at
+        ? 'Signed delivery recorded'
+        : 'No signed delivery recorded yet')
+    : 'Webhook ID missing'+
+      (state?.paypal?.webhook_url_configured?' · callback set':'');
+
 
   return <article className="panel readiness-panel" aria-label="System status">
     <div className="panel-heading">
@@ -52,7 +90,7 @@ export default function IntegrationStatusPanel({health,integrations}){
       </div>
       <button type="button" className="status-refresh button" aria-label="Refresh system status"
         onClick={refresh} disabled={checking}>
-        <RefreshCw size={14} aria-hidden="true"/> Refresh
+        <RefreshCw size={14} aria-hidden="true" className={checking?'spin':undefined}/> {checking?'Refreshing…':'Refresh'}
       </button>
     </div>
     <Row icon={Activity} name="ProcurePilot API" description="Process liveness"
@@ -71,14 +109,17 @@ export default function IntegrationStatusPanel({health,integrations}){
       description={'API key '+(state?.channel3?.api_key_set?'set':'missing')+' · HTTPS URL '+(state?.channel3?.base_url_configured?'set':'missing')}
       {...channel}/>
     <Row icon={Wallet} name={'PayPal '+mode}
-      description={'Client ID '+(state?.paypal?.client_id_set?'set':'missing')+' · secret '+(state?.paypal?.client_secret_set?'set':'missing')}
+      description={'Client ID '+(state?.paypal?.client_id_set?'set':'missing')+
+        ' · secret '+(state?.paypal?.client_secret_set?'set':'missing')+
+        ' · checkout '+(state?.paypal?.merchant_checkout_verified?'verified by capture':'not yet verified')}
       {...paypal}/>
     <Row icon={ShieldCheck} name="PayPal webhook"
-      description={state?.paypal?.webhook_configured?'Webhook ID set':'Webhook ID missing'}
+      description={webhookDescription}
       {...webhook}/>
     <p className="status-summary" role="note">
       <strong>{integrations.isError?'Could not check configuration.':'Configured means credentials are present, not verified.'}</strong>
       {lastUpdated&&!integrations.isError&&<span> · Checked {lastUpdated}</span>}
+      {refreshMessage&&<span role={refreshFailed?'alert':'status'}> · {refreshMessage}</span>}
     </p>
   </article>;
 }
