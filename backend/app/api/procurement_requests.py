@@ -297,7 +297,12 @@ async def analyze_request(
             'cached': False, 'source': 'catalogue_only', 'usage': None,
         }
 
-    # The AI SDK is deliberately imported only on the analysis route. Health,\n    # registration, login, catalog search, and payments do not need ADK.\n    # A broken AI SDK must not prevent authentication API startup.\n    from app.agents import runtime\n    from app.agents.runtime import AgentConfigurationError, AgentExecutionError\n\n    settings = get_settings()
+    # Lazy AI import keeps login, catalogue search and payments independent
+    # from third-party model SDK startup.
+    from app.agents import runtime
+    from app.agents.runtime import AgentConfigurationError, AgentExecutionError
+
+    settings = get_settings()
     if not settings.google_api_key and not runtime.configured_fallbacks(settings):
         raise HTTPException(
             status_code=503,
