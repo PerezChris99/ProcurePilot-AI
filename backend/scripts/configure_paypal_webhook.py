@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 import re
 from urllib.parse import urlsplit
 
@@ -71,7 +72,7 @@ def _matching_hook(webhooks: list, url: str) -> dict | None:
 async def ensure_webhook(*, create: bool = False, client: PayPalClient | None = None) -> dict:
     paypal = client or PayPalClient()
     paypal.ensure_configured()
-    target = _validate_target(CANONICAL_ENDPOINT)
+    target = _validate_target(os.environ.get("PAYPAL_WEBHOOK_URL", CANONICAL_ENDPOINT))
     try:
         # PayPal lists webhooks for the REST app represented by this OAuth
         # token, not for unrelated apps or generic merchant accounts.
