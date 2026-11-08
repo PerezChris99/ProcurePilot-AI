@@ -1,8 +1,9 @@
 import {describe,expect,it,vi} from 'vitest';
-import {render,screen,waitFor,within} from '@testing-library/react';
+import {render,screen,waitFor,within,fireEvent} from '@testing-library/react';
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {MemoryRouter} from 'react-router-dom';
 import DashboardPage from './DashboardPage.jsx';
+import {getHealth,getIntegrationStatus} from '../services/api.js';
 vi.mock('../context/useAuth.js',()=>({useAuth:()=>({user:{full_name:'Amina Kombe'}})}));
 vi.mock('../services/api.js',()=>({
  getHealth:vi.fn().mockResolvedValue({status:'ok'}),
@@ -57,5 +58,35 @@ describe('Live overview',()=>{
    expect(within(requests.closest('article')).getByText('4')).toBeInTheDocument();
   });
   expect(await screen.findByText('purchase order · created')).toBeInTheDocument();
+ });
+});
+
+
+describe('Hosted system status refresh',()=>{
+ it('forces new API calls, updates webhook ID status, and leaves purchase metrics untouched',async()=>{
+  renderPage();
+  expect(await screen.findByText('Webhook ID missing')).toBeInTheDocument();
+  getHealth.mockResolvedValueOnce({status:'ok'});
+  getIntegrationStatus.mockResolvedValueOnce({
+    database:{connected:true,schema_ready:true,engine:'postgresql'},
+    ai:{configured:true,api_key_set:true,model:'gemini-3.5-flash-lite',
+      backup_providers:{groq:true,openrouter:true}},
+    channel3:{configured:true,api_key_set:true,base_url_configured:true},
+    paypal:{
+      environment:'sandbox',credentials_configured:true,
+      client_id_set:true,client_secret_set:true,
+      webhook_configured:true,webhook_id_valid:true,
+      webhook_id_hint:'••••771C',webhook_url_configured:true,
+      webhook_last_verified_at:null,merchant_checkout_verified:false,
+    },
+  });
+  fireEvent.click(screen.getByRole('button',{name:'Refresh system status'}));
+  await waitFor(()=>{
+    expect(getHealth).toHaveBeenCalledWith({force:true});
+    expect(getIntegrationStatus).toHaveBeenCalledWith({force:true});
+    expect(screen.getByText(/Webhook ID ••••771C/)).toBeInTheDocument();
+  });
+  expect(screen.getByText(/Status updated just now/)).toBeInTheDocument();
+  expect(screen.getByText('Completed purchases')).toBeInTheDocument();
  });
 });
