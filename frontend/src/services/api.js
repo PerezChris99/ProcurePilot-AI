@@ -66,8 +66,8 @@ export async function apiRequest(path,options={}){
   }
   return response.json();
 }
-export function getHealth(){return apiRequest('/health')}
-export function getIntegrationStatus(){return apiRequest('/integrations/status')}
+export function getHealth({force=false}={}){return apiRequest('/health',force?{cache:'no-store'}:{})}
+export function getIntegrationStatus({force=false}={}){return apiRequest('/integrations/status',force?{cache:'no-store'}:{})}
 export function getDashboardSummary(){return apiRequest('/dashboard/summary')}
 
 /* Authenticated exports do not expose session tokens in query strings or URLs. */
