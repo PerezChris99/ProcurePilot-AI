@@ -88,8 +88,11 @@ def test_registration_rolls_back_and_returns_503_on_failed_database_commit(clien
         def add(self, user):
             pass
 
-        def commit(self):
+        def flush(self):
             raise OperationalError("INSERT users", {}, Exception("secret database URI"))
+
+        def commit(self):
+            raise OperationalError("COMMIT users", {}, Exception("secret database URI"))
 
         def rollback(self):
             self.rolled_back = True
@@ -107,3 +110,58 @@ def test_registration_rolls_back_and_returns_503_on_failed_database_commit(clien
         assert 'secret database URI' not in response.text
     finally:
         app.dependency_overrides.pop(get_db, None)
+
+
+def test_registration_materializes_user_without_post_commit_refresh(client, monkeypatch):
+    """Response contract does not depend on a second SELECT after INSERT/COMMIT."""
+    from datetime import datetime
+    from app.api import auth as auth_api
+    from app.main import app
+    from app.core.database import get_db
+    from app.schemas.auth import UserResponse
+
+    class EmulatedUserWrite:
+        refresh_called = False
+        rolled_back = False
+        added = None
+
+        def scalar(self, _query):
+            return None
+
+        def add(self, item):
+            self.added = item
+
+        def flush(self):
+            self.added.id = '12345678-1234-4123-8123-123456789abc'
+            self.added.created_at = datetime(2026, 11, 8, 12, 0, 0)
+            self.added.is_active = True
+
+        def commit(self):
+            pass
+
+        def refresh(self, _obj):
+            self.refresh_called = True
+            raise AssertionError('no post-commit SELECT allowed')
+
+        def rollback(self):
+            self.rolled_back = True
+
+    write = EmulatedUserWrite()
+    def override():
+        yield write
+
+    old = app.dependency_overrides.get(get_db)
+    app.dependency_overrides[get_db] = override
+    try:
+        response = register(client, email='quick-registration@example.com')
+        assert response.status_code == 201
+        payload = response.json()
+        assert payload['user']['id'] == '12345678-1234-4123-8123-123456789abc'
+        assert payload['user']['email'] == 'quick-registration@example.com'
+        assert write.refresh_called is False
+        assert write.rolled_back is False
+    finally:
+        if old is None:
+            app.dependency_overrides.pop(get_db, None)
+        else:
+            app.dependency_overrides[get_db] = old
