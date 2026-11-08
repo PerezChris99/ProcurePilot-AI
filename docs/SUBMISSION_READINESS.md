@@ -1,17 +1,25 @@
 # ProcurePilot AI — master submission checklist S01–S36
 
-**Updated 7 November 2026.** [Official rules](https://paypalaihackathon.devpost.com/rules)
-· Deadline: **12 Nov 2026, 23:00 EAT**
-· Free judging access through **15 Dec 2026**
+**Updated 8 November 2026.** [Official rules](https://paypalaihackathon.devpost.com/rules)
+· Deadline: **Thursday 12 Nov 2026, 23:00 EAT (12:00 noon PST)**
+· Judges need functional access during the **1–15 Dec 2026** judging period.
 · Repository: https://github.com/PerezChris99/ProcurePilot-AI
-· Intended website: https://procurepilotai.vercel.app
+· Hosted application: https://procurepilotai.vercel.app
 
-**Current verified count: 9/36**, counting only evidence for the latest candidate.
-The prior `d6e61cd` had a maintainer-confirmed 9/9 offline PASS, but the
-subsequent November 7 report is **8/9** with two Vitest timeouts; the updated
-candidate has not yet been rerun in Windows. No third-party certification. New candidate changes must
-be retested. Do not check a box without a real artifact or trace. No
-automatic Git merge or Devpost submission.
+**Verified completion: 10/36 submission gates.**
+Checkboxes are binary: source-level implementation can satisfy a code gate,
+but cannot replace a live PayPal or Gemini acceptance, a browser audit,
+or the Devpost submission. Partial progress is explained below without checking
+the remaining work off. Status incorporates owner-confirmed hosted account
+creation/login/procurement creation on 8 Nov, production Vercel and Neon
+build-gate evidence, and the latest GitHub source review.
+
+**Current change candidate:** authentication latency optimization on existing
+`perez` (batched DB throttle and reduced registration SQL roundtrips).
+Performance improvements are **source-implemented but NOT yet certified faster
+for actual public users**, pending a passing Preview regression build and
+browser latency measurements. `main` remains the known working release
+until separately reviewed.
 
 ## A. Fundamentals and eligibility
 
@@ -33,21 +41,16 @@ automatic Git merge or Devpost submission.
 - [x] **S10** — Judge README, flow diagrams, local preview and run instructions.
 - [ ] **S11** — Latest candidate passes clean-room 9/9, source/diff/secret review.
 - [ ] **S12** — User approves after online tests, then one `perez`→`main` PR/merge.
-- [ ] **S13** — Deployed **production** SHA matches approved, retested release.
+- [ ] **S13** — Production and Preview deployed `fa5f321` and `main`/`perez` were synchronized after PR #55. Current auth-speed candidate is not yet approved/retested for production; the release gate remains open.
 
 ## C. Hosted Vercel + Neon
 
 - [x] **S14** — `procurepilotai.vercel.app` attached; frontend/deep links returned 200.
-- [ ] **S15** — Production FastAPI `/api/v1/health` returns 200 JSON; logs clear.
-- [ ] **S16** — Production Neon migration 0010 was confirmed by the maintainer;
-      Vercel production DB connection and hosted registration remain unverified.
-      A separate **empty** Neon staging project is linked to Vercel `perez` Preview;
-      run `qa/initialize_neon.py --smoke` on its Direct TLS URL.
-- [ ] **S17** — All seven hosted read-only checks PASS. Last supplied result was
-      2/7 on the prior production release. PR #50 has since changed production;
-      a new probe is required. The `perez` Preview is still protected.
+- [ ] **S15** — Production FastAPI build gate proves in-process `/api/v1/health` 200 and `/api/v1/ready` 200, and browser auth works. An independent PUBLIC HTTPS health 200 JSON check and runtime log review are still missing.
+- [x] **S16** — **Production Neon schema and connection verified by the backend Vercel build gate**: correct production host/role, Alembic `0010_auth_throttles`, all 11 tables, and in-process FastAPI readiness 200. Staging Neon is separately migrated to 0010; the Vercel Preview passed real SQL-backed registration/login/JWT/procurement creation. This is not a 7/7 public HTTP result.
+- [ ] **S17** — Latest production 7/7 *public HTTP* probe is still missing. The old 2/7 result predated the now-working Vercel/Neon release, so it is obsolete. Rerun `qa/live_demo_check.py` from a machine with network access; Preview may require Vercel authentication.
 - [ ] **S18** — Actual hosted Channel3 search and Gemini/ADK response.
-- [ ] **S19** — Fresh-account browser sign-in, expired-session and per-user isolation.
+- [ ] **S19** — **Partially achieved:** owner confirmed fresh hosted registration, login and procurement creation on 8 Nov. Still requires explicit expired-session testing, two-account data isolation, logout and device refresh acceptance.
 
 ## D. Real PayPal Sandbox and evidence
 
@@ -74,6 +77,32 @@ automatic Git merge or Devpost submission.
 - [ ] **S34** — Precise tools/platform and genuine sponsor-category disclosure.
 - [ ] **S35** — Public repo, runnable demo access, video and required fields entered.
 - [ ] **S36** — Submitted Devpost entry confirmed before Nov 12 cutoff (not draft).
+
+## G. Authentication performance (not counted in S01–S36)
+
+- [x] **P01 source** — Profiled the registration/login path and identified two sequential remote PostgreSQL auth-throttle UPSERTs plus a post-commit registration SELECT.
+- [x] **P02 source** — Implemented one atomic multi-bucket UPSERT and a pre-commit response snapshot; Argon2id and strict rate-limit checks retained.
+- [x] **P03 targeted proof** — Standalone SQLAlchemy/SQLite execution demonstrated one UPSERT per auth attempt and retained both counters; automated regression tests committed.
+- [ ] **P04 Preview** — Current commit passes targeted pytest, actual Preview FastAPI/Neon readiness, and responsive browser login/registration with no regressions.
+- [ ] **P05 measurable speed** — Measure a warm/cold sign-in and sign-up baseline vs candidate, capturing p50/p95, browser network timing, and stable auth-error behavior on real hosted users (avoid repeated failures beyond throttle limits).
+- [ ] **P06 release** — Owner approves Preview results; merge `perez`→`main`, verify production SHA and rerun health/ready/login.
+
+**Latency reality:** The code removes two round trips from the sign-up path
+(one batched limiter write in place of two; one post-commit read eliminated)
+and one round trip from the login limiter path. Total user-visible time also
+depends on Argon2's deliberately secure CPU work, Neon latency, Vercel cold
+starts and frontend bundle loading. No unsupported percentage speed-up claim.
+
+## H. Prize-focused readiness (not counted in S01–S36)
+
+- [ ] **W01** — Prove the entire legitimate PayPal Sandbox buyer approval, explicit capture and signed webhook flow; retain amount/currency/idempotency evidence.
+- [ ] **W02** — Prove real Channel3 offers and one AI response with accurate provider attribution, constrained by buyer's deterministic policy.
+- [ ] **W03** — Capture one concrete, truthful impact example and one meaningful ineligible-offer rejection.
+- [ ] **W04** — Rehearse a judge-led 3-minute walkthrough with accessible text, no secret leakage, and no fabricated PayPal checkout.
+- [ ] **W05** — Produce a polished public YouTube demo **under 3 minutes**, screenshots, final technical documentation and Devpost description.
+- [ ] **W06** — Independent judge-style run, final QA, Devpost submit confirmation and free demo access through judging.
+
+See [winning execution plan](WINNING_EXECUTION_PLAN_2026-11-08.md).
 
 ## Next evidence commands
 
