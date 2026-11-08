@@ -2,9 +2,11 @@
 
 **ProcurePilot AI · Every Purchase Has a Reason**
 
+**Core demonstration:** **“What happens when the cheapest product is the wrong product?”** Follow a specific buyer requirement through genuine Channel3 offer eligibility, evidence-grounded analysis, human authorization, PayPal Sandbox test capture and the resulting Decision Passport. Use the [2:45 evidence-first filming plan](DEMO_CHEAPEST_WRONG_PRODUCT.md).
+
 This page is an honest route to inspecting or exercising the application in the
 [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/). It distinguishes
-the no-credentials **offline preview** from a **real integrated Sandbox run**.
+the no-credentials **offline preview** from a **real integrated Sandbox run**. A rejected offer is called cheaper only when saved, same-currency provider evidence actually supports that comparison.
 
 ## Route A: Hosted experience — the intended judging journey
 
@@ -105,6 +107,8 @@ The intended project needs **real, authorized test credentials**. Follow
    proof. Export the PDF if useful.
 
 ### Negative case worth watching
+
+For the competition story, use an actual quote only if its stored price and disqualification are visible. A cheaper rejected quote is **not** realized cost savings; it is an ineligible product. If live catalogue evidence does not show this pair, show the policy rejection without calling it the cheapest, or explicitly label the Trust Lab as synthetic.
 
 Ask for **72-inch monitors**. A 24-inch screen, an unknown-diagonal display
 or a monitor stand must **not** be orderable simply because its price is
