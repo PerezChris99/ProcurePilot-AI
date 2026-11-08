@@ -6,24 +6,15 @@ This page is an honest route to inspecting or exercising the application in the
 [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/). It distinguishes
 the no-credentials **offline preview** from a **real integrated Sandbox run**.
 
-## Route A: Hosted experience (preferred after 7/7 acceptance)
+## Route A: Hosted experience — the intended judging journey
 
-The configured frontend URL is **https://procurepilotai.vercel.app** (Vercel
-Services frontend and FastAPI; Neon PostgreSQL). The landing page and SPA
-routing passed a public HTTP probe, but the last maintainer-reported probe
-still showed **HTTP 500 on five API checks**. A successful Vercel build is not
-proof of full end-to-end availability. Re-run the seven-check public HTTPS probe
-and publish judge credentials through secure submission instructions only
-after **7/7 PASS** and successful provider acceptance.
+Open **https://procurepilotai.vercel.app**. Choose **Get started** to register your own test workspace; judges do not need a PayPal REST API key, database URL or Gemini secret to use the hosted app. Follow the [quick judge access and PayPal buyer guide](JUDGE_ACCESS_PLAYBOOK.md) for a complete buyer-request-to-Passport walkthrough.
 
-A suitable hosted run must support registration/login, live Channel3
-discovery, a real Google ADK Gemini analysis or disclosed model fallback,
-eligible PO creation, human approval, PayPal **Sandbox** buyer approval and
-explicit verified capture, plus Decision Passport export. No test real-world
-merchant payment is claimed.
+**Current evidence, 8 November 2026:** The owner reports working registration, sign-in, procurement and a successfully completed **PayPal Sandbox** buyer transaction visible inside PayPal. Vercel production and preview builds are READY at commit `5dff11f`. Previous public API failures predate the repaired release and are not a valid current outage report. The latest **7/7 public HTTPS probe, fresh 9/9 QA run, and delivered signed webhook verification are still separate acceptance tasks** and must not be inferred solely from the PayPal account transaction.
 
-**Do not** put a Sandbox Personal test password, PayPal REST client secret,
-JWT signing secret or API token in public docs, videos, issues or logs.
+The hosted route should let you search real Channel3 offers, request a genuine Google ADK / Gemini explanation (or see a clearly labelled fallback), select an eligible fixed-price purchase order, approve it through a permitted human account, approve and capture it through a **separate Personal PayPal Sandbox buyer**, and inspect the **Decision Passport**. The sandbox does not buy an item from the listed retailer or transfer real money.
+
+For a frictionless checkout repeat, the entrant must provide a **dedicated Personal Sandbox buyer login** through private Devpost testing instructions or another organizer-approved secure channel. The app's Business seller REST credentials remain on the server; do not request or disclose them. Do not place buyer passwords, REST secrets, JWT secrets or API tokens in this public guide.
 
 ## Route B: One-command safe local preview — no provider secrets
 
