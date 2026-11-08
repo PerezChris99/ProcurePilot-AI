@@ -97,6 +97,8 @@ FAILURE_CODES = {
     'paypal_webhook_duplicate_urls': 103,
     'paypal_webhook_invalid_provider_id': 104,
     'paypal_webhook_unexpected_target': 105,
+    'staging_paypal_capture_regression_failed': 106,
+    'staging_paypal_capture_test_runner_missing': 107,
 }
 EXPECTED = {
     'production': (
@@ -538,6 +540,37 @@ def inspect_preview_paypal_merchant(environment: str) -> None:
     asyncio.run(check())
 
 
+def verify_preview_paypal_capture_regression(environment: str) -> None:
+    """One-shot SQLite/test-double regression suite, never Sandbox charges.
+
+    Tests override FastAPI's db to in-memory SQLite and monkeypatch the
+    PayPal API client, so no buyer session, real capture, or Neon writes.
+    The gate is Preview-only and opt-in to avoid inflating deploy resources.
+    """
+    if environment!='preview' or os.environ.get('PROCUREPILOT_STAGING_CAPTURE_TESTS')!='1':
+        return
+    import subprocess
+    import sys
+    import re
+
+    result=subprocess.run([
+        sys.executable,'-m','pytest','-q','tests/test_purchase_orders.py',
+        '--disable-warnings','--maxfail=1',
+    ],cwd=BACKEND,capture_output=True,text=True,timeout=150,check=False)
+    if result.returncode:
+        # Print fixed, harmless pytest test identifiers only; never raw
+        # exceptions, DSNs, tokens, credentials, or provider payloads.
+        failed=re.findall(r'^(?:FAILED|ERROR) (tests/test_purchase_orders.py::[A-Za-z0-9_\[\]-]+)',
+                          result.stdout,flags=re.MULTILINE)
+        if failed:
+            print('[release-db] capture regression failing cases: '+','.join(failed[:4]),file=sys.stderr)
+        category=('staging_paypal_capture_test_runner_missing'
+                  if 'No module named pytest' in result.stderr
+                  else 'staging_paypal_capture_regression_failed')
+        raise ReleaseGateError(category)
+    print('[release-db] PASS PayPal purchase-order/capture/webhook regression suite (SQLite, no provider calls)')
+
+
 def main() -> int:
     environment = os.environ.get('VERCEL_ENV', '')
     if not os.environ.get('VERCEL') and not environment:
@@ -567,6 +600,7 @@ def main() -> int:
         verify_preview_live_providers(environment)
         verify_preview_primary_gemini(environment)
         inspect_preview_paypal_merchant(environment)
+        verify_preview_paypal_capture_regression(environment)
         print('[release-db] PASS FastAPI health/readiness/auth guards, Neon and Alembic 0010')
         return 0
     except ReleaseGateError as exc:
