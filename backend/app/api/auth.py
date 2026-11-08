@@ -35,12 +35,13 @@ def _find_user(db: Session, email: str) -> User | None:
         raise _database_unavailable(exc) from exc
 
 
-def _token_response(user: User) -> TokenResponse:
+def _token_response(user: User | UserResponse) -> TokenResponse:
     settings = get_settings()
+    response_user = user if isinstance(user, UserResponse) else UserResponse.model_validate(user)
     return TokenResponse(
-        access_token=create_access_token(user.id),
+        access_token=create_access_token(response_user.id),
         expires_in=settings.access_token_expire_minutes * 60,
-        user=UserResponse.model_validate(user),
+        user=response_user,
     )
 
 
@@ -60,8 +61,12 @@ def register(
     )
     try:
         db.add(user)
+        # Assign the UUID and client-side created_at default on INSERT.
+        # Take a complete user snapshot before commit so auth doesn't need a
+        # second SELECT after the write on a remote Neon connection.
+        db.flush()
+        response_user = UserResponse.model_validate(user)
         db.commit()
-        db.refresh(user)
     except IntegrityError as exc:
         db.rollback()
         # An integrity violation could be a non-unique constraint. Only report
@@ -74,7 +79,7 @@ def register(
     except SQLAlchemyError as exc:
         db.rollback()
         raise _database_unavailable(exc) from exc
-    return _token_response(user)
+    return _token_response(response_user)
 
 
 @router.post('/login', response_model=TokenResponse)
