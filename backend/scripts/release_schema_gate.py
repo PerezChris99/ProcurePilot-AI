@@ -97,6 +97,8 @@ FAILURE_CODES = {
     'paypal_webhook_duplicate_urls': 103,
     'paypal_webhook_invalid_provider_id': 104,
     'paypal_webhook_unexpected_target': 105,
+    'staging_paypal_capture_regression_failed': 106,
+    'staging_paypal_capture_test_runner_missing': 107,
 }
 EXPECTED = {
     'production': (
@@ -538,6 +540,29 @@ def inspect_preview_paypal_merchant(environment: str) -> None:
     asyncio.run(check())
 
 
+def verify_preview_paypal_capture_regression(environment: str) -> None:
+    """One-shot standard-library PayPal response contract verification.
+
+    This runs the actual production capture-evidence matcher with synthetic
+    order/capture data; no pytest, real provider API calls, or database writes.
+    Preview-only and explicitly opt-in to avoid resource burn.
+    """
+    if environment!='preview' or os.environ.get('PROCUREPILOT_STAGING_CAPTURE_TESTS')!='1':
+        return
+    import subprocess
+    import sys
+    result=subprocess.run(
+        [sys.executable,'-m','scripts.verify_paypal_capture'],
+        cwd=BACKEND,capture_output=True,text=True,timeout=45,check=False,
+    )
+    if result.returncode:
+        # Standard library runner prints only safe hardcoded test names.
+        if result.stdout.startswith('[paypal-capture] FAIL'):
+            print(result.stdout.strip()[:500],file=sys.stderr)
+        raise ReleaseGateError('staging_paypal_capture_regression_failed')
+    print(result.stdout.strip())
+
+
 def main() -> int:
     environment = os.environ.get('VERCEL_ENV', '')
     if not os.environ.get('VERCEL') and not environment:
@@ -567,6 +592,7 @@ def main() -> int:
         verify_preview_live_providers(environment)
         verify_preview_primary_gemini(environment)
         inspect_preview_paypal_merchant(environment)
+        verify_preview_paypal_capture_regression(environment)
         print('[release-db] PASS FastAPI health/readiness/auth guards, Neon and Alembic 0010')
         return 0
     except ReleaseGateError as exc:
