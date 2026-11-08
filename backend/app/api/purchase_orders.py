@@ -142,14 +142,123 @@ def _serialize_many(orders, db):
 
 
 def _paypal_order_matches(payload,order,payment):
-    if payload.get('id')!=payment.paypal_order_id or payload.get('status') not in ('APPROVED','COMPLETED'):
+    """Strictly verify an existing PayPal order BEFORE capturing any funds.
+
+    GET /v2/checkout/orders/{id} is the source of the original custom_id and
+    order amount. Never weaken this identity and total check to accommodate
+    the differently shaped POST /capture response.
+    """
+    if not isinstance(payload,dict) or payload.get('id')!=payment.paypal_order_id or payload.get('status') not in ('APPROVED','COMPLETED'):
         return False
     units=payload.get('purchase_units') or []
-    if len(units)!=1: return False
+    if not isinstance(units,list) or len(units)!=1 or not isinstance(units[0],dict):
+        return False
     unit=units[0]; amount=unit.get('amount') or {}
-    try: value=Decimal(str(amount.get('value')))
+    if not isinstance(amount,dict): return False
+    try:
+        value=Decimal(str(amount.get('value')))
+        if not value.is_finite(): return False
     except (InvalidOperation,ValueError,TypeError): return False
     return unit.get('custom_id')==order.id and amount.get('currency_code')==order.currency and value==Decimal(order.total_amount)
+
+
+def _paypal_completed_capture(payload,order,payment):
+    """Validate actual capture evidence, NOT a copy of the order creation body.
+
+    PayPal's POST /capture response commonly omits purchase-unit custom_id
+    and original amount; GET /orders/{id} was already strictly matched above.
+    Any metadata present in the capture response must still match, and a
+    single COMPLETED capture with an exact amount/currency is mandatory.
+    """
+    if not isinstance(payload,dict) or payload.get('id')!=payment.paypal_order_id or payload.get('status')!='COMPLETED':
+        return None
+    units=payload.get('purchase_units')
+    if not isinstance(units,list) or len(units)!=1 or not isinstance(units[0],dict):
+        return None
+    unit=units[0]
+    if 'custom_id' in unit and unit['custom_id']!=order.id: return None
+    if 'reference_id' in unit and unit['reference_id'] not in (order.po_number,'default'):
+        return None
+    if 'amount' in unit:
+        amount=unit['amount']
+        if not isinstance(amount,dict) or amount.get('currency_code')!=order.currency:
+            return None
+        try:
+            original=Decimal(str(amount.get('value')))
+            if not original.is_finite() or original!=Decimal(order.total_amount):
+                return None
+        except (InvalidOperation,ValueError,TypeError):
+            return None
+    payments=unit.get('payments') or {}
+    if not isinstance(payments,dict): return None
+    captures=payments.get('captures')
+    if not isinstance(captures,list) or len(captures)!=1 or not isinstance(captures[0],dict):
+        return None
+    capture=captures[0]
+    if capture.get('status')!='COMPLETED' or not PayPalClient.is_valid_order_id(capture.get('id')):
+        return None
+    if payment.capture_id and payment.capture_id!=capture['id']:
+        return None
+    amount=capture.get('amount')
+    if not isinstance(amount,dict) or amount.get('currency_code')!=order.currency:
+        return None
+    try:
+        value=Decimal(str(amount.get('value')))
+        if not value.is_finite() or value!=Decimal(order.total_amount):
+            return None
+    except (InvalidOperation,ValueError,TypeError):
+        return None
+    return capture
+
+
+def _paypal_capture_response_noncontradictory(payload,order,payment):
+    """Only missing capture details permit a read-only GET reconciliation.
+
+    Explicit mismatches in the POST response cannot be excused by a second
+    response. Fail closed on any conflicting order ID, PO ref, price, or
+    capture amount; never issue a second POST to 'fix' a response mismatch.
+    """
+    if not isinstance(payload,dict) or payload.get('id')!=payment.paypal_order_id or payload.get('status')!='COMPLETED':
+        return False
+    units=payload.get('purchase_units')
+    if not isinstance(units,list) or len(units)!=1 or not isinstance(units[0],dict):
+        return False
+    unit=units[0]
+    if 'custom_id' in unit and unit['custom_id']!=order.id: return False
+    if 'reference_id' in unit and unit['reference_id'] not in (order.po_number,'default'):
+        return False
+    if 'amount' in unit:
+        amount=unit['amount']
+        if not isinstance(amount,dict) or amount.get('currency_code')!=order.currency:
+            return False
+        try:
+            value=Decimal(str(amount.get('value')))
+            if not value.is_finite() or value!=Decimal(order.total_amount):
+                return False
+        except (InvalidOperation,ValueError,TypeError):
+            return False
+    payments=unit.get('payments') or {}
+    if not isinstance(payments,dict): return False
+    captures=payments.get('captures')
+    if captures is None: return True  # No capture details; GET can supply them.
+    if not isinstance(captures,list) or len(captures)!=1 or not isinstance(captures[0],dict):
+        return False
+    capture=captures[0]
+    if capture.get('status') not in (None,'COMPLETED'): return False
+    if 'id' in capture:
+        if not PayPalClient.is_valid_order_id(capture['id']): return False
+        if payment.capture_id and capture['id']!=payment.capture_id: return False
+    if 'amount' in capture:
+        amount=capture['amount']
+        if not isinstance(amount,dict) or amount.get('currency_code')!=order.currency:
+            return False
+        try:
+            value=Decimal(str(amount.get('value')))
+            if not value.is_finite() or value!=Decimal(order.total_amount):
+                return False
+        except (InvalidOperation,ValueError,TypeError):
+            return False
+    return True
 
 @router.post('/procurement-requests/{request_id}/purchase-orders',status_code=status.HTTP_201_CREATED,response_model=PurchaseOrderResponse)
 def create_purchase_order(request_id:str,payload:PurchaseOrderCreate,db:Session=Depends(get_db),user:User=Depends(get_current_user)):
@@ -386,8 +495,31 @@ async def capture_paypal_order(order_id:str,db:Session=Depends(get_db),user:User
         result=await client.capture_order(paypal_order_id,hashlib.sha256(('capture:'+payment.idempotency_key).encode()).hexdigest()[:32]) if remote.get('status')=='APPROVED' else remote
     except (PayPalConfigurationError,PayPalUnavailable) as exc:
         raise HTTPException(status_code=503 if isinstance(exc,PayPalConfigurationError) else 502,detail='PayPal could not verify or capture this order.') from exc
-    if not _paypal_order_matches(result,order,payment):
-        raise HTTPException(status_code=502,detail='PayPal capture response does not match the approved purchase order.')
+    # The Orders v2 POST capture response is *not* a repeat of GET order:
+    # it may contain reference_id and payments.captures, without custom_id
+    # or the original purchase-unit amount. The GET above validated the PO
+    # identity/amount before any POST. Reconcile an already-COMPLETED order
+    # with GET only; NEVER send another capture request in that state.
+    if not isinstance(result,dict) or result.get('id')!=paypal_order_id:
+        raise HTTPException(status_code=502,detail='PayPal returned a different order ID. Capture state is uncertain; verify the saved order before retrying.')
+    capture=None
+    if result.get('status')=='COMPLETED':
+        capture=_paypal_completed_capture(result,order,payment)
+        if capture is None:
+            if not _paypal_capture_response_noncontradictory(result,order,payment):
+                raise HTTPException(status_code=502,detail='PayPal reported conflicting completed capture details. Do not start a new checkout; review this PayPal order.')
+            # PayPal can omit complete capture data from the immediate result.
+            # Read the same order from PayPal and verify its immutable original
+            # PO binding and full capture evidence; no second charge is made.
+            try:
+                confirmation=await client.get_order(paypal_order_id)
+            except (PayPalConfigurationError,PayPalUnavailable) as exc:
+                raise HTTPException(status_code=502,detail='PayPal capture may have succeeded but confirmation is unavailable. Retry confirmation on this same purchase order, not a new payment.') from exc
+            if not _paypal_order_matches(confirmation,order,payment):
+                raise HTTPException(status_code=502,detail='PayPal confirmation does not match the original approved purchase order.')
+            capture=_paypal_completed_capture(confirmation,order,payment)
+            if capture is None:
+                raise HTTPException(status_code=409,detail='PayPal has not returned a verified completed capture. This purchase order remains pending; check the provider order before retrying.')
     order=_owned_order(order_id,user,db)
     current_payment=db.scalar(select(Payment).where(Payment.purchase_order_id==order.id))
     if not current_payment or current_payment.id!=payment_id or current_payment.paypal_order_id!=paypal_order_id:
@@ -402,13 +534,10 @@ async def capture_paypal_order(order_id:str,db:Session=Depends(get_db),user:User
         _audit(db,user.id,'payment.capture_pending',order_id=order.id,request_id=order.request_id,details={'paypal_status':result.get('status')})
         db.commit()
         raise HTTPException(status_code=409,detail='PayPal has not confirmed a completed capture. The order remains unpaid; retry after the provider reports a final status.')
-    captures=[]
-    for unit in result.get('purchase_units') or []: captures.extend((unit.get('payments') or {}).get('captures') or [])
-    capture=next((entry for entry in captures if entry.get('status')=='COMPLETED' and entry.get('id')),None)
-    try: captured_amount=Decimal(str(capture.get('amount',{}).get('value'))) if capture else None
-    except (InvalidOperation,ValueError,TypeError): captured_amount=None
-    if not capture or captured_amount!=Decimal(order.total_amount) or capture.get('amount',{}).get('currency_code')!=order.currency:
-        raise HTTPException(status_code=502,detail='PayPal capture response did not match the approved amount. The order was not marked paid.')
+    if capture is None:
+        raise HTTPException(status_code=502,detail='Completed PayPal capture evidence was not verified. The order remains pending.')
+    if payment.capture_id and payment.capture_id!=capture['id']:
+        raise HTTPException(status_code=409,detail='Another capture ID is already recorded for this order.')
     payment.status='completed'; payment.capture_id=capture['id']; payment.provider_response={'paypal_status':'COMPLETED','capture_id':capture['id']}
     order.status='paid'
     _audit(db,user.id,'payment.paypal_capture_completed',order_id=order.id,request_id=order.request_id,details={'capture_id':capture['id'],'amount':str(order.total_amount),'currency':order.currency})
