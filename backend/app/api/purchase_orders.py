@@ -543,7 +543,12 @@ async def capture_paypal_order(order_id:str,db:Session=Depends(get_db),user:User
     if order.status not in ('approved','payment_pending'):
         raise HTTPException(status_code=409,detail='Purchase order status changed while confirming payment.')
     if result.get('status')!='COMPLETED':
-        payment.status='pending'; payment.provider_response={'paypal_status':result.get('status')}
+        payment.status='pending'
+        # Preserve the one-way REST app fingerprint across pending responses.
+        # Otherwise a successful same-merchant retry is falsely classified as
+        # a merchant rotation and can no longer reconcile a later capture.
+        previous=payment.provider_response if isinstance(payment.provider_response,dict) else {}
+        payment.provider_response={**previous,'paypal_status':result.get('status')}
         _audit(db,user.id,'payment.capture_pending',order_id=order.id,request_id=order.request_id,details={'paypal_status':result.get('status')})
         db.commit()
         raise HTTPException(status_code=409,detail='PayPal has not confirmed a completed capture. The order remains unpaid; retry after the provider reports a final status.')
