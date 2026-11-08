@@ -66,6 +66,7 @@ FAILURE_CODES = {
     'staging_authenticated_read_failed': 67,
     'staging_request_creation_failed': 68,
     'staging_cleanup_failed': 69,
+    'auth_regression_failed': 72,
 }
 EXPECTED = {
     'production': (
@@ -298,12 +299,41 @@ def smoke_fastapi(environment: str) -> None:
                     raise ReleaseGateError('staging_cleanup_failed') from exc
 
 
+def run_preview_auth_regressions(environment: str) -> None:
+    """Run isolated SQLite auth regressions without ever touching Neon users.
+
+    The temporary test subprocess explicitly overrides APP_ENV and DATABASE_URL.
+    This is opt-in and Preview-only so production builds do not waste capacity.
+    """
+    if (environment != 'preview' or
+            os.environ.get('PROCUREPILOT_AUTH_REGRESSION') != '1'):
+        return
+    env = os.environ.copy()
+    env['APP_ENV'] = 'test'
+    env['DATABASE_URL'] = 'sqlite://'
+    env.pop('RATE_LIMIT_REDIS_URL', None)
+    try:
+        result = subprocess.run([
+            sys.executable, '-m', 'pytest', '-q',
+            'tests/test_auth.py',
+            'tests/test_auth_rate_limits.py',
+            'tests/test_postgres_auth_throttles.py',
+        ], cwd=BACKEND, env=env, capture_output=True, text=True,
+            timeout=180, check=False)
+    except (OSError, TimeoutError, subprocess.TimeoutExpired) as exc:
+        raise ReleaseGateError('auth_regression_failed') from exc
+    if result.returncode != 0:
+        raise ReleaseGateError('auth_regression_failed')
+    print('[release-db] PASS Preview isolated authentication and limiter regressions')
+
+
 def main() -> int:
     environment = os.environ.get('VERCEL_ENV', '')
     if not os.environ.get('VERCEL') and not environment:
         print('[release-db] skipped outside Vercel')
         return 0
     try:
+        run_preview_auth_regressions(environment)
         direct_url = checked_direct_url(os.environ.get('DATABASE_URL', ''), environment)
         validate_fastapi_settings()
         try:
