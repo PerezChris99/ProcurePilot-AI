@@ -79,6 +79,12 @@ FAILURE_CODES = {
     'staging_live_ai_failed': 82,
     'staging_live_paypal_oauth_failed': 83,
     'staging_gemini_primary_failed': 84,
+    'paypal_webhook_not_in_rest_app': 85,
+    'paypal_webhook_id_mismatch': 86,
+    'paypal_webhook_management_unavailable': 87,
+    'paypal_existing_order_unavailable': 88,
+    'paypal_existing_order_unapproved': 89,
+    'paypal_existing_order_payee_missing': 90,
 }
 EXPECTED = {
     'production': (
@@ -432,6 +438,55 @@ def verify_preview_primary_gemini(environment: str) -> None:
 
 
 
+def inspect_preview_paypal_merchant(environment: str) -> None:
+    """One-shot read-only PayPal REST app webhook and historical order inspection.
+
+    Not proof of merchant payment acceptance: only a real completed Sandbox
+    buyer approval/capture can establish that. This never calls POST orders,
+    capture, or webhook creation and never logs provider IDs or user details.
+    """
+    if environment != 'preview' or os.environ.get('PROCUREPILOT_PAYPAL_INSPECT') != '1':
+        return
+
+    import asyncio
+    from app.integrations.paypal.client import PayPalClient
+    from app.core.config import get_settings
+    from scripts.configure_paypal_webhook import ensure_webhook, WebhookSetupError
+
+    async def check():
+        client=PayPalClient()
+        client.ensure_configured()
+        try:
+            webhook=await ensure_webhook(create=False,client=client)
+        except WebhookSetupError as exc:
+            raise ReleaseGateError('paypal_webhook_management_unavailable') from exc
+        if webhook.get('action')!='existing':
+            raise ReleaseGateError('paypal_webhook_not_in_rest_app')
+        configured=get_settings().paypal_webhook_id
+        if not configured or webhook.get('id')!=configured:
+            raise ReleaseGateError('paypal_webhook_id_mismatch')
+        print('[release-db] PASS registered PayPal webhook matches current REST app and environment ID')
+
+        order_id=os.environ.get('PROCUREPILOT_PAYPAL_INSPECT_ORDER_ID','')
+        if not order_id:
+            return
+        if not client.is_valid_order_id(order_id):
+            raise ReleaseGateError('paypal_existing_order_unavailable')
+        try:
+            order=await client.get_order(order_id)
+        except Exception as exc:
+            raise ReleaseGateError('paypal_existing_order_unavailable') from exc
+        units=order.get('purchase_units') or []
+        if not units or not isinstance(units[0],dict) or not (
+            units[0].get('payee') or {}).get('merchant_id'):
+            raise ReleaseGateError('paypal_existing_order_payee_missing')
+        if order.get('status') not in ('APPROVED','COMPLETED'):
+            raise ReleaseGateError('paypal_existing_order_unapproved')
+        print('[release-db] PASS historical Sandbox order has buyer approval state')
+
+    asyncio.run(check())
+
+
 def main() -> int:
     environment = os.environ.get('VERCEL_ENV', '')
     if not os.environ.get('VERCEL') and not environment:
@@ -460,6 +515,7 @@ def main() -> int:
         smoke_fastapi(environment)
         verify_preview_live_providers(environment)
         verify_preview_primary_gemini(environment)
+        inspect_preview_paypal_merchant(environment)
         print('[release-db] PASS FastAPI health/readiness/auth guards, Neon and Alembic 0010')
         return 0
     except ReleaseGateError as exc:
