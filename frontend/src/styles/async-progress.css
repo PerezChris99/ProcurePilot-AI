@@ -51,3 +51,7 @@
     background:#2cb4e8;
   }
 }
+
+/* Keep the author acknowledgement visually quieter than navigation links. */
+.site-footer-brief .site-footer-credit{margin:10px 0 0;font-size:.90625rem;line-height:1.55;color:#596a7c;}
+.site-footer-credit a{font-weight:650;}
