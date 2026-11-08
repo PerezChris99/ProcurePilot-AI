@@ -6,7 +6,7 @@
 
 **Project name:** ProcurePilot AI  
 **Tagline:** Every Purchase Has a Reason.  
-**Short description:** An accountable procurement assistant that turns live product evidence, AI analysis, human approval and PayPal Sandbox capture into one auditable Decision Passport.
+**Short description:** What happens when the cheapest product is the wrong product? ProcurePilot checks actual Channel3 offers against buyer requirements, uses Gemini to explain qualified evidence, requires human approval and preserves PayPal Sandbox proof in a Decision Passport.
 
 **Public demo:** https://procurepilotai.vercel.app  
 **Public source:** https://github.com/PerezChris99/ProcurePilot-AI  
@@ -16,11 +16,11 @@
 
 ## Inspiration
 
-Buying a product is straightforward. Explaining why it was the right purchase is harder. Teams lose specification details, choose cheap but unsuitable offers, approve spending without context, and later struggle to match the decision to the payment. We wanted an AI-assisted purchasing experience that does not ask anyone to trust an unexplained recommendation.
+**What happens when the cheapest product is the wrong product?** A purchasing team may find a tempting low price only to discover that the item violates a required size, attribute, stock or merchant constraint. Saving money on the wrong product is not a good purchasing decision. We built ProcurePilot AI so businesses can keep requirements, live offer evidence, human approval and Sandbox payment proof together—without treating an unexplained AI recommendation as permission to spend.
 
 ## What it does
 
-ProcurePilot AI turns a purchasing need into a traceable decision. A buyer sets a specification, quantity, currency and budget. Channel3 retrieves real catalogue offers and merchant links. Deterministic server-side rules check whether each offer actually meets the request, including required attributes, observed stock, currency and budget. Ineligible offers retain explicit reasons for rejection.
+ProcurePilot AI answers that question through one traceable purchasing workflow. A buyer specifies requirements, quantity, currency and budget. Channel3 retrieves real catalogue offers and merchant links. Deterministic server-side rules reject offers that fail mandatory attributes, observed stock, currency or budget restrictions—even when a rejected listing would appear cheaper. The reasons remain visible rather than being buried by an AI-generated recommendation.
 
 Google Gemini, orchestrated through Google ADK, can then explain a bounded packet of saved offer evidence. It does not invent prices, decide eligibility, approve orders or execute payments. If the model is unavailable, the experience identifies the non-AI catalogue fallback rather than pretending a model replied.
 
@@ -40,7 +40,7 @@ The result is **accountable AI-assisted commerce**, not unsupervised purchasing.
 
 ## Challenges
 
-Real product data can be incomplete. A 24-inch monitor should never pass a 27-inch mandatory screen specification because it is cheap. The AI provider may time out or exhaust quota, while a PayPal capture response can contain less purchase-unit metadata than the original approved order. These failure modes made deterministic policy checks, honest provider attribution, bounded model requests and carefully differentiated PayPal order/capture verification essential.
+Real product data can be incomplete. A 24-inch monitor should never pass a 27-inch mandatory screen specification merely because of its price. The AI provider may time out or exhaust quota, while a PayPal capture response can contain less purchase-unit metadata than the original approved order. These failure modes made deterministic policy checks, honest provider attribution, bounded model requests and carefully differentiated PayPal order/capture verification essential.
 
 We also separated external network calls from long-running database transactions and designed a recoverable capture check to avoid treating a local response error as proof that PayPal did not take the test payment.
 
@@ -68,24 +68,25 @@ Organization-level approval policies, independent operational monitoring, invent
 
 ## Short pitch for project card
 
-ProcurePilot AI makes every purchase explainable. It sources real offers through Channel3, rejects products that violate the buyer's requirements, uses Gemini via Google ADK to explain the eligible options, requires a human to authorize the purchase, and verifies PayPal Sandbox capture. Every choice ends with a Decision Passport: what was considered, why it qualified, who approved and how payment was confirmed.
+**What happens when the cheapest product is the wrong product?** ProcurePilot AI checks real Channel3 offers against the buyer's non-negotiable requirements, explains the qualified choices with Gemini via Google ADK, requires human approval, and verifies PayPal Sandbox capture. The Decision Passport records the rejected alternatives, selected evidence, human authorization and test payment proof. A rejected cheaper quote is not claimed as savings.
 
-## Demonstration recording — 2:45 target
+## Demonstration recording — “What happens when the cheapest product is the wrong product?”
 
-Film the actual hosted browser at readable 1080p or higher. Keep the mouse steady, show evidence rather than menus, and use voice narration with subtitles. Cut waiting time, never fabricate transactions or use synthetic offline results as live evidence. Blur buyer email, login password, authorization tokens and other personal data. Avoid copyrighted music and third-party branding beyond necessary factual product-interface capture.
+**Canonical production plan:** [The 2:45 proof-first storyboard](DEMO_CHEAPEST_WRONG_PRODUCT.md). Film a real browser and real provider data, not a narrated mockup.
 
-| Window | Screen proof | Voiceover |
-| --- | --- | --- |
-| 0:00–0:15 | Landing page; one clear product sentence | "Buying is easy. Defending a purchasing decision is harder. ProcurePilot preserves the reason behind every order." |
-| 0:15–0:38 | New procurement with concrete specifications, quantity and budget | "We begin with the actual requirement, not a generic AI prompt." |
-| 0:38–1:06 | Real Channel3 results; show source and a rejected unsuitable alternative | "Live offers meet a strict server policy. A cheaper but incorrect product is not a better purchase." |
-| 1:06–1:29 | Real model response labelled Gemini/ADK if received | "AI explains the saved evidence. It cannot change eligibility or spend money." |
-| 1:29–1:53 | Create frozen-price purchase order and approve | "A human authorizes the decision against the original amount and conditions." |
-| 1:53–2:25 | Genuine PayPal Sandbox page, separate Personal buyer approval, app return and capture | "PayPal confirms the test buyer's approval. The backend verifies the completed capture and exact amount." |
-| 2:25–2:42 | Paid status, audit, Decision Passport/PDF | "The final record links product evidence, human decision and PayPal's test transaction." |
-| 2:42–2:45 | Simple closing title | "Every purchase has a reason." |
+**00:00–00:13:** Ask the question; show the requirement. **00:13–01:05:** Show a real Channel3 offer and a policy rejection, with a genuine cheaper-versus-eligible price contrast **only if the actual saved quotes support it**. **01:05–01:28:** Show actual Gemini/ADK analysis, or accurately labelled rules-only fallback. **01:28–01:52:** Freeze and approve the qualified order. **01:52–02:23:** Record actual Personal-buyer PayPal Sandbox approval and explicit capture. **02:23–02:45:** Finish on the Decision Passport and tagline.
 
-**Visual rule:** Spend the most time on the things a judge cannot infer from a screenshot: a rejected wrong specification, the real PayPal approval/capture and the completed Passport. Avoid tech-logo slides and feature-list walls. Screen text must be legible at normal playback size.
+**Evidence rule:** Real provider offers must determine the product names, prices, currency and comparison. If the cheapest actual offer is not rejected, do not narrate it as though it were. Synthetic Trust Lab policy demonstrations are valid only when clearly labelled separate from the live commerce run.
+
+**Value statement:** The product makes unsuitable offers visibly ineligible and preserves the purchasing justification. A cheaper *rejected* listing is not a saving, and Sandbox capture is not actual merchant fulfillment. The final video must be under 3:00, publicly visible on YouTube and free of exposed credentials or unlicensed third-party content.
+
+## Differentiation and early impact evidence
+
+ProcurePilot is deliberately not a price-sorting chatbot. Its contribution is the combination of **hard buyer mandates**, explain-only AI, human-approved fixed-price purchase orders and the historical Decision Passport. Existing shopping assistants or procurement suites may provide parts of this workflow; we do not claim to have invented product comparison, approval software or audit logging.
+
+The current system does **not** submit the selected offer to a retailer for fulfillment. A real merchant-order integration would require an authorized seller channel, supported checkout or ordering API, and separate order confirmation, taxes, shipping, refunds, cancellation and failure reconciliation. The Sandbox demo proves the payment integration, not delivery.
+
+Impact claims must be observable: a real rejected incompatible quote, a real approved eligible quote, the recorded approval actor, and the corresponding Sandbox capture. A controlled small usability test can compare time-to-decision, specification errors and the quality of the retained evidence against a manual process; report sample size and raw results if actually collected, not fabricated efficiency gains.
 
 ### Final material checklist
 
