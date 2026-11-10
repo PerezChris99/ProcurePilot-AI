@@ -1,4 +1,6 @@
-# ProcurePilot AI — Windows QA suite
+# ProcurePilot AI — QA and deployment acceptance
+
+**Post-submission note (10 November 2026):** The solo developer reports submitting the project to Devpost. GitHub records a successful Vercel deployment of `be87bc3` on 9 November; this does not establish a current full test pass. The procedures below remain necessary before any new production release.
 
 Run from the repository root in an existing VS Code terminal:
 
@@ -66,11 +68,11 @@ All QA subprocesses are given APP_ENV=test, an isolated SQLite URL and cleared p
 3. Confirm signed webhook delivery to a public HTTPS API endpoint, duplicate handling and amount mismatch failures.
 4. Validate PostgreSQL migrations against a disposable PostgreSQL copy, not production first.
 5. Check keyboard navigation, reduced motion, 320/375/768/960/1440px displays, mobile browsers and real devices.
-6. Deploy a public stable backend/frontend, record and publish the video, and submit Devpost.
+6. For every post-submission release, confirm the Vercel commit, inspect runtime errors and maintain a working hosted demo and private judge buyer access through the judging window.
 
 Do not describe mocked tests, isolated SQLite migrations or a compiled build as proof that real third-party APIs or public deployment are working.
 
-See docs/INTEGRATION_ACCEPTANCE.md and docs/HACKATHON_SUBMISSION_KIT.md.
+See [integration acceptance](../docs/INTEGRATION_ACCEPTANCE.md), [release procedure](../docs/RELEASE_READINESS.md) and [judge instructions](../docs/JUDGE_ACCESS_PLAYBOOK.md).
 
 ## Neon / release evidence (read-only except explicit migration)
 
