@@ -1,131 +1,45 @@
-# Controlled release and evidence — ProcurePilot AI
+# Release and judging acceptance — ProcurePilot AI
 
-**Workflow:** implement on existing `perez` → verify offline → verify an isolated
-preview with safe credentials → receive owner's explicit approval → one reviewed
-merge to `main` → confirm production deployment SHA and recheck live services.
+**Purpose:** A short, repeatable release procedure for the submitted solo project.  
+[Main README](../README.md) · [Judge quick start](JUDGES_START_HERE.md) · [QA](../qa/README.md) · [1:59 demo](DEMO_CHEAPEST_WRONG_PRODUCT.md)
 
-**No GitHub Actions. No extra Git branches. No automatic production promotion
-without approval.** Do not trade away authentication, amount verification,
-signed webhooks, or legitimate product evidence to make a check appear green.
+**Git workflow:** commit to existing `perez` → review one PR → merge into `main` → verify Vercel's exact deployed commit. **No new branches or GitHub Actions.** Keep preview/staging data separate from production.
 
-## The three independently provable technical gates
+~~~mermaid
+flowchart LR
+    A["perez: reviewed source"] --> B["Local 9-gate QA"]
+    B --> C["Isolated preview + staging checks"]
+    C --> D["PR merged to main"]
+    D --> E["Vercel production deployment"]
+    E --> F["7 hosted HTTP checks"]
+    F --> G["Real-provider + Sandbox acceptance"]
+~~~
 
-| Gate | Proof | Status today |
+## Three independent verification gates
+
+| Gate | Command or evidence | What it proves |
 | --- | --- | --- |
-| Offline correctness | `qa/reports/summary.json`, nine passes | Latest supplied run 8/9 (two frontend Vitest timeouts); candidate fixes await new Windows 9/9 |
-| Neon database | `qa/reports/neon.json`, TLS connection, schema 0010 and required tables | Production schema reported green by owner; new staging project separately exists but needs migrations and staging write/read QA |
-| Hosted application | `qa/reports/hosted.json`, seven HTTP passes | Old production probe 2/7; PR #50 has since deployed, and both new production and protected preview need fresh HTTP acceptance |
+| **Local source (9)** | `.\test-all.bat` → `qa/reports/summary.md` | Python, frontend, migration, contract and build tests |
+| **Database** | `python qa/verify_neon.py --output qa/reports/neon.json` using authorized private `DATABASE_URL` | TLS connection, current migration/schema readiness on the target DB |
+| **Hosted HTTP (7)** | `python qa/live_demo_check.py --frontend https://procurepilotai.vercel.app --api https://procurepilotai.vercel.app` | Public page and API readiness, CORS and protected-route behavior |
 
-### Step 1: pull and test the reviewed source
+**A build is not an end-to-end payment test.** After these checks, exercise a genuine Channel3 search, attributable Gemini/ADK analysis, authorized human approval, separate **Personal PayPal Sandbox buyer** authorization, explicit server-validated capture and signed webhook delivery **if claiming** live webhook proof.
 
-From repository root on Windows, using the existing Python virtualenv:
+## Safe release procedure
 
-```powershell
-git switch perez; git pull --ff-only origin perez
-.\backend\.venv\Scripts\python.exe -m pip install -r .\backend\requirements.txt
-.\test-all.bat
-```
+1. Pull the reviewed source on `perez` and run `.\test-all.bat`. Investigate failed gates rather than weakening them.
+2. Check migrations with disposable or dedicated staging PostgreSQL first. Do not reset or seed the production database solely to force a green report.
+3. Verify the protected Vercel preview with a **separate staging database**. Use a temporary, revocable deployment-protection bypass only if necessary; never store it in Git.
+4. Merge a reviewed PR from `perez` into `main` once authorized. Confirm Vercel deployed the intended merge SHA.
+5. Run the seven public hosted checks, then rehearse the genuine browser purchase and Decision Passport export using a dedicated Personal Sandbox buyer.
+6. Inspect runtime errors, access control and data isolation. Keep the demo and judge credentials available through **15 December 2026**.
 
-A passing build with mocked providers is **not** acceptance of a live model,
-catalogue, buyer checkout, or HTTPS webhook.
+**Protected preview:** If Vercel requires authentication, supply its temporary `VERCEL_AUTOMATION_BYPASS_SECRET` only through a private terminal for the configured preview host; revoke it after testing. Do not send it to production or include it in logs, commits or screenshots.
 
-### Step 2: initialize / verify Neon without revealing credentials
+**Database changes:** Follow [the Neon/Vercel runbook](VERCEL_NEON_DEPLOYMENT.md) and [detailed tests](testing.md) before touching production schema. Full provider acceptance guidance is in [integration checks](INTEGRATION_ACCEPTANCE.md).
 
-```powershell
-.\backend\.venv\Scripts\python.exe .\qa\initialize_neon.py
-```
+## Current evidence boundary
 
-Open [Neon Console](https://console.neon.tech/) → `procurepilot-ai` → Connect → `procurepilot` database → **Connection pooling OFF** → copy its **Direct** TLS connection string. Then run the initializer above. On Windows it reads the clipboard directly (no hidden paste prompt), clears the clipboard, and never prints the URL or writes it to a report. Alternatively pass `--input env` after privately setting `DATABASE_URL`. The script runs
-`alembic upgrade head`, verifies `0010_auth_throttles`, and writes the
-credential-free `qa/reports/neon.json` report.
+As of **10 November 2026**, GitHub reports Vercel deployment of source commit `db3cd787` completed successfully. The solo developer reports a completed PayPal Sandbox transaction and a submitted Devpost entry. The **1:59 video duration is supplied by the creator**. None of these reports substitute for a freshly executed current-commit 9/9 local suite, 7/7 public probe or independently observed signed webhook.
 
-**Do not reset tables or create demo users on the production DB just to pass
-this check.** The old Neon plugin connection role `owner` does not exist;
-this script verifies through a real, freshly supplied database connection.
-A local Neon success does not prove that Vercel has the same correct URL.
-
-### Step 3: safely test Vercel preview before merging
-
-The Vercel project currently builds `perez` as a **preview** separate from
-`main`. Test this preview through an authorized Vercel browser session
-with a **separate staging database**. Production `DATABASE_URL` is scoped
-to production and must not be copied into previews. If no staging database
-and preview access are configured, **live preview acceptance remains blocked**.
-Never disable protections or point a test account at production data to fake
-a passing preview.
-
-### Step 4: verify seven public gates after a controlled release
-
-```powershell
-python .\qa\live_demo_check.py --frontend https://procurepilotai.vercel.app --api https://procurepilotai.vercel.app | Tee-Object -FilePath .\qa\reports\hosted.json
-```
-
-For a protected Vercel `perez` Preview, open Settings → Deployment
-Protection → **Protection Bypass for Automation** and create a temporary,
-revocable token. Set `VERCEL_AUTOMATION_BYPASS_SECRET` privately in your
-Windows PowerShell session. Then run the same seven checks with both
-`--frontend` and `--api` pointing to
-`https://procurepilotai-preview.vercel.app`. The script sends the secret
-only to this exact preview host, never production or an arbitrary URL,
-and refuses redirects to avoid credential leakage. Do not paste the
-secret into GitHub, chat, logs or Devpost. Revoke it after preview QA.
-
-For raw HTTP 500 diagnostics, use `python qa/hosted_readonly_check.py`.
-The Vercel `backend/main.py` entrypoint now fails closed with HTTP 503 and
-a **safe startup category** if an application import fails. Categories
-`missing_runtime_dependency`, `runtime_import_failure`, and
-`invalid_configuration` point to distinct operational causes; no raw
-exception message is disclosed. If the host still returns
-`FUNCTION_INVOCATION_FAILED` HTTP 500, inspect Vercel's Python runtime
-and bundle logs. The diagnostic does **not** fix imports or authorize
-account creation, provider calls, or payment handling.
-Vercel's connected runtime-log reader previously returned HTTP 403; the
-owner can view actual tracebacks under the deployment's Runtime Logs.
-
-### Step 5: evaluate evidence (no Git writes)
-
-```powershell
-.\backend\.venv\Scripts\python.exe .\qa\report_release.py
-```
-
-If the current production build on `main` is still failing HTTP 500,
-the 7/7 production report can only be obtained **after** its fix is
-released. Before merge, use green local tests and an isolated, authorized
-online preview as the release-review evidence; complete the production
-7/7 gate **immediately after** the approved merge.
-
-The tool's three-report PASS is a **post-release** evidence standard rather
-than permission to merge untested source. It refuses to authorize review
-unless all three reports pass on a clean
-`perez` tree. It **does not** confirm provider payment, merge or deploy.
-
-### Step 6: real-provider acceptance — human-assisted
-
-- Real Channel3 products and one correctly excluded offer.
-- One real Gemini/ADK analysis with accurate provider attribution.
-- User-scoped buyer → saved PO → independent or authorized approval.
-- Real PayPal **Sandbox** Business-seller checkout, separate Personal-buyer
-  approval, explicit verified capture, matching currency/amount/order IDs.
-- HTTPS signed webhook delivery, rejected forged event, duplicate replay,
-  and a truthful Decision Passport/PDF.
-- Fresh private browsing session, phone/tablet/desktop display, failure modes.
-
-Detailed evidence: [Provider acceptance](INTEGRATION_ACCEPTANCE.md).
-No real money, retail merchant settlement, or unlicensed content.
-
-### Step 7: release only with explicit approval
-
-The owner reviews `perez` changes, offline gate output, sanitized online
-evidence, actual provider test and domain. Only after explicit approval:
-merge the existing `perez` into `main` through a single PR, wait for
-the production deployment, confirm the exact SHA, then rerun the live gates.
-The GitHub integration builds `perez` previews automatically; avoid repeated
-pushes. Preview and production databases must be isolated.
-
-## Submitted-project maintenance and judging
-
-The solo developer reports submitting [ProcurePilot AI to Devpost](https://devpost.com/software/procurepilot-ai) on 10 November 2026. This is developer-reported submission status, not independent evidence of Devpost's final submission receipt.
-
-GitHub reports Vercel deployment of commit `be87bc3` completed successfully on 9 November. For any subsequent deployment, verify the exact source SHA, public health/readiness, authentication, Channel3, Gemini provider attribution and a distinct Personal-buyer PayPal Sandbox checkout before regarding the change as accepted.
-
-The hosted project and authorized dedicated judge test accounts should remain available through 15 December 2026. Keep actual Sandbox passwords and merchant/API credentials outside GitHub, logs and public documentation. Preserve the no-real-retailer-checkout limitation when describing the project.
+**Scope:** PayPal Sandbox uses virtual money; no real Channel3 retailer payment, supplier order or fulfillment is created. Keep that distinction visible in the README, demo and judge materials.
