@@ -1,61 +1,53 @@
-# Judge access and PayPal Sandbox walkthrough
+# Judge access and PayPal Sandbox — quick guide
 
-**ProcurePilot AI — functional evaluation guide**  
-Updated: 10 November 2026  
-App: https://procurepilotai.vercel.app  
-Source: https://github.com/PerezChris99/ProcurePilot-AI  
-Deadline: 12 November 2026 at 12:00 PST / 23:00 EAT. Judging: 1–15 December 2026.
+**ProcurePilot AI** · **Demo video: 1:59** (creator-reported)  
+[Live app](https://procurepilotai.vercel.app) · [Devpost entry](https://devpost.com/software/procurepilot-ai) · [Full judge walkthrough](JUDGES_START_HERE.md)
 
-## Start without credentials
+## What you need
 
-Open the hosted app. Select **Get started**, register a fresh account using a test email you control and a unique password, and sign in. No developer keys are needed by a judge: the hosted backend owns its configured provider integrations. If registration or providers are unavailable, use the documented [one-command offline preview](JUDGES_START_HERE.md), clearly marked as a synthetic, non-payable inspection route.
+| Access | How to obtain it |
+| --- | --- |
+| **ProcurePilot account** | Select **Get started** and register, or use an isolated judge account if the entrant supplies one privately |
+| **PayPal Sandbox Personal buyer** | Use the dedicated **test buyer** credentials supplied in the private Devpost judging/testing field or organizer-approved secure channel |
+| **Not required** | Real PayPal login, PayPal Developer Dashboard, merchant Business login, REST API keys or database credentials |
 
-A complete live walkthrough starts with **New procurement** and follows:
+**Important:** PayPal Sandbox uses **virtual money**. Do not use a real PayPal account. The Personal test buyer must be **different** from the Business Sandbox merchant.
 
-1. Describe a specific business need with quantity, currency, budget, and any mandatory specifications; an example is two 27-inch office monitors, quantity 2, USD budget 1000. This is a search intent, not a guarantee of current stock.
-2. Select **Search products**. Review actual Channel3 catalogue offers, sources, prices and the explicit reasons some results are ineligible.
-3. Select **Ask AI to analyze**. Observe the named model when a real response succeeds. If Gemini/ADK is unavailable, the UI must disclose a rule-based fallback rather than claim generated analysis.
-4. Select an eligible saved offer, **Create purchase order**, and **Submit for approval**.
-5. Use **Approvals** to record an authorized human decision. For an order assigned to a different registered reviewer, that reviewer must sign in separately.
-6. Under **Purchase orders**, create a **PayPal Sandbox** checkout. PayPal opens in a separate browser tab. Sign into PayPal with a **Personal Sandbox buyer** account, distinct from the Business Sandbox merchant that issued the order.
-7. Approve the exact Sandbox order in PayPal. Return to ProcurePilot, review the total, then click **Confirm buyer approval & capture**. A browser return alone is not capture.
-8. Verify the paid Sandbox status, audit timeline and **Decision Passport** JSON/PDF. Match the recorded order, capture ID, currency and amount.
+## Complete a test purchase
 
-**Payment boundaries:** PayPal Sandbox uses virtual money; the app does not purchase or fulfill the listed Channel3 retailer offer. An LLM cannot authorize an order or initiate an unapproved payment.
+~~~mermaid
+flowchart TD
+    A["Sign in to ProcurePilot"] --> B["Create request + search Channel3"]
+    B --> C["Select eligible offer + create PO"]
+    C --> D["Submit and approve PO"]
+    D --> E["Create PayPal Sandbox checkout"]
+    E --> F["Separate Personal buyer approves"]
+    F --> G["Return and confirm capture"]
+    G --> H["Paid record + Decision Passport"]
+~~~
 
-## Testing access the entrant must prepare
+1. Open [ProcurePilot AI](https://procurepilotai.vercel.app) and sign in.
+2. **New procurement:** try two 27-inch monitors, quantity **2**, budget **$1,000 USD**, with 27-inch size mandatory.
+3. **Search products:** review actual offers and reasons ineligible listings were rejected. **Ask AI to analyze** for a real model explanation or a clearly marked non-AI fallback.
+4. Select an eligible offer, **Create PO**, then **Submit for approval**. In **Approvals**, an authorized user approves it. A separately assigned reviewer must log in independently.
+5. Under **Purchase orders**, start **PayPal Sandbox checkout**. In the PayPal tab, sign in as the **Personal Sandbox buyer** and approve the test transaction.
+6. Return to ProcurePilot and select **Confirm buyer approval & capture**. The redirect alone does **not** mean payment completed.
+7. Check that the order shows paid and open the **Decision Passport**. Compare order, amount/currency, approval and payment/capture evidence; export JSON/PDF if useful.
 
-The hosted app supports self-registration. For a frictionless judge experience, also prepare a **dedicated, non-privileged ProcurePilot judge account** and a **dedicated PayPal Sandbox Personal buyer account**. Test both in a fresh private browser session after the last deployment.
+## If checkout does not finish
 
-The entrant must supply the following only through an access-controlled judging/testing channel accepted by Devpost, after checking whether the submission field is private. Do not assume all Devpost project fields are private:
+- **Login rejected?** Sign out of any real PayPal or Sandbox Business session and use the **Personal Sandbox buyer** credentials.
+- **Popup blocked?** Use the saved order's **Open PayPal** link, then return to ProcurePilot.
+- **Session expired?** Sign in again and open the *same* saved order. Do not create unnecessary duplicate payments.
+- **Capture uncertain?** Inspect the saved payment status and order IDs before trying again. Do not assume a canceled redirect proves success.
+- **Third-party service unavailable?** Use the [offline inspection route](JUDGES_START_HERE.md#offline-inspection-if-providers-are-unavailable); it is **synthetic and non-payable**, not evidence of real provider integration.
 
-- Live app URL and optional dedicated ProcurePilot judge login (email and unique password).
-- Separate PayPal Sandbox **Personal buyer** email and password, explicitly labelled “Sandbox only”.
-- Exact steps above and a contact method for access problems.
-- A warning that a PayPal Sandbox Business seller identity, real PayPal login or PayPal Developer Dashboard account **must not** be used for the buyer approval.
+## What is and is not demonstrated
 
-**Never publish** these passwords or the merchant PayPal REST client secret, webhook ID plus secret material, database URL, JWT secret, Channel3 key, Gemini key, access tokens or environment files in GitHub, issue comments, public screenshots, videos or frontend bundles. If a private submissions field is not available, arrange a secure organizer-approved distribution method. Rotate dedicated test passwords once judging ends; preserve required access until at least 15 December.
+**Demonstrated in source:** Channel3 catalogue comparisons, deterministic purchasing eligibility, Google ADK/Gemini analysis with labelled fallback, human authorization, PayPal Orders v2 Sandbox capture validation, signed-webhook handlers and an evidence-backed Decision Passport.
 
-A judge may create a fresh application workspace while reusing the provided isolated Sandbox Personal buyer login for the payment demonstration. Do not imply that each judge needs PayPal REST application credentials or the developer's own account.
+**Not claimed:** A real supplier order, actual retailer payout, guaranteed current stock, full enterprise approvals or independently confirmed live webhook delivery.
 
-## Fallback if a judge cannot log into PayPal Sandbox
+**Credential handling:** Never post the Sandbox buyer password or merchant/API secrets in GitHub, public PDFs, screenshots or videos. Private judging access should remain functional through **15 December 2026**; rotate disposable test credentials afterward.
 
-- Verify the address is an official PayPal Sandbox login and the order was generated by the current merchant REST application.
-- Sign out of any Business seller or real PayPal session, and sign in with the separate Personal Sandbox test buyer.
-- Review the saved order in ProcurePilot before attempting capture. Never repeatedly trigger capture, create duplicate orders for a completed transaction or assume a cancelled return is payment.
-- Follow [local judge preview](JUDGES_START_HERE.md) for reproducible inspection if live third-party services are temporarily down. Offline preview is not live provider evidence.
-
-## Evidence and operational acceptance
-
-**Developer-reported progress:** The developer reports a working dedicated Sandbox buyer, a successful Sandbox transaction and a submitted Devpost entry. GitHub records successful deployment of commit `be87bc3` on 9 November. The report does not independently verify current HTTPS health checks, transaction ID reconciliation or signed webhook delivery.
-
-During judging, the developer should maintain a sanitized evidence bundle outside GitHub: dated capture screenshot or provider transaction detail, order/capture ID comparison (redact buyer details), paid UI and Decision Passport, signed webhook event delivery if claimed, real Channel3 result, actual model provider label, and the current 9/9 plus public 7/7 test output. Never invent a missing result.
-
-## Useful links
-
-- [Technical walkthrough](JUDGES_START_HERE.md)
-- [Public demonstration walkthrough](DEMO_CHEAPEST_WRONG_PRODUCT.md)
-- [Release acceptance procedure](RELEASE_READINESS.md)
-- [Test and integration checks](INTEGRATION_ACCEPTANCE.md)
-- [Official rules](https://paypalaihackathon.devpost.com/rules)
-- [PayPal Sandbox account documentation](https://developer.paypal.com/sandbox-testing/accounts)
+**Status:** The creator reports a working Sandbox buyer and a submitted Devpost entry. GitHub shows the Vercel deployment for `db3cd787` completed on 10 November 2026. These are not a replacement for current end-to-end testing.
