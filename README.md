@@ -22,7 +22,7 @@ flowchart TD
     B --> C{"Backend policy: eligible?"}
     C -->|No| D["Show rejection reason"]
     C -->|Yes| E["Qualified offers"]
-    D --> E
+    D --> F
     E --> F["Gemini via Google ADK: explain evidence"]
     F --> G["Select eligible offer; freeze order amount"]
     G --> H{"Human approval"}
