@@ -1,177 +1,82 @@
 # Judges — start here
 
-**ProcurePilot AI · Every Purchase Has a Reason**
+**ProcurePilot AI · Every Purchase Has a Reason**  
+**Demo video: 1:59** (creator-reported runtime) · [Devpost entry](https://devpost.com/software/procurepilot-ai) · [Live app](https://procurepilotai.vercel.app)
 
-**Core demonstration:** **“What happens when the cheapest product is the wrong product?”** Follow a specific buyer requirement through Channel3 offer eligibility, evidence-grounded analysis, human authorization, PayPal Sandbox test capture and the resulting Decision Passport. See the [public demonstration walkthrough](DEMO_CHEAPEST_WRONG_PRODUCT.md).
+## The idea in 20 seconds
 
-This page is an honest route to inspecting or exercising the application in the
-[PayPal AI Hackathon](https://paypalaihackathon.devpost.com/). It distinguishes
-the no-credentials **offline preview** from a **real integrated Sandbox run**. A rejected offer is called cheaper only when saved, same-currency provider evidence actually supports that comparison.
+**What happens when the cheapest product is the wrong product?**
 
-## Route A: Hosted experience — the intended judging journey
+ProcurePilot checks **real Channel3 offers** against mandatory buyer specifications before an AI explains the qualified options. A human authorizes the selected order, **PayPal Sandbox** confirms the test capture, and a **Decision Passport** preserves the reasons, approver and payment evidence.
 
-Open **https://procurepilotai.vercel.app**. Choose **Get started** to register your own test workspace; judges do not need a PayPal REST API key, database URL or Gemini secret to use the hosted app. Follow the [quick judge access and PayPal buyer guide](JUDGE_ACCESS_PLAYBOOK.md) for a complete buyer-request-to-Passport walkthrough.
+~~~mermaid
+flowchart LR
+    A["Requirement"] --> B["Channel3 offers"]
+    B --> C{"Meets policy?"}
+    C -->|No| D["Visible rejection"]
+    C -->|Yes| E["Gemini explains"]
+    E --> F["Human approval"]
+    F --> G["PayPal Sandbox test"]
+    G --> H["Decision Passport"]
+~~~
 
-**Status — 10 November 2026:** The developer reports completing a PayPal Sandbox test purchase and submitting the Devpost entry. GitHub shows a **successful Vercel deployment** of source commit `be87bc3` on 9 November. This is deployment status, not independent verification of current public HTTP checks, a fresh QA run or webhook delivery. For evaluation, use the live app and dedicated Sandbox buyer access supplied through Devpost's private instructions.
+## Try the real hosted workflow
 
-The hosted route should let you search real Channel3 offers, request a genuine Google ADK / Gemini explanation (or see a clearly labelled fallback), select an eligible fixed-price purchase order, approve it through a permitted human account, approve and capture it through a **separate Personal PayPal Sandbox buyer**, and inspect the **Decision Passport**. The sandbox does not buy an item from the listed retailer or transfer real money.
+**Start:** [https://procurepilotai.vercel.app](https://procurepilotai.vercel.app)
 
-For a frictionless checkout repeat, the entrant must provide a **dedicated Personal Sandbox buyer login** through private Devpost testing instructions or another organizer-approved secure channel. The app's Business seller REST credentials remain on the server; do not request or disclose them. Do not place buyer passwords, REST secrets, JWT secrets or API tokens in this public guide.
+1. Select **Get started**; register or sign in.
+2. Create **New procurement**: for example, *two 27-inch office monitors*, quantity **2**, USD budget **$1,000**, 27-inch display mandatory. The example does **not** guarantee current listings.
+3. Choose **Search products**; compare real Channel3 prices, merchants, eligibility and rejection reasons. Only describe a rejected option as *the cheapest* when saved same-currency prices prove that.
+4. Choose **Ask AI to analyze**; read the attributed Gemini/ADK response, or an explicitly labelled rules-only fallback.
+5. Select an **eligible** offer, **Create PO**, then **Submit for approval**. An authorized reviewer approves it in **Approvals** (the owner can self-approve unless a separate reviewer was assigned).
+6. Under **Purchase orders**, create **PayPal Sandbox checkout**. Use a **Personal Sandbox buyer** separate from the app's Business merchant, approve in the PayPal tab, return, and choose **Confirm buyer approval & capture**. Returning alone does not constitute capture.
+7. Inspect the paid order, audit history and **Decision Passport** (JSON/PDF), including selected/rejected evidence and capture proof.
 
-## Route B: One-command safe local preview — no provider secrets
+**Access:** A dedicated **Personal Sandbox buyer** can be provided through the private Devpost testing instructions. Never publish a password, real PayPal login or API secret in GitHub. See [judge payment details](JUDGE_ACCESS_PLAYBOOK.md).
 
-Install:
-- Git
-- Python **3.12+**
-- Node.js **22.12+** (or 20.19+) and npm
-- An internet connection for one-time installation of dependencies
+## What the Decision Passport proves
 
-Windows PowerShell:
+~~~mermaid
+flowchart TD
+    REQ["Saved requirements + Channel3 snapshot"] --> PASS["Decision Passport"]
+    RULE["Eligibility and rejection reasons"] --> PASS
+    AUTH["Human decision and timestamp"] --> PASS
+    CAP["Validated PayPal Sandbox capture"] --> PASS
+    PASS --> EXP["Inspect or export JSON / PDF"]
+~~~
 
-```powershell
+A rejected cheaper quote is **not savings**. Catalogue attributes are historical observations, not live guarantees. A Sandbox capture moves **no real money to a Channel3 retailer** and does **not** place a supplier order.
+
+## Offline inspection, if providers are unavailable
+
+This runs **clearly labelled synthetic data**, not actual Channel3/Gemini/PayPal activity.
+
+Requires Git, Python **3.12+** and Node **22.12+** (or **20.19+**).
+
+**Windows:**
+
+~~~powershell
 git clone https://github.com/PerezChris99/ProcurePilot-AI.git
 cd ProcurePilot-AI
 .\judge-preview.bat
-```
+~~~
 
-macOS/Linux terminal:
+**macOS / Linux:**
 
-```bash
+~~~bash
 git clone https://github.com/PerezChris99/ProcurePilot-AI.git
 cd ProcurePilot-AI
 python3 judge-preview.py
-```
+~~~
 
-The launcher uses **its own SQLite file** under `backend/`, migrates it,
-installs backend and frontend packages, builds the UI first, then serves
-`http://127.0.0.1:5173` and `http://127.0.0.1:8000`. No PostgreSQL server,
-Redis, VS Code or real API keys are needed. It does **not** overwrite `.env`
-or alter an existing PostgreSQL database. If you already installed the packages,
-rerun with `--skip-install`. Ctrl+C stops the servers.
+Open `http://127.0.0.1:5173`, register, then optionally seed an explicitly marked sample by running `.\judge-preview.bat --seed-email YOUR_REGISTERED_EMAIL` (Windows) or `python3 judge-preview.py --seed-email YOUR_REGISTERED_EMAIL` (macOS/Linux). Offline sample orders are **non-payable**.
 
-1. Open the frontend in the browser.
-2. Choose **Get started** and register an account you own.
-3. Open a second terminal in the same repository directory.
-4. On Windows run `.\judge-preview.bat --seed-email YOUR_REGISTERED_EMAIL`,
-   or on macOS/Linux `python3 judge-preview.py --seed-email YOUR_REGISTERED_EMAIL`.
-5. Refresh **Product discovery** and open the explicitly marked
-   `[OFFLINE SAMPLE]` request.
-6. Inspect the 27-inch screen match, 24-inch specification rejection and
-   out-of-stock listing. This sample cannot create payable POs or claim real
-   stock, AI tokens or PayPal transactions.
+The authenticated **Decision Trust Lab** runs twelve labelled synthetic policy/authorization/payment-matching scenarios. These exercise real policy predicates without third-party calls, live payments or invented merchant evidence.
 
-**This route is an inspection preview**, not the complete functional
-third-party demo required to prove live integration. Never present sample
-catalogue entries or their explanation as live Channel3/Gemini responses.
+## Verify and read more
 
-## Route C: Full local provider run
+- **Automated local QA (Windows):** `.\test-all.bat`; [what it covers](../qa/README.md).
+- **Hosted 7-gate read-only check:** `python .\qa\live_demo_check.py --frontend https://procurepilotai.vercel.app --api https://procurepilotai.vercel.app`.
+- **Deep dive:** [Architecture](architecture.md) · [API](api.md) · [Security](security.md) · [Provider setup](provider-setup.md).
 
-The intended project needs **real, authorized test credentials**. Follow
-[provider setup](provider-setup.md) and [integration acceptance](INTEGRATION_ACCEPTANCE.md).
-
-- On Windows, the development launcher `start.bat` uses your configured
-  root `.env`, applies migrations and starts the VS Code workspace tasks.
-  The ordinary template uses local PostgreSQL; configure it first.
-- On macOS/Linux, `./start.sh` uses a local SQLite development database
-  when no root `.env` yet exists; `./start.sh --postgres` uses the
-  PostgreSQL template. Both preserve an existing environment file.
-- Supply rotated `CHANNEL3_API_KEY`, `GOOGLE_API_KEY` (optional fallbacks),
-  `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` and the Sandbox API host.
-- For remote signature-verified PayPal webhooks, deploy a public HTTPS API
-  and register its webhook ID. Localhost cannot receive PayPal deliveries.
-
-### Live browser walkthrough (5 minutes)
-
-1. Sign in and open **New procurement**.
-2. Enter *Two 27-inch office monitors*, quantity **2**, USD, budget **1000**.
-   This is an example request, not a fabricated inventory guarantee.
-3. Select **Search products**. Inspect actual Channel3 product IDs, seller
-   URLs and offer price. Note why an out-of-stock/wrong-sized item fails.
-4. Select **Ask AI to analyze**. Review the evidence-grounded Gemini
-   assessment and its actual attribution. When providers are unavailable,
-   look for the accurately labelled **catalogue-only** fallback and retry.
-5. Choose an **eligible** offer and click **Create PO**, then **Submit for
-   approval**. Open **Approvals** and approve as the authorized reviewer.
-   If a different approver was assigned, sign in as that registered reviewer.
-6. In **Purchase orders**, click **Create PayPal Sandbox checkout**. A
-   **separate browser tab** opens to the official PayPal Sandbox buyer flow;
-   ProcurePilot remains open in the original tab. Sign in with the separate
-   **Sandbox Personal buyer** (not your real PayPal, Developer Dashboard, or
-   Sandbox Business merchant credentials). After approval, PayPal returns to
-   the app in that checkout tab. Select **Confirm buyer approval & capture**;
-   this explicit final action is never automatic. If popups are blocked,
-   follow the saved order's **Open PayPal in new tab** link and sign in to
-   ProcurePilot again if the return tab requires it.
-7. Open the **audit timeline** and **Decision Passport**; inspect source
-   evidence, frozen pricing, approval actor/timestamp and provider capture
-   proof. Export the PDF if useful.
-
-### Negative case worth watching
-
-For the competition story, use an actual quote only if its stored price and disqualification are visible. A cheaper rejected quote is **not** realized cost savings; it is an ineligible product. If live catalogue evidence does not show this pair, show the policy rejection without calling it the cheapest, or explicitly label the Trust Lab as synthetic.
-
-Ask for **72-inch monitors**. A 24-inch screen, an unknown-diagonal display
-or a monitor stand must **not** be orderable simply because its price is
-within budget. The request's hard specifications remain authoritative.
-
-## Optional: reproduce twelve policy safeguards without spending money
-
-While signed in, select **Open Decision Trust Lab** on Overview, then
-**Run policy checks**. All twelve cases execute against the same deterministic
-purchase eligibility and matching logic used by the API. One valid monitor
-passes; eleven disallowed cases are rejected (including wrong specifications,
-missing evidence, budget, merchant restrictions, unauthorized delegated
-review and altered payment amounts). Inputs are explicitly synthetic: no
-payment or third-party interaction is performed.
-
-For a **real saved purchase order**, open its **Decision Passport** to inspect
-the lowest eligible quote, the cheapest rejected same-currency listing with
-its policy violation, approval events, and actual Sandbox status. Rejected
-quotes are not called savings, and merchant settlement remains unverified.
-
-## How to verify the repo
-
-Windows PowerShell after dependencies are installed:
-
-```powershell
-.\test-all.bat
-Get-Content .\qa\reports\summary.md
-```
-
-The maintainer reported all **nine offline gates passing before these recent updates** on Windows on
-November 6, 2026. The local suite writes its report to ignored `qa/reports`;
-it does not use live provider credentials, exercise real remote webhooks or
-represent a hosted payment checkout. Source changes after that report require
-the suite to be rerun.
-
-When the public UI/API exists, run [the credential-free hosted readiness
-checker](LIVE_HOSTING_ACCEPTANCE.md) to verify seven HTTPS, schema, CORS and
-authorization gates. It does not prove external integration acceptance.
-
-## What counts as a meaningful integration
-
-| Piece | Verifiable behavior | What it does not imply |
-| --- | --- | --- |
-| Channel3 | Real product and HTTPS retailer offers, prices, stock and snapshots | A retailer purchase, fulfilled stock or confirmed delivery |
-| Google ADK / Gemini | Short evidence-only analysis; bounded retries/failover and provider metadata | AI authority to create/approve/pay for orders |
-| Human approval | Approved PO from signed-in authorized actor | Enterprise-wide independent procurement governance |
-| PayPal Orders v2 | Sandbox OAuth, order creation, buyer approval, explicit capture, idempotency and amount checks | Production funds, a Channel3 retailer payout or real-world merchant receiving |
-| Decision Passport | Frozen selection, alternatives, source timestamp, approval/payment audit and PDF | Guarantee that a vendor's catalogue statement was objectively true |
-
-Documentation: [Architecture](architecture.md) · [Threat model](security.md) ·
-[API](api.md) · [Development history](HACKATHON_CHANGELOG.md) ·
-[Vercel + Neon deployment](VERCEL_NEON_DEPLOYMENT.md).
-
-## Access through judging
-
-The official rules require a freely accessible working project through the
-judging period ending **December 15, 2026**. The entrant must ensure hosting
-uptime, stable test-account access, required authorized Sandbox details,
-application logs/monitoring, and an English-language demonstration video
-under three minutes uploaded publicly to YouTube. The judges may evaluate the
-project solely from its text and video, so the recorded journey must be real,
-readable, truthful and complete.
-
-**Private test access should be shared through the Devpost testing field or
-an authorized private channel, not through GitHub.** Do not log or display
-secrets when recording the video.
+**Status:** The solo creator reports a completed Sandbox test transaction and Devpost submission. GitHub recorded a successful Vercel deployment of commit `db3cd787` on 10 November 2026. These reports do not substitute for independently re-running live providers, signed webhooks or all current QA checks. Keep test access available through the December 15 judging-period end.
