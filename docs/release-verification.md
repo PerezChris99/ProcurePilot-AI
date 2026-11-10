@@ -1,12 +1,8 @@
-# Release and judge readiness — 4 November 2026
+# Release verification and development history
 
-> **Current status, November 6:** The maintainer reports 9/9 local offline
-> QA gates passing after PR #39; public Channel3/Gemini/PayPal acceptance,
-> Render hosting, signed webhooks, browser E2E, the YouTube demo and Devpost
-> submission are not verified. See [Final Audit](HACKATHON_FINAL_AUDIT.md)
-> and [Judges Start Here](JUDGES_START_HERE.md). Older entries below are
-> historical snapshots.
-
+> **Status — 10 November 2026:** The solo developer reports submitting ProcurePilot AI on [Devpost](https://devpost.com/software/procurepilot-ai) and completing a PayPal Sandbox test transaction. GitHub records a successful Vercel deployment of commit `be87bc3` on 9 November. Public end-to-end acceptance, live provider reliability and delivered signed webhooks require their own evidence and are not implied by a build status.
+>
+> The older engineering notes below are dated historical snapshots. Consult [release acceptance](RELEASE_READINESS.md), [testing](../qa/README.md), [judges' guide](JUDGES_START_HERE.md) and [dated commits](HACKATHON_CHANGELOG.md) for current reference points.
 
 ## Source work committed and merged previously
 
