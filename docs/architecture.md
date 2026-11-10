@@ -14,7 +14,7 @@ flowchart TD
     DISC --> RULES["Server-side eligibility + evidence snapshot"]
     RULES --> AI["Google ADK / Gemini explanation"]
     API <--> PP["PayPal Orders v2 Sandbox"]
-    PP -. "Signed webhook, verified by API" .-> API
+    PP -.->|"Signed webhook verified in API"| API
     API --> PASS["Decision Passport JSON / PDF"]
 ~~~
 
