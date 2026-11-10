@@ -2,7 +2,7 @@
 
 **ProcurePilot AI · Every Purchase Has a Reason**
 
-**Core demonstration:** **“What happens when the cheapest product is the wrong product?”** Follow a specific buyer requirement through genuine Channel3 offer eligibility, evidence-grounded analysis, human authorization, PayPal Sandbox test capture and the resulting Decision Passport. Use the [2:45 evidence-first filming plan](DEMO_CHEAPEST_WRONG_PRODUCT.md).
+**Core demonstration:** **“What happens when the cheapest product is the wrong product?”** Follow a specific buyer requirement through Channel3 offer eligibility, evidence-grounded analysis, human authorization, PayPal Sandbox test capture and the resulting Decision Passport. See the [public demonstration walkthrough](DEMO_CHEAPEST_WRONG_PRODUCT.md).
 
 This page is an honest route to inspecting or exercising the application in the
 [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/). It distinguishes
@@ -12,7 +12,7 @@ the no-credentials **offline preview** from a **real integrated Sandbox run**. A
 
 Open **https://procurepilotai.vercel.app**. Choose **Get started** to register your own test workspace; judges do not need a PayPal REST API key, database URL or Gemini secret to use the hosted app. Follow the [quick judge access and PayPal buyer guide](JUDGE_ACCESS_PLAYBOOK.md) for a complete buyer-request-to-Passport walkthrough.
 
-**Current evidence, 8 November 2026:** The owner reports working registration, sign-in, procurement and a successfully completed **PayPal Sandbox** buyer transaction visible inside PayPal. Vercel production and preview builds are READY at commit `5dff11f`. Previous public API failures predate the repaired release and are not a valid current outage report. The latest **7/7 public HTTPS probe, fresh 9/9 QA run, and delivered signed webhook verification are still separate acceptance tasks** and must not be inferred solely from the PayPal account transaction.
+**Status — 10 November 2026:** The developer reports completing a PayPal Sandbox test purchase and submitting the Devpost entry. GitHub shows a **successful Vercel deployment** of source commit `be87bc3` on 9 November. This is deployment status, not independent verification of current public HTTP checks, a fresh QA run or webhook delivery. For evaluation, use the live app and dedicated Sandbox buyer access supplied through Devpost's private instructions.
 
 The hosted route should let you search real Channel3 offers, request a genuine Google ADK / Gemini explanation (or see a clearly labelled fallback), select an eligible fixed-price purchase order, approve it through a permitted human account, approve and capture it through a **separate Personal PayPal Sandbox buyer**, and inspect the **Decision Passport**. The sandbox does not buy an item from the listed retailer or transfer real money.
 
@@ -159,7 +159,7 @@ authorization gates. It does not prove external integration acceptance.
 | Decision Passport | Frozen selection, alternatives, source timestamp, approval/payment audit and PDF | Guarantee that a vendor's catalogue statement was objectively true |
 
 Documentation: [Architecture](architecture.md) · [Threat model](security.md) ·
-[API](api.md) · [Devpost submission kit](HACKATHON_SUBMISSION_KIT.md) ·
+[API](api.md) · [Development history](HACKATHON_CHANGELOG.md) ·
 [Vercel + Neon deployment](VERCEL_NEON_DEPLOYMENT.md).
 
 ## Access through judging
