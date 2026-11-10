@@ -2,7 +2,7 @@
 
 **ProcurePilot AI · Every Purchase Has a Reason**  
 **Format:** one real browser journey, approximately 2:45, with an actual PayPal Sandbox capture.  
-**Status:** filming plan, NOT a recorded video or proof that a live cheaper rejected quote exists.
+**Purpose:** A reference walkthrough of the actual application flow. Example prices and catalogue availability must come from genuine saved provider data; this document does not itself certify a recorded video.
 
 ## The question
 
@@ -68,8 +68,8 @@ The strongest outcome to substantiate quickly is: **“The purchasing rules corr
 
 ## Supporting material
 
-- [Final Devpost text and submission fields](DEVPOST_FINAL_DRAFT.md)
+- [Public Devpost project](https://devpost.com/software/procurepilot-ai)
 - [Judge steps and separate Sandbox buyer login](JUDGE_ACCESS_PLAYBOOK.md)
-- [Decision Passport evidence and judging criteria](JUDGING_EVIDENCE_MATRIX.md)
+- [Architecture and Decision Passport flow](architecture.md)
 - [Source and setup](../README.md)
 - [Official rules](https://paypalaihackathon.devpost.com/rules)

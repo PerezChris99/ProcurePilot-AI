@@ -122,10 +122,10 @@ the production deployment, confirm the exact SHA, then rerun the live gates.
 The GitHub integration builds `perez` previews automatically; avoid repeated
 pushes. Preview and production databases must be isolated.
 
-## Submission handoff
+## Submitted-project maintenance and judging
 
-[Master submission checklist](SUBMISSION_READINESS.md) tracks S01–S36.
-Prepare [Devpost copy and video storyboard](HACKATHON_SUBMISSION_KIT.md),
-then capture real browser screenshots and a public YouTube video under 3:00.
-Submit on Devpost before 12 November 2026, 23:00 EAT. Keep free judge
-access through 15 December 2026.
+The solo developer reports submitting [ProcurePilot AI to Devpost](https://devpost.com/software/procurepilot-ai) on 10 November 2026. This is developer-reported submission status, not independent evidence of Devpost's final submission receipt.
+
+GitHub reports Vercel deployment of commit `be87bc3` completed successfully on 9 November. For any subsequent deployment, verify the exact source SHA, public health/readiness, authentication, Channel3, Gemini provider attribution and a distinct Personal-buyer PayPal Sandbox checkout before regarding the change as accepted.
+
+The hosted project and authorized dedicated judge test accounts should remain available through 15 December 2026. Keep actual Sandbox passwords and merchant/API credentials outside GitHub, logs and public documentation. Preserve the no-real-retailer-checkout limitation when describing the project.

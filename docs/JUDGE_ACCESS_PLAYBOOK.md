@@ -1,7 +1,7 @@
 # Judge access and PayPal Sandbox walkthrough
 
 **ProcurePilot AI — functional evaluation guide**  
-Updated: 8 November 2026  
+Updated: 10 November 2026  
 App: https://procurepilotai.vercel.app  
 Source: https://github.com/PerezChris99/ProcurePilot-AI  
 Deadline: 12 November 2026 at 12:00 PST / 23:00 EAT. Judging: 1–15 December 2026.
@@ -47,15 +47,15 @@ A judge may create a fresh application workspace while reusing the provided isol
 
 ## Evidence and operational acceptance
 
-**Owner-reported 8 November:** a genuine Sandbox buyer transaction was completed and is visible inside PayPal. This is not a separately collected provider receipt and does not independently establish webhook delivery. Production/Preview deployment builds were READY at commit 5dff11f; the last public 7/7 HTTPS probe and fresh full 9/9 QA report have not been supplied in this session.
+**Developer-reported progress:** The developer reports a working dedicated Sandbox buyer, a successful Sandbox transaction and a submitted Devpost entry. GitHub records successful deployment of commit `be87bc3` on 9 November. The report does not independently verify current HTTPS health checks, transaction ID reconciliation or signed webhook delivery.
 
-Before submission, the entrant should record a sanitized evidence bundle kept outside GitHub: dated capture screenshot or provider transaction detail, order/capture ID comparison (redact buyer details), paid UI and Decision Passport, signed webhook event delivery if claimed, real Channel3 result, actual model provider label, and the current 9/9 plus public 7/7 test output. Never invent a missing result.
+During judging, the developer should maintain a sanitized evidence bundle outside GitHub: dated capture screenshot or provider transaction detail, order/capture ID comparison (redact buyer details), paid UI and Decision Passport, signed webhook event delivery if claimed, real Channel3 result, actual model provider label, and the current 9/9 plus public 7/7 test output. Never invent a missing result.
 
 ## Useful links
 
 - [Technical walkthrough](JUDGES_START_HERE.md)
-- [Submission copy and filming script](DEVPOST_FINAL_DRAFT.md)
-- [Judging evidence map](JUDGING_EVIDENCE_MATRIX.md)
-- [Live acceptance commands](SUBMISSION_READINESS.md)
+- [Public demonstration walkthrough](DEMO_CHEAPEST_WRONG_PRODUCT.md)
+- [Release acceptance procedure](RELEASE_READINESS.md)
+- [Test and integration checks](INTEGRATION_ACCEPTANCE.md)
 - [Official rules](https://paypalaihackathon.devpost.com/rules)
 - [PayPal Sandbox account documentation](https://developer.paypal.com/sandbox-testing/accounts)

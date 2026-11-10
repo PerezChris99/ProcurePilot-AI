@@ -85,16 +85,10 @@ A labelled **indeterminate progress bar** immediately appears while credentials 
    latency samples. A successful build and lower SQL query count alone do not
    prove specific milliseconds saved.
 
-## 6. Release and rollback
+## 6. Release status, verification and rollback
 
-- The code is on existing `perez`; no new branch or GitHub Actions.
-- Do not merge `perez` until the current full offline QA checks pass and
-  the owner approves the Preview release.
-- On production release, confirm source SHA, 200 health/ready, new-account 201,
-  valid login 200, incorrect login 401, rate-limit 429, existing account
-  password verification and purchase state unaffected.
-- Preserve the ability to revert this isolated performance commit if timing
-  or counter behavior regresses. Never disable Argon2 or distributed throttling.
+These frontend loading and backend SQL optimizations are included in the merged repository. GitHub reports the public Vercel deployment for commit `be87bc3` completed on 9 November 2026. Deployment success does **not** establish measured authentication latency.
 
-See [master checklist](SUBMISSION_READINESS.md) and
-[winning execution plan](WINNING_EXECUTION_PLAN_2026-11-08.md).
+After a production change, verify the exact SHA, public API health and readiness, registration and login, invalid credential handling, shared throttling, session restoration and existing purchasing records. A repeatable browser benchmark requires actual timings on the same device and network.
+
+Preserve the ability to revert a performance regression without weakening Argon2 verification, per-user ownership or shared throttling. See [release verification](RELEASE_READINESS.md) and [QA testing](../qa/README.md).

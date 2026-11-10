@@ -1,8 +1,10 @@
-# Significant hackathon-period work
+# Development history — ProcurePilot AI
+
+The solo developer reports submitting the application on [Devpost](https://devpost.com/software/procurepilot-ai) on 10 November 2026. This page preserves representative technical milestones and linked Git commits, not award forecasts or internal strategy.
 
 This file documents substantive, verifiable development **during the
 October 1–November 12, 2026 submission period**. Each example links to a
-real repository commit. It is intended for a concise Devpost summary, not
+real repository commit. It documents attributable source changes, not
 a claim that every integration has passed live acceptance.
 
 | Evidence | Actual work and distinctive contribution |
